@@ -1,0 +1,20 @@
+# Maven
+target/
+
+# Node
+node_modules/
+web/dist/
+
+# Web build copied into the server jar
+server/src/main/resources/static/
+
+# Nix
+result
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local env
+.env
