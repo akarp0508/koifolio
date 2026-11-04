@@ -1,4 +1,4 @@
-# agentfolio
+# koifolio
 
 A local-first, AI-agent-friendly portfolio tracker for individual investors — built around the Warsaw Stock Exchange (GPW), but not limited to it.
 
@@ -8,7 +8,7 @@ A local-first, AI-agent-friendly portfolio tracker for individual investors — 
 
 Brokerage apps show *what* you hold. They don't help you keep track of *why* you hold it, how risky it is, or whether your portfolio still follows your own rules.
 
-agentfolio keeps everything in plain files (Markdown, YAML, JSONL) that live in **your own private git repo**. You edit them through a web UI — and AI agents (Claude Code and others) can read and update the very same files: write company analyses, refresh risk scores, check rules. The app is open source; your data never leaves your machine.
+koifolio keeps everything in plain files (Markdown, YAML, JSONL) that live in **your own private git repo**. You edit them through a web UI — and AI agents (Claude Code and others) can read and update the very same files: write company analyses, refresh risk scores, check rules. The app is open source; your data never leaves your machine.
 
 ## Core ideas
 
@@ -89,7 +89,7 @@ updated: 2026-01-15
 - Risk & scenarios view: risk/return chart, expected portfolio return, scenario ranges.
 - Rule checks with explanations ("ABC is 18.8% of IKE — limit 20%").
 - Broker import (e.g. XTB xlsx export).
-- CLI with JSON output for agents (`agentfolio positions --json`, `agentfolio check-rules`).
+- CLI with JSON output for agents (`koifolio positions --json`, `koifolio check-rules`).
 - Agent prompts/skills shipped with the repo (e.g. "update company note after quarterly report").
 - Event calendar (earnings dates) read from notes.
 
@@ -99,7 +99,7 @@ Sidebar + dashboard layout:
 
 ```
 ┌───────────┬─────────────────────────────────────────┐
-│ agentfolio│ Account: [All ▾]                PL|EN ◐ │
+│ koifolio  │ Account: [All ▾]                PL|EN ◐ │
 │           ├─────────────────────────────────────────┤
 │ ▸ Dashboard │ ┌Value────┐┌P/L─────┐┌Cash────┐┌Rules┐ │
 │   Positions │ │ 50 000  ││ +4 200 ││ 1 000  ││ 2/2 │ │
@@ -119,7 +119,7 @@ Sidebar + dashboard layout:
 TypeScript everywhere, one repo, one command to run.
 
 ```
-agentfolio/
+koifolio/
 ├─ packages/core/     # domain: parsing files, positions, P/L, bonds, rules (pure, tested)
 ├─ apps/server/       # local HTTP server (Hono): reads/writes data dir, fetches prices
 └─ apps/web/          # React + Vite + TypeScript, Recharts, i18n (PL/EN)
@@ -150,8 +150,8 @@ Provider will be pluggable; manual price override always available.
 
 ## Disclaimer
 
-agentfolio is a personal tool, not investment advice. Risk scores and scenarios are opinions stored in your files — the app only displays and aggregates them.
+koifolio is a personal tool, not investment advice. Risk scores and scenarios are opinions stored in your files — the app only displays and aggregates them.
 
 ## License
 
-[MIT](LICENSE)
+[GPL-3.0-or-later](LICENSE)
