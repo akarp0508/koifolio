@@ -4,24 +4,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Planning stage: no code, build, lint or test setup exists yet. `README.md` is the spec (data formats, features, UI mockup, roadmap). Keep it in sync when design decisions change. When scaffolding adds commands (workspace, lint, tests, Nix dev shell), record them here.
+Planning stage: no code, build, lint or test setup exists yet. `README.md` is the spec (data model, export format, MCP tools, features, UI mockup, roadmap). Keep it in sync when design decisions change. When scaffolding adds commands (Maven, web, Nix dev shell, Docker), record them here.
 
 ## What it is
 
-koifolio is a local-first portfolio tracker (GPW-focused, not GPW-only). The user's portfolio data lives in a **separate private repo** of plain files. This repo is only the app. Never commit sample personal data here.
-
-- **Files are the database:** `accounts.yaml`, `rules.yaml`, `transactions/<account-id>.jsonl` (one transaction per line), `companies/<TICKER>.md` (YAML frontmatter + free-form analysis), `.cache/` (prices/FX, git-ignored). The README has the full schemas.
-- AI agents and the web UI edit the same files. Writes must keep files human-readable and produce small, clean git diffs (e.g. append JSONL lines, preserve the Markdown body when updating frontmatter).
+koifolio is a self-hosted portfolio tracker (GPW-focused, not GPW-only). It currently runs for a single user on a Raspberry Pi 5 (8 GB, arm64) over Tailscale, but it is designed multi-user from day one so it can later be hosted for others. Never commit personal portfolio data to this repo.
 
 ## Planned architecture
 
-TypeScript monorepo, Node 24, one command to run:
+Maven multi-module, Java 25, Spring Boot + Postgres, React frontend, deployed as one Docker Compose stack (app + Postgres, multi-arch image).
 
-- `packages/core/`: pure domain logic (file parsing, positions, avg price, P/L, bond valuation by formula, rule checks). This is the single source of truth for calculations, shared by server, future CLI and tests, so the UI and agents always get the same numbers. Keep it free of I/O side effects, and test it.
-- `apps/server/`: Hono local HTTP server. It reads/writes the data dir and fetches quotes and FX (NBP API). It exists because browsers can't reach quote providers (CORS). Price providers are pluggable, and a manual price override is always available.
-- `apps/web/`: React + Vite + Recharts, PL/EN i18n, light/dark theme (follows system by default).
+- `core/`: pure Java domain logic (positions, average/FIFO cost basis, P/L, tax, bond valuation, rules, plain-text export format). It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring, no I/O; unit-tested.
+- `server/`: Spring Boot.
+  - REST API with an OpenAPI spec, plus an MCP server for agents (Spring AI).
+  - Spring Security: local accounts, plus an OAuth2 authorization server for MCP clients.
+  - Spring Data + Flyway on Postgres.
+  - Price/FX/CPI providers and a scheduler for daily snapshots and backfill.
+  - Serves the built `web` app.
+- `web/`: React + Vite + TypeScript + Recharts, PL/EN, light/dark. Display and editing only, with no calculations. API types are generated from the OpenAPI spec.
 
-Price sources are an open question: stooq.pl is unusable (JS challenge), and GPW small-cap quotes need research.
+Key constraints:
+- Every table row is owned by a user. Money is `numeric`/`BigDecimal`, never floating point.
+- Transactions are append-only. Every change (UI or agent) goes to the audit log with its author.
+- Postgres is the source of truth. Plain text (YAML/JSONL/Markdown, format in README) is export/import plus an optional one-way git backup, never a live sync.
+- Must run on arm64 with modest resources: no headless browser. Price providers are pluggable (free APIs or scraping, no paid keys) with a manual override. GPW small-cap quotes are still an open question (stooq.pl is unusable).
 
 ## Conventions
 

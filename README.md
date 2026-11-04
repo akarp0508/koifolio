@@ -1,6 +1,6 @@
 # koifolio
 
-A local-first, AI-agent-friendly portfolio tracker for individual investors — built around the Warsaw Stock Exchange (GPW), but not limited to it.
+A self-hosted, AI-agent-friendly portfolio tracker for individual investors — built around the Warsaw Stock Exchange (GPW), but not limited to it.
 
 > **Status:** planning. Nothing is implemented yet — this README is the plan.
 
@@ -8,37 +8,79 @@ A local-first, AI-agent-friendly portfolio tracker for individual investors — 
 
 Brokerage apps show *what* you hold. They don't help you keep track of *why* you hold it, how risky it is, or whether your portfolio still follows your own rules.
 
-koifolio keeps everything in plain files (Markdown, YAML, JSONL) that live in **your own private git repo**. You edit them through a web UI — and AI agents (Claude Code and others) can read and update the very same files: write company analyses, refresh risk scores, check rules. The app is open source; your data never leaves your machine.
+koifolio keeps your transactions, accounts and company analyses in one place. You use it through a web UI, and AI agents (Claude Code and others) work with the same data through an MCP server: they write company analyses, refresh risk scores and check rules. Everything is exportable to plain text (Markdown, YAML, JSONL) at any time, optionally backed up to your own git repo. The app is open source and self-hosted.
 
 ## Core ideas
 
-- **Files are the database.** Small, focused, human- and agent-readable files instead of a DB. Every change is a git diff.
-- **Analysis lives next to the numbers.** Each company is a Markdown note with YAML frontmatter (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
+- **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
+- **Agents are first-class users.** A built-in MCP server exposes the same calculations the UI shows. Every agent change is validated and recorded in the audit log.
+- **Your data is never locked in.** Plain-text export/import in documented formats, plus an optional scheduled git backup.
 - **Multiple accounts.** Tax-advantaged and regular accounts (e.g. Polish IKE, OKI, IKZE), plus bonds — viewed separately or together.
 - **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
-- **Local-first.** Runs on your computer, reads a directory you point it to.
+- **Self-hosted, always on.** One Docker Compose stack (app + Postgres), light enough for a Raspberry Pi 5. Built multi-user from day one, even if you're the only user.
 
-## Data layout (lives in a separate, private repo)
+## Data model
+
+Postgres is the source of truth. Every row belongs to a user. Money is `numeric` / `BigDecimal`, never floating point.
+
+- **Accounts:** name, type (`brokerage` | `bonds`), wrapper (`IKE` | `IKZE` | `OKI` | `regular`), currency, tax settings.
+- **Transactions:** append-only. Types: `buy`, `sell`, `dividend`, `deposit`, `withdrawal`, `fee`, `bond_buy`, `bond_redeem`, `split`, `spin_off`. Fractional quantities supported. Full lot detail is kept, so any cost-basis method can be computed from them.
+- **Instruments & company notes:** ticker, market, currency, sector, risk (1–5), scenarios with probabilities, thesis, plus a free-form Markdown analysis.
+- **Bonds:** the generic bond model below.
+- **Rules:** portfolio constraints checked against positions.
+- **Snapshots:** daily portfolio values for the history chart.
+- **Audit log:** who made each change (UI user or which agent), when, and the before/after values.
+
+### Cost basis & tax
+Configurable per account, with defaults by wrapper: method `average` or `fifo` (Polish tax rules use FIFO) and a tax rate (e.g. 19% Belka on regular accounts, 0% on IKE). P/L is shown pre-tax and, optionally, after estimated tax.
+
+### Currency
+Totals are reported in a configurable base currency (default PLN). Values use the current NBP rate. Costs use the rate from the transaction date (D-1 NBP mid rate, as Polish tax rules require).
+
+### Bonds
+One generic model, so any bond can be valued if its parameters are given:
+```yaml
+series: EDO0136
+nominal: 100
+term_months: 120
+coupon:
+  type: indexed           # fixed | indexed (CPI + margin) | floating (reference rate + margin)
+  first_period_rate: 5.6  # %
+  margin: 2.0
+interest: capitalized     # capitalized | paid
+period_months: 12
+early_redemption_fee: 2.0 # per bond
+```
+Polish retail series (OTS, ROR, DOR, TOS, COI, EDO, ROS, ROD) ship as presets. CPI (GUS) and reference rates (NBP) are fetched and cached, with manual override.
+
+## Plain-text export format
+
+The export (and the optional git backup) is a directory of small, human- and agent-readable files. Import reads the same format, on demand (replace or merge). There is no live two-way sync.
 
 ```
 my-portfolio/
-├─ accounts.yaml            # accounts: IKE (XTB), OKI, bonds...
-├─ rules.yaml               # portfolio rules (max position %, min low-risk %)
+├─ accounts.yaml
+├─ rules.yaml
+├─ bonds.yaml
 ├─ transactions/
 │  ├─ ike-xtb.jsonl         # one line = one transaction
 │  └─ bonds-tos-2025-08.jsonl
-├─ companies/               # one note per instrument (name configurable)
+├─ companies/
 │  └─ PAS.md                # YAML frontmatter + free-form analysis
-└─ .cache/                  # prices, FX — git-ignored
+└─ history/
+   └─ snapshots.jsonl
 ```
 
 ### `accounts.yaml`
 ```yaml
 - id: ike-xtb
   name: IKE (XTB)
-  type: brokerage          # brokerage | bonds
-  wrapper: IKE             # IKE | IKZE | OKI | regular
+  type: brokerage
+  wrapper: IKE
   currency: PLN
+  tax:                     # optional; defaults come from the wrapper
+    method: average        # average | fifo
+    rate: 0                # IKE held to retirement
 - id: bonds-tos-2025-08
   name: TOS bonds 08.2025
   type: bonds
@@ -53,9 +95,8 @@ my-portfolio/
 {"date":"2026-01-05","type":"deposit","amount":5000,"currency":"PLN"}
 {"date":"2025-08-14","type":"bond_buy","series":"TOS0828","nominal":10000,"rate":5.0}
 ```
-Types: `buy`, `sell`, `dividend`, `deposit`, `withdrawal`, `fee`, `bond_buy`, `bond_redeem`, `split`, `spin_off`. Fractional quantities supported.
 
-### Company note frontmatter (`companies/PAS.md`)
+### `companies/PAS.md`
 ```yaml
 ---
 ticker: PAS
@@ -76,22 +117,35 @@ updated: 2026-01-15
 (free-form analysis written by you or an agent)
 ```
 
+## Agents (MCP)
+
+The server exposes an MCP endpoint (OAuth-protected, as the MCP spec defines for remote servers). Planned tools:
+
+- read: `get_portfolio`, `get_positions`, `get_company`, `check_rules`, `get_history`
+- write: `update_company` (fields + note), `add_transaction`, `update_rules`
+
+Write tools are validated by the same domain code as the UI and attributed in the audit log (`agent: claude-code — update PAS risk 3 → 4`). Agents can be given read-only access, or be allowed to write analysis only.
+
 ## Features
 
 ### v1
 - **Transactions & positions** — add buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
-- **Multiple accounts** — filter by account or see everything combined (incl. fixed-rate bonds valued by formula).
+- **Multiple accounts** — filter by account or see everything combined (incl. bonds valued by formula).
 - **Dashboard** — total value, P/L, cash, rule checks, value over time, allocation by company / sector.
-- **Automatic prices** — current quotes + FX rates (NBP API) fetched by the local server and cached.
+- **Automatic prices** — quotes, FX (NBP), CPI and reference rates fetched on a schedule and cached.
+- **Value history** — daily snapshots. Gaps (downtime, the period before koifolio existed) are backfilled from transactions + historical closing prices where the provider has them.
+- **MCP server** for agents, with audit log.
+- **Plain-text export/import**, optional scheduled git backup (one-way, pushes to a repo you configure).
+- **Accounts & auth** — local user accounts (first user created on first run), passkeys/password.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 
 ### Later
 - Risk & scenarios view: risk/return chart, expected portfolio return, scenario ranges.
 - Rule checks with explanations ("ABC is 18.8% of IKE — limit 20%").
 - Broker import (e.g. XTB xlsx export).
-- CLI with JSON output for agents (`koifolio positions --json`, `koifolio check-rules`).
-- Agent prompts/skills shipped with the repo (e.g. "update company note after quarterly report").
+- Agent skills shipped with the repo (e.g. "update company note after quarterly report").
 - Event calendar (earnings dates) read from notes.
+- Hosting for others: signup/invites, OIDC, admin.
 
 ## UI
 
@@ -116,41 +170,50 @@ Sidebar + dashboard layout:
 
 ## Architecture
 
-TypeScript everywhere, one repo, one command to run.
+Java backend, React frontend, one Docker Compose stack.
 
 ```
 koifolio/
-├─ packages/core/     # domain: parsing files, positions, P/L, bonds, rules (pure, tested)
-├─ apps/server/       # local HTTP server (Hono): reads/writes data dir, fetches prices
-└─ apps/web/          # React + Vite + TypeScript, Recharts, i18n (PL/EN)
+├─ pom.xml            # Maven multi-module parent
+├─ core/              # domain: positions, cost basis, P/L, bonds, rules, export format (pure Java, no Spring)
+├─ server/            # Spring Boot: REST API, MCP server, auth, persistence, price providers, scheduler
+└─ web/               # React + Vite + TypeScript, Recharts, i18n (PL/EN)
 ```
 
-- **Server** is needed for two things: file access to the data directory and fetching quotes (browsers can't call quote providers directly because of CORS).
-- **Core** is shared by the server, the future CLI and tests — so agents and the UI compute numbers the same way.
-- **Dev environment:** Node 24; a Nix flake dev shell will be provided.
+- **core** holds all calculations, so the UI, MCP tools and export produce the same numbers. It has no I/O and is unit-tested.
+- **server:** Spring Boot, Java 25.
+  - Spring Security (sessions, passkeys, OAuth2 authorization server for MCP clients)
+  - Spring Data + Flyway on Postgres
+  - Spring AI MCP server
+  - jsoup for scraping, JGit for the git backup
+- **web** only displays and edits data through the REST API; no calculations. TypeScript types are generated from the server's OpenAPI spec.
+- **Deployment:** a multi-arch Docker image (`linux/arm64` for Raspberry Pi 5, plus `amd64`). A multi-stage build compiles `web` and serves it from Spring Boot. Compose runs app + Postgres. Reached over Tailscale for now; public exposure later is a config change, since auth already exists. No headless browser.
+- **Dev environment:** JDK 25, Maven, Node 24 (for `web`); a Nix flake dev shell will be provided. In dev, Vite proxies API calls to Spring Boot.
 
 ## Price sources (open question)
 
+Acceptable: free APIs and scraping of public pages (no paid keys).
+
 | Source | Status (2026-11) |
 |---|---|
-| NBP API (FX rates) | ✅ works, free, no key |
+| NBP API (FX rates, reference rates) | ✅ works, free, no key |
 | stooq.pl CSV | ❌ now behind a JavaScript challenge, unusable from a server |
 | others (to evaluate) | GPW quotes for small caps are the hard part — needs research |
 
-Provider will be pluggable; manual price override always available.
+Providers are pluggable, with a fallback chain, and should support historical closing prices (for backfill). Manual price override always available.
 
 ## Roadmap
 
-1. Repo scaffolding: workspace, lint, tests, Nix dev shell.
-2. `core`: file formats + positions/P&L + bonds + tests.
-3. `server`: data dir API + price provider + cache.
+1. Scaffolding: Maven multi-module, web app, Nix dev shell, Dockerfile + compose, CI.
+2. `core`: domain model, positions/cost basis/P&L, bonds, rules, export format + tests.
+3. `server`: persistence + migrations, auth, REST API, price providers + cache, scheduler (snapshots/backfill).
 4. `web`: layout, dashboard, positions, transactions modal, accounts, i18n, themes.
-5. Risk & scenarios view, rule checks.
-6. CLI + agent integrations.
+5. MCP server + audit log, export/import, git backup.
+6. Risk & scenarios view, rule checks with explanations.
 
 ## Disclaimer
 
-koifolio is a personal tool, not investment advice. Risk scores and scenarios are opinions stored in your files — the app only displays and aggregates them.
+koifolio is a personal tool, not investment advice. Risk scores and scenarios are opinions you store — the app only displays and aggregates them.
 
 ## License
 
