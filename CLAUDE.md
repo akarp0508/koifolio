@@ -25,7 +25,7 @@ Maven multi-module, Java 25, Spring Boot + Postgres, React frontend, deployed as
 
 Key constraints:
 - Every table row is owned by a user. Money is `numeric`/`BigDecimal`, never floating point.
-- Transactions are append-only. Every change (UI or agent) goes to the audit log with its author.
+- Transactions are never destroyed (edits create revisions, deletes are soft). Every change (UI or agent) goes to the audit log with its author.
 - Postgres is the source of truth. Plain text (YAML/JSONL/Markdown, format in README) is export/import plus an optional one-way git backup, never a live sync.
 - Must run on arm64 with modest resources: no headless browser. Price providers are pluggable (free APIs or scraping, no paid keys) with a manual override. GPW small-cap quotes are still an open question (stooq.pl is unusable).
 

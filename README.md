@@ -24,7 +24,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 Postgres is the source of truth. Every row belongs to a user. Money is `numeric` / `BigDecimal`, never floating point.
 
 - **Accounts:** name, type (`brokerage` | `bonds`), wrapper (`IKE` | `IKZE` | `OKI` | `regular`), currency, tax settings.
-- **Transactions:** append-only. Types: `buy`, `sell`, `dividend`, `deposit`, `withdrawal`, `fee`, `bond_buy`, `bond_redeem`, `split`, `spin_off`. Fractional quantities supported. Full lot detail is kept, so any cost-basis method can be computed from them.
+- **Transactions:** never destroyed. Editing creates a new revision that supersedes the old one, and deleting is a soft delete; both are recorded in the audit log. Types: `buy`, `sell`, `dividend`, `deposit`, `withdrawal`, `fee`, `bond_buy`, `bond_redeem`, `split`, `spin_off`. Fractional quantities supported. Full lot detail is kept, so any cost-basis method can be computed from them.
 - **Instruments & company notes:** ticker, market, currency, sector, risk (1–5), scenarios with probabilities, thesis, plus a free-form Markdown analysis.
 - **Bonds:** the generic bond model below.
 - **Rules:** portfolio constraints checked against positions.
@@ -129,15 +129,22 @@ Write tools are validated by the same domain code as the UI and attributed in th
 ## Features
 
 ### v1
-- **Transactions & positions** — add buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
-- **Multiple accounts** — filter by account or see everything combined (incl. bonds valued by formula).
-- **Dashboard** — total value, P/L, cash, rule checks, value over time, allocation by company / sector.
-- **Automatic prices** — quotes, FX (NBP), CPI and reference rates fetched on a schedule and cached.
-- **Value history** — daily snapshots. Gaps (downtime, the period before koifolio existed) are backfilled from transactions + historical closing prices where the provider has them.
+- **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
+- **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (all Polish series).
+- **Cost basis & tax** — average/FIFO and tax rate per account.
+- **Dashboard** — total value, P/L, cash, rule status (pass/fail), value over time (from daily snapshots), allocation by company / sector.
+- **Prices** — quotes, FX (NBP), CPI and reference rates fetched on a schedule and cached; manual price override in the UI.
+- **Company notes** — edit structured fields and the Markdown analysis in the UI.
+- **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
-- **Plain-text export/import**, optional scheduled git backup (one-way, pushes to a repo you configure).
-- **Accounts & auth** — local user accounts (first user created on first run), passkeys/password.
+- **Login** — local user accounts (first user created on first run), password.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
+
+### v1.1
+- **Backfill** — fill history gaps (downtime, the period before koifolio existed) from transactions + historical closing prices where the provider has them.
+- **Plain-text export/import** in the format above.
+- **Git backup** — scheduled, one-way, pushes the export to a repo you configure.
+- **Passkeys.**
 
 ### Later
 - Risk & scenarios view: risk/return chart, expected portfolio return, scenario ranges.
@@ -182,7 +189,7 @@ koifolio/
 
 - **core** holds all calculations, so the UI, MCP tools and export produce the same numbers. It has no I/O and is unit-tested.
 - **server:** Spring Boot, Java 25.
-  - Spring Security (sessions, passkeys, OAuth2 authorization server for MCP clients)
+  - Spring Security (sessions, password then passkeys, OAuth2 authorization server for MCP clients)
   - Spring Data + Flyway on Postgres
   - Spring AI MCP server
   - jsoup for scraping, JGit for the git backup
@@ -205,11 +212,12 @@ Providers are pluggable, with a fallback chain, and should support historical cl
 ## Roadmap
 
 1. Scaffolding: Maven multi-module, web app, Nix dev shell, Dockerfile + compose, CI.
-2. `core`: domain model, positions/cost basis/P&L, bonds, rules, export format + tests.
-3. `server`: persistence + migrations, auth, REST API, price providers + cache, scheduler (snapshots/backfill).
-4. `web`: layout, dashboard, positions, transactions modal, accounts, i18n, themes.
-5. MCP server + audit log, export/import, git backup.
-6. Risk & scenarios view, rule checks with explanations.
+2. `core`: domain model, positions/cost basis/P&L, bonds, rules + tests.
+3. `server`: persistence + migrations, audit log, login, REST API, price providers + cache + manual override, scheduler (snapshots).
+4. MCP server (read tools first, then write tools).
+5. `web`: layout, dashboard, positions, transactions modal, accounts, company notes, rules, i18n, themes. → **v1**
+6. Backfill, export/import, git backup, passkeys. → **v1.1**
+7. Risk & scenarios view, rule checks with explanations.
 
 ## Disclaimer
 
