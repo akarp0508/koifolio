@@ -154,4 +154,4 @@ agentfolio is a personal tool, not investment advice. Risk scores and scenarios 
 
 ## License
 
-TBD (MIT planned).
+[MIT](LICENSE)
