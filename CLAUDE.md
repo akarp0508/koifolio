@@ -4,7 +4,20 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Planning stage: no code, build, lint or test setup exists yet. `README.md` is the spec (data model, export format, MCP tools, features, UI mockup, roadmap). Keep it in sync when design decisions change. When scaffolding adds commands (Maven, web, Nix dev shell, Docker), record them here.
+Scaffolding done (roadmap step 1); working towards v1. `README.md` is the spec (data model, export format, MCP tools, features, UI mockup, roadmap). Keep it in sync when design decisions change.
+
+## Commands
+
+All tools come from the Nix dev shell: prefix with `nix develop -c` (or enter `nix develop`).
+
+- Build + all tests: `mvn -q -B verify`
+- One module: `mvn -q -B -pl core test` (server tests need core: `-pl server -am`)
+- Single test: `mvn -q -B -pl core test -Dtest=ClassName#method -Dsurefire.failIfNoSpecifiedTests=false`
+- Run server: `mvn -q -pl server -am spring-boot:run` (port 8080)
+- Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm run build` (tsc + vite)
+- Docker (on the Pi; Docker isn't installed on the dev machine): `cp .env.example .env`, then `docker compose up -d --build`. Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
+
+Spring Boot 4.1 (Boot 4 starter names, e.g. `spring-boot-starter-webmvc`). Base package `io.github.akarp0508.koifolio`. The Docker build copies `web/dist` into `server/src/main/resources/static` (git-ignored) so Spring Boot serves the UI.
 
 ## What it is
 
