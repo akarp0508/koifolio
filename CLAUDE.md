@@ -15,7 +15,7 @@ Requires JDK 25, Maven and Node 24 installed locally (or use Docker for full bui
 - Single test: `mvn -q -B -pl core test -Dtest=ClassName#method -Dsurefire.failIfNoSpecifiedTests=false`
 - Run server: `mvn -q -pl server -am spring-boot:run` (port 8080)
 - Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm run build` (tsc + vite)
-- Docker (on the Pi; Docker isn't installed on the dev machine): `cp .env.example .env`, then `docker compose up -d --build`. Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
+- Docker: `cp .env.example .env`, then `docker compose up -d --build`. Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
 
 Spring Boot 4.1 (Boot 4 starter names, e.g. `spring-boot-starter-webmvc`). Base package `io.github.akarp0508.koifolio`. The Docker build copies `web/dist` into `server/src/main/resources/static` (git-ignored) so Spring Boot serves the UI.
 
