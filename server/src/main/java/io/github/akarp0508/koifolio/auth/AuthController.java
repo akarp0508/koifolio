@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -58,7 +59,9 @@ class AuthController {
         return problem;
     }
 
-    record RegisterRequest(@NotBlank @Size(max = 50) String username, @NotBlank @Size(min = 8) String password) {
+    record RegisterRequest(
+            @NotBlank @Size(max = 50, message = "must be at most 50 characters") String username,
+            @NotNull @Size(min = 8, message = "must be at least 8 characters") String password) {
     }
 
     record LoginRequest(@NotBlank String username, @NotBlank String password) {

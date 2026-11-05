@@ -10,6 +10,12 @@ Base path `/api/v1`. JSON. Clients authenticate with a JWT: `Authorization: Bear
   ```json
   {"status": 422, "code": "oversold", "detail": "Selling 15 PAS but only 10 held on 2026-03-12"}
   ```
+  Invalid fields return `400 validation_failed` with the problem in `detail` and an `errors` list:
+  ```json
+  {"status": 400, "code": "validation_failed", "detail": "password must be at least 8 characters",
+   "errors": [{"field": "password", "message": "must be at least 8 characters"}]}
+  ```
+  A body that can't be read returns `400 invalid_body`.
 - **Concurrency:** editable resources carry a `version`. A stale `PUT`/`PATCH` returns `409`.
 - **Pagination:** list endpoints that can grow take `cursor` and `limit`, and return `{"items": [...], "nextCursor": "..."}`.
 

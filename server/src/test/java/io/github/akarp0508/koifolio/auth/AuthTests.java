@@ -108,8 +108,27 @@ class AuthTests {
     }
 
     @Test
-    void shortPasswordIsRejected() throws Exception {
-        postJson("register", "anna", "short").andExpect(status().isBadRequest());
+    void shortPasswordSaysWhatIsWrong() throws Exception {
+        postJson("register", "anna", "short").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("validation_failed"))
+                .andExpect(jsonPath("$.detail").value("password must be at least 8 characters"))
+                .andExpect(jsonPath("$.errors[0].field").value("password"));
+    }
+
+    @Test
+    void everyInvalidFieldIsReported() throws Exception {
+        postJson("register", "", "").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.length()").value(2))
+                .andExpect(jsonPath("$.errors[0].field").value("password"))
+                .andExpect(jsonPath("$.errors[1].field").value("username"));
+    }
+
+    @Test
+    void malformedJsonSaysSo() throws Exception {
+        mvc.perform(post("/api/v1/auth/register").contentType(MediaType.APPLICATION_JSON).content("{bad"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("invalid_body"))
+                .andExpect(jsonPath("$.detail").value("Request body is missing or is not valid JSON"));
     }
 
     @Test
