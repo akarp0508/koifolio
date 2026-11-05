@@ -27,6 +27,14 @@ class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem;
     }
 
+    @ExceptionHandler
+    ProblemDetail handle(FieldValidationException e) {
+        return validationProblem(e.errors().entrySet().stream()
+                .map(error -> fieldError(error.getKey(), error.getValue()))
+                .sorted((a, b) -> a.get("field").compareTo(b.get("field")))
+                .toList());
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(
             MethodArgumentNotValidException e, HttpHeaders headers, HttpStatusCode status, WebRequest request) {

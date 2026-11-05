@@ -47,7 +47,7 @@ class AccountService {
     @Transactional
     Account update(UUID userId, UUID id, String name, String description, BigDecimal balance) {
         requireUser(userId);
-        Account account = find(userId, id);
+        Account account = accounts.findForUpdate(id, userId).orElseThrow(AccountService::notFound);
         if (name != null) {
             account.setName(name.strip());
         }
@@ -68,8 +68,11 @@ class AccountService {
     }
 
     private Account find(UUID userId, UUID id) {
-        return accounts.findByIdAndUserId(id, userId).orElseThrow(() ->
-                new ApiException(HttpStatus.NOT_FOUND, "account_not_found", "Account not found"));
+        return accounts.findByIdAndUserId(id, userId).orElseThrow(AccountService::notFound);
+    }
+
+    private static ApiException notFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "account_not_found", "Account not found");
     }
 
     private void requireUser(UUID userId) {

@@ -11,6 +11,7 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
 import java.util.UUID;
@@ -70,7 +71,7 @@ class AccountController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete an account")
+    @Operation(summary = "Delete an account", description = "Also deletes its transactions.")
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         accounts.delete(userId(jwt), id);
     }
@@ -96,14 +97,15 @@ class AccountController {
             @Schema(type = "string", example = "5000.00") BigDecimal balance) {
     }
 
+    /** @param balanceSetOn the last day the balance was set by hand */
     record AccountResponse(UUID id, String name, String description, String currency,
-                           @Schema(example = "5000.00") String balance) {
+                           @Schema(example = "5000.00") String balance, LocalDate balanceSetOn) {
 
         static AccountResponse of(Account account) {
             int digits = Currency.getInstance(account.getCurrency()).getDefaultFractionDigits();
             String balance = account.getBalance().setScale(digits, RoundingMode.UNNECESSARY).toPlainString();
             return new AccountResponse(account.getId(), account.getName(), account.getDescription(),
-                    account.getCurrency(), balance);
+                    account.getCurrency(), balance, account.getBalanceSetOn());
         }
     }
 }
