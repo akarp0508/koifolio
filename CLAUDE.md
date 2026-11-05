@@ -8,7 +8,7 @@ Scaffolding done (roadmap step 1); working towards v1. `README.md` is the spec (
 
 ## Commands
 
-All tools come from the Nix dev shell: prefix with `nix develop -c` (or enter `nix develop`).
+Requires JDK 25, Maven and Node 24 installed locally (or use Docker for full builds).
 
 - Build + all tests: `mvn -q -B verify`
 - One module: `mvn -q -B -pl core test` (server tests need core: `-pl server -am`)

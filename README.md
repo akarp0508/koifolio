@@ -195,7 +195,7 @@ koifolio/
   - jsoup for scraping, JGit for the git backup
 - **web** only displays and edits data through the REST API; no calculations. TypeScript types are generated from the server's OpenAPI spec.
 - **Deployment:** a multi-arch Docker image (`linux/arm64` for Raspberry Pi 5, plus `amd64`). A multi-stage build compiles `web` and serves it from Spring Boot. Compose runs app + Postgres. Reached over Tailscale for now; public exposure later is a config change, since auth already exists. No headless browser.
-- **Dev environment:** JDK 25, Maven, Node 24 (for `web`); a Nix flake dev shell will be provided. In dev, Vite proxies API calls to Spring Boot.
+- **Dev environment:** JDK 25, Maven, Node 24 (for `web`). In dev, Vite proxies API calls to Spring Boot.
 
 ## Price sources
 
@@ -230,7 +230,7 @@ Acceptable: free APIs and scraping of public pages (no paid keys). Must work on 
 
 ## Roadmap
 
-1. Scaffolding: Maven multi-module, web app, Nix dev shell, Dockerfile + compose, CI.
+1. Scaffolding: Maven multi-module, web app, Dockerfile + compose, CI.
 2. `core`: domain model, positions/cost basis/P&L, bonds, rules + tests.
 3. `server`: persistence + migrations, audit log, login, REST API, price providers + cache + manual override, scheduler (snapshots).
 4. MCP server (read tools first, then write tools).
