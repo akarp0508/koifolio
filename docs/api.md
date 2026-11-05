@@ -1,6 +1,6 @@
 # REST API
 
-Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The server publishes an OpenAPI spec, and `web` generates its types from it.
+Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The OpenAPI spec is generated from the controllers by `springdoc-openapi`, added in roadmap step 3, and `web` generates its types from it. Once controllers exist, the generated spec is the reference and this file is the plan. Swagger UI is open in dev and behind login in production.
 
 ## Conventions
 

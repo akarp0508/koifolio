@@ -2,7 +2,7 @@
 
 1. Scaffolding: Maven server project, web app, Dockerfile + compose, CI.
 2. `domain` package: domain model, positions/cost basis/P&L, bonds, rules + tests.
-3. `server`: persistence + migrations, audit log, login, REST API, price providers + cache + manual override, scheduler (snapshots).
+3. `server`: persistence + migrations, audit log, login, REST API + OpenAPI/Swagger, price providers + cache + manual override, scheduler (snapshots).
 4. MCP server (read tools first, then write tools).
 5. `web`: layout, dashboard, positions, transactions modal, unvalidated changes tab, accounts, company notes, rules, i18n, themes. → **v1**
 6. Backfill, export/import, git backup, passkeys. → **v1.1**
