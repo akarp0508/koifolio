@@ -23,7 +23,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 
 Postgres is the source of truth. Every row belongs to a user. Money is `numeric` / `BigDecimal`, never floating point.
 
-- **Accounts:** name, type (`brokerage` | `bonds`), wrapper (`IKE` | `IKZE` | `OKI` | `regular`), currency, tax settings.
+- **Accounts:** name, free-form description, tax settings. An account owns its lots and cash, and can hold any instrument, bonds included.
 - **Transactions:** never destroyed. Editing creates a new revision that supersedes the old one, and deleting is a soft delete; both are recorded in the audit log. Types: `buy`, `sell`, `dividend`, `deposit`, `withdrawal`, `fee`, `bond_buy`, `bond_redeem`, `split`, `spin_off`. Fractional quantities supported. Full lot detail is kept, so any cost-basis method can be computed from them.
 - **Instruments & company notes:** ticker, market, currency, sector, risk (1–5), scenarios with probabilities, thesis, plus a free-form Markdown analysis.
 - **Bonds:** the generic bond model below.
@@ -32,7 +32,7 @@ Postgres is the source of truth. Every row belongs to a user. Money is `numeric`
 - **Audit log:** who made each change (UI user or which agent), when, and the before/after values.
 
 ### Cost basis & tax
-Configurable per account, with defaults by wrapper: method `average` or `fifo` (Polish tax rules use FIFO) and a tax rate (e.g. 19% Belka on regular accounts, 0% on IKE). P/L is shown pre-tax and, optionally, after estimated tax.
+Every account has its own tax settings: method `average` or `fifo` (Polish tax rules use FIFO) and a tax rate. There is no fixed list of account types, so any account can be modelled. The UI offers presets that fill in these fields (e.g. regular: FIFO, 19% Belka; IKE: 0%). P/L is shown pre-tax and, optionally, after estimated tax.
 
 ### Currency
 Totals are reported in a configurable base currency (default PLN). Values use the current NBP rate. Costs use the rate from the transaction date (D-1 NBP mid rate, as Polish tax rules require).
@@ -75,17 +75,16 @@ my-portfolio/
 ```yaml
 - id: ike-xtb
   name: IKE (XTB)
-  type: brokerage
-  wrapper: IKE
-  currency: PLN
-  tax:                     # optional; defaults come from the wrapper
+  description: Long-term retirement account, held until 60.   # free text
+  tax:
     method: average        # average | fifo
-    rate: 0                # IKE held to retirement
+    rate: 0
 - id: bonds-tos-2025-08
   name: TOS bonds 08.2025
-  type: bonds
-  wrapper: regular
-  currency: PLN
+  description: Treasury bonds bought at PKO.
+  tax:
+    method: fifo
+    rate: 0.19
 ```
 
 ### `transactions/*.jsonl`
@@ -131,7 +130,7 @@ Write tools are validated by the same domain code as the UI and attributed in th
 ### v1
 - **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
 - **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (all Polish series).
-- **Cost basis & tax** — average/FIFO and tax rate per account.
+- **Cost basis & tax** — average/FIFO and tax rate per account, with presets.
 - **Dashboard** — total value, P/L, cash, rule status (pass/fail), value over time (from daily snapshots), allocation by company / sector.
 - **Prices** — quotes, FX (NBP), CPI and reference rates fetched on a schedule and cached; manual price override in the UI.
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.
