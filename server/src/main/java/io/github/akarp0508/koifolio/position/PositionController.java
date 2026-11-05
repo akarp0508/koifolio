@@ -2,12 +2,16 @@ package io.github.akarp0508.koifolio.position;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.domain.PositionResult;
+import io.github.akarp0508.koifolio.domain.Valuation;
+import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.util.Currency;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -45,19 +49,37 @@ class PositionController {
      * @param averageCost left out once nothing is held
      * @param realizedGain counts only shares with a known cost
      * @param incomplete a sale exceeded what was held, so the history is missing something
+     * @param priceCurrency can differ from {@code currency}; value and gain are then left out
+     * @param currencyMismatch the price is in another currency than the account
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record PositionResponse(UUID accountId, String ticker, String currency, String quantity, String averageCost,
-                            String cost, String realizedGain, boolean closed, boolean incomplete) {
+                            String cost, String realizedGain, boolean closed, boolean incomplete,
+                            String price, String priceCurrency, Instant quotedAt, String value,
+                            String unrealizedGain, String unrealizedPercent, boolean currencyMismatch) {
 
         static PositionResponse of(PositionService.Position position) {
             PositionResult result = position.result();
             String currency = position.account().getCurrency();
             String averageCost = result.isClosed() ? null : money(result.averageCost(), currency);
             String quantity = result.quantity().stripTrailingZeros().toPlainString();
+
+            Optional<CurrentPrice> price = position.price().filter(current -> !result.isClosed());
+            boolean mismatch = price.isPresent() && !price.get().currency().equals(currency);
+            Optional<Valuation> valuation = price.filter(current -> !mismatch)
+                    .map(current -> Valuation.of(result, current.price()));
+
             return new PositionResponse(position.account().getId(), position.ticker(), currency, quantity, averageCost,
                     money(result.cost(), currency), money(result.realizedGain(), currency), result.isClosed(),
-                    result.incomplete());
+                    result.incomplete(),
+                    price.map(current -> current.price().stripTrailingZeros().toPlainString()).orElse(null),
+                    price.map(CurrentPrice::currency).orElse(null),
+                    price.map(CurrentPrice::quotedAt).orElse(null),
+                    valuation.map(v -> money(v.value(), currency)).orElse(null),
+                    valuation.map(v -> money(v.gain(), currency)).orElse(null),
+                    valuation.flatMap(Valuation::gainPercent)
+                            .map(percent -> percent.setScale(1, RoundingMode.HALF_UP).toPlainString()).orElse(null),
+                    mismatch);
         }
 
         private static String money(BigDecimal value, String currency) {

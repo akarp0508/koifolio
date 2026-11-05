@@ -27,6 +27,17 @@ class Instrument {
     @Column(nullable = false)
     private boolean listed;
 
+    /** The price source's own symbol, once found. */
+    @Column(name = "quote_symbol")
+    private String quoteSymbol;
+
+    @Column(name = "quote_currency")
+    private String quoteCurrency;
+
+    /** When the source was last asked about this ticker. */
+    @Column(name = "quote_checked_at")
+    private Instant quoteCheckedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -52,6 +63,14 @@ class Instrument {
 
     String getName() {
         return name;
+    }
+
+    String getQuoteSymbol() {
+        return quoteSymbol;
+    }
+
+    String getQuoteCurrency() {
+        return quoteCurrency;
     }
 
     boolean isListed() {

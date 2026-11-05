@@ -1,3 +1,6 @@
 koifolio:
   auth:
     jwt-secret: test-secret-test-secret-test-secret-test
+  prices:
+    schedule-enabled: false
+    refresh-cooldown: 0s

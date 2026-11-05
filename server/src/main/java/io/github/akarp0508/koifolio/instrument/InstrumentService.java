@@ -2,6 +2,7 @@ package io.github.akarp0508.koifolio.instrument;
 
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -9,6 +10,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Limit;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,6 +42,35 @@ public class InstrumentService {
     public Map<UUID, String> tickers(UUID userId) {
         return instruments.findByUserId(userId).stream()
                 .collect(Collectors.toMap(Instrument::getId, Instrument::getTicker));
+    }
+
+    public record QuoteRef(String symbol, String currency) {
+    }
+
+    /** The price source's symbol for each of the user's instruments that has one. */
+    @Transactional(readOnly = true)
+    public Map<UUID, QuoteRef> quoteRefs(UUID userId) {
+        return instruments.findByUserId(userId).stream()
+                .filter(instrument -> instrument.getQuoteSymbol() != null)
+                .collect(Collectors.toMap(Instrument::getId, instrument ->
+                        new QuoteRef(instrument.getQuoteSymbol(), instrument.getQuoteCurrency())));
+    }
+
+    /** Tickers with no symbol yet, skipping ones already asked about since {@code checkedBefore}. */
+    @Transactional(readOnly = true)
+    public List<String> tickersToResolve(Instant checkedBefore, int limit) {
+        return instruments.findTickersToResolve(checkedBefore, Limit.of(limit));
+    }
+
+    /** @param symbol null if the source doesn't cover the ticker */
+    @Transactional
+    public void saveResolution(String ticker, String symbol, String currency, Instant checkedAt) {
+        instruments.saveResolution(ticker, symbol, currency, checkedAt);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> quoteSymbols() {
+        return instruments.findQuoteSymbols();
     }
 
     @Transactional(readOnly = true)

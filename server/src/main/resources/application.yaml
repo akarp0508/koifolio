@@ -26,6 +26,12 @@ springdoc:
     enabled: ${KOIFOLIO_SWAGGER:false}
 
 koifolio:
+  prices:
+    schedule-enabled: true
+    initial-delay: 1m
+    refresh-every: 15m
+    refresh-cooldown: 1m
+    bankier-url: https://api.bankier.pl/quotes/public
   auth:
     jwt-secret: ${KOIFOLIO_JWT_SECRET}
     token-ttl: 12h
