@@ -14,14 +14,15 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 ## Added after testing
 
 5. **Instruments and balance warning** (done): a private ticker list that fills itself, and a confirmation before going below zero.
+6. **Positions** (done): holdings, average cost and realized gains per account and ticker, with transactions linked to instruments.
 
 ## After the MVP
 
 The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:
 
-- Domain calculations: positions, cost basis, P/L, FX, tax. A first version is on the `domain-replay-wip` branch.
+- Prices, then unrealized P/L, FX and tax. A first version of those calculations is on the `domain-replay-wip` branch.
 - More web UI, with each screen's look agreed first
-- Prices and daily snapshots
+- Daily snapshots
 - MCP server and audit log
 - Bonds, rules
 - Backfill, export/import, git backup, passkeys

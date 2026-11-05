@@ -449,3 +449,14 @@ td {
   margin: -0.5rem 0 0.9rem;
   font-size: 0.87rem;
 }
+
+.filter-check {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: 0.75rem;
+}
+
+tr.closed td {
+  color: var(--muted);
+}

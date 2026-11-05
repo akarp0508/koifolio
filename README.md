@@ -2,7 +2,7 @@
 
 A self-hosted, AI-agent-friendly portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
 
-> **Status:** early development, building an MVP. Login, accounts with balances, and transactions work, in the API and web UI. See the [roadmap](docs/roadmap.md).
+> **Status:** early development, building an MVP. Login, accounts with balances, transactions, instruments and positions work, in the API and web UI. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -23,6 +23,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 
 ### v1
 - **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
+- **Positions** — holdings, average cost and realized gains per account and ticker, with average or FIFO cost.
 - **Instruments** — your own list of tickers to pick from when adding a transaction; new tickers join it automatically.
 - **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (Polish series as presets).
 - **Cost basis & tax** — average/FIFO and tax rate per account, with presets.

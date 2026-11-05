@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, normalizeAmount } from './format'
+import { formatAmount, formatGain, normalizeAmount } from './format'
 
 const THIN = ' '
 
@@ -21,6 +21,18 @@ describe('formatAmount', () => {
 
   it('does not lose precision on huge values', () => {
     expect(formatAmount('123456789012345.67')).toBe(`123${THIN}456${THIN}789${THIN}012${THIN}345.67`)
+  })
+})
+
+describe('formatGain', () => {
+  it('shows the direction', () => {
+    expect(formatGain('250.00')).toBe('+250.00')
+    expect(formatGain('-1000.00')).toBe(`−1${THIN}000.00`)
+  })
+
+  it('leaves zero without a sign', () => {
+    expect(formatGain('0.00')).toBe('0.00')
+    expect(formatGain('0')).toBe('0')
   })
 })
 

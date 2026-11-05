@@ -48,7 +48,7 @@ Implemented. Each account belongs to one user; another user's account returns `4
 | `GET /accounts` | List yours, oldest first |
 | `POST /accounts` | Create |
 | `GET /accounts/{id}` | |
-| `PATCH /accounts/{id}` | Change `name`, `description` or `balance`; send only what changes |
+| `PATCH /accounts/{id}` | Change `name`, `description`, `balance` or `costMethod`; send only what changes |
 | `DELETE /accounts/{id}` | Delete, along with its transactions |
 
 ```json
@@ -58,7 +58,8 @@ Implemented. Each account belongs to one user; another user's account returns `4
   "description": "Main account",
   "currency": "PLN",
   "balance": "5000.00",
-  "balanceSetOn": "2026-11-05"
+  "balanceSetOn": "2026-11-05",
+  "costMethod": "average"
 }
 ```
 
@@ -118,34 +119,49 @@ Implemented. Each user has their own private list of tickers.
 | `PATCH /instruments/{id}` | `{"name"}`; the ticker can't change |
 | `DELETE /instruments/{id}` | Remove from the list; transactions keep their ticker |
 
-A transaction using a new ticker adds it to the list.
+A transaction using a new ticker adds it to the list. Removing one hides it from the list and keeps its transactions; using it again, or adding it again, brings it back.
 
 Planned: `GET /instruments/search`, `PUT /instruments/{id}/profile`, `GET /bond-presets`.
 
+## Positions
+
+Implemented. Worked out from buys and sells on every request; nothing is stored.
+
+| Request | Purpose |
+|---|---|
+| `GET /positions` | By ticker, then account. Filters: `account`; `closed=true` includes fully sold positions |
+
+```json
+{
+  "accountId": "…",
+  "ticker": "PAS",
+  "currency": "PLN",
+  "quantity": "15",
+  "averageCost": "110.00",
+  "cost": "1650.00",
+  "realizedGain": "200.00",
+  "closed": false,
+  "incomplete": false
+}
+```
+
+- One position per account and ticker, using the account's `costMethod`.
+- `cost` and `realizedGain` include fees. Dividends aren't part of realized gain.
+- `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
+- `averageCost` is left out once nothing is held.
+
 ## Portfolio
 
-All take `account` (omit for all accounts) and `asOf` (default today). Calculations happen only on the server.
+Planned. All take `account` (omit for all accounts) and `asOf` (default today). Calculations happen only on the server.
 
 | Request | Purpose |
 |---|---|
 | `GET /portfolio/summary` | Total value, P/L, cash, rule status, warnings |
-| `GET /portfolio/positions` | Positions |
 | `GET /portfolio/bonds` | Bond holdings |
 | `GET /portfolio/allocation?by=company\|sector` | Weights |
 | `GET /portfolio/history?from=&to=` | Value over time, from snapshots |
 | `GET /portfolio/realized?year=` | Realized gains and estimated tax |
 | `GET /portfolio/income?year=` | Dividends and interest |
-
-```json
-{
-  "value": {"amount": "50000.00", "currency": "PLN"},
-  "pnl": {"amount": "4200.00", "currency": "PLN"},
-  "cash": {"amount": "1000.00", "currency": "PLN"},
-  "rules": {"passed": 2, "total": 2},
-  "unvalidatedTransactions": 1,
-  "warnings": [{"code": "missing_price", "instrument": "…"}]
-}
-```
 
 ## Rules
 

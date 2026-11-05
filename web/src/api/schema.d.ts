@@ -138,7 +138,7 @@ export interface paths {
         post?: never;
         /**
          * Remove an instrument from your list
-         * @description Transactions keep their ticker.
+         * @description Its transactions are kept.
          */
         delete: operations["delete_1"];
         options?: never;
@@ -173,6 +173,26 @@ export interface paths {
          * @description Send only the fields to change.
          */
         patch: operations["update_1"];
+        trace?: never;
+    };
+    "/api/v1/positions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List your positions, by ticker
+         * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows.
+         */
+        get: operations["list_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/auth/me": {
@@ -301,6 +321,11 @@ export interface components {
             currency: string;
             /** @example 5000.00 */
             balance?: string;
+            /**
+             * @description How positions work out cost. Defaults to average.
+             * @enum {string}
+             */
+            costMethod?: "average" | "fifo";
         };
         AccountResponse: {
             /** Format: uuid */
@@ -312,6 +337,8 @@ export interface components {
             balance?: string;
             /** Format: date */
             balanceSetOn?: string;
+            /** @enum {string} */
+            costMethod?: "average" | "fifo";
         };
         RenameInstrumentRequest: {
             name: string;
@@ -321,6 +348,20 @@ export interface components {
             description?: string;
             /** @example 5000.00 */
             balance?: string;
+            /** @enum {string} */
+            costMethod?: "average" | "fifo";
+        };
+        PositionResponse: {
+            /** Format: uuid */
+            accountId?: string;
+            ticker?: string;
+            currency?: string;
+            quantity?: string;
+            averageCost?: string;
+            cost?: string;
+            realizedGain?: string;
+            closed?: boolean;
+            incomplete?: boolean;
         };
     };
     responses: never;
@@ -691,6 +732,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    list_3: {
+        parameters: {
+            query?: {
+                account?: string;
+                closed?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PositionResponse"][];
                 };
             };
         };

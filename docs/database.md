@@ -9,17 +9,17 @@ User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is 
 ```
 users               id, username, password_hash, base_currency, cost_fx_rule, created_at
 
-accounts            id, user_id, name, description, currency, balance, balance_set_on, created_at
-                    planned: tax_method, tax_rate, archived_at
+accounts            id, user_id, name, description, currency, balance, balance_set_on, cost_method, created_at
+                    planned: tax_rate, archived_at
 
 instrument_profiles user_id, instrument_id, sector, risk, scenarios (jsonb), thesis, note, updated_at
                     PK (user_id, instrument_id)
 
-transactions        id, user_id, account_id, type, date, ticker, quantity, price, fee, amount,
+transactions        id, user_id, account_id, instrument_id, type, date, quantity, price, fee, amount,
                     withheld_tax, cash_effect, affects_balance, created_at
                     planned: revisions, soft delete, sequence, created_by, validated_at
 
-instruments         id, user_id, ticker, name, created_at
+instruments         id, user_id, ticker, name, listed, created_at
                     UNIQUE (user_id, ticker)
 
 rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
@@ -35,6 +35,7 @@ audit_log           id, user_id, actor_type (user | agent), actor_name, entity_t
 ```
 
 - Each type uses a subset of the columns, enforced by a `CHECK`.
+- Removing an instrument clears `listed`, since transactions still point at it.
 - `cash_effect` is stored, so undoing a transaction subtracts exactly what was applied. Writes lock the account row.
 - Deleting an account deletes its transactions.
 - Accounts with transactions are archived, not deleted.

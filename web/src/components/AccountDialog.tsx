@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account } from '../api/client'
+import type { Account, CostMethod } from '../api/client'
 import { normalizeAmount } from '../format'
 import { Field } from './Field'
 import { Modal } from './Modal'
@@ -17,6 +17,7 @@ export function AccountDialog({ account, onSaved, onClose }: {
   const [description, setDescription] = useState(account?.description ?? '')
   const [currency, setCurrency] = useState(account?.currency ?? 'PLN')
   const [balance, setBalance] = useState(account?.balance ?? '')
+  const [costMethod, setCostMethod] = useState<CostMethod>(account?.costMethod ?? 'average')
   const [error, setError] = useState<ApiError | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -27,9 +28,9 @@ export function AccountDialog({ account, onSaved, onClose }: {
     const amount = normalizeAmount(balance) || undefined
     try {
       if (account) {
-        await api.updateAccount(account.id, { name, description, balance: amount })
+        await api.updateAccount(account.id, { name, description, balance: amount, costMethod })
       } else {
-        await api.createAccount({ name, description, currency, balance: amount })
+        await api.createAccount({ name, description, currency, balance: amount, costMethod })
       }
       onSaved()
     } catch (e) {
@@ -85,6 +86,13 @@ export function AccountDialog({ account, onSaved, onClose }: {
             {COMMON_CURRENCIES.map((code) => <option key={code} value={code} />)}
           </datalist>
         </div>
+        <label className="field">
+          <span>Cost method</span>
+          <select value={costMethod} onChange={(e) => setCostMethod(e.target.value as CostMethod)}>
+            <option value="average">Average cost</option>
+            <option value="fifo">FIFO (oldest shares sold first)</option>
+          </select>
+        </label>
         {error && !shownInline && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">
           <button type="button" onClick={onClose}>Cancel</button>

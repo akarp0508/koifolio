@@ -4,10 +4,18 @@ import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
 import { Instruments } from './components/Instruments'
 import { Login } from './components/Login'
+import { Positions } from './components/Positions'
 import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
 
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
+
+const PAGES = [
+  { hash: '#accounts', label: 'Accounts', Page: Accounts },
+  { hash: '#transactions', label: 'Transactions', Page: Transactions },
+  { hash: '#positions', label: 'Positions', Page: Positions },
+  { hash: '#instruments', label: 'Instruments', Page: Instruments },
+]
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash)
@@ -34,6 +42,7 @@ function App() {
   const [loading, setLoading] = useState(hasToken)
   const { theme, nextTheme } = useTheme()
   const hash = useHash()
+  const current = PAGES.find((page) => page.hash === hash) ?? PAGES[0]
 
   const logOut = useCallback(() => {
     clearToken()
@@ -71,9 +80,9 @@ function App() {
     <div className="layout">
       <nav className="sidebar">
         <strong className="brand">koifolio</strong>
-        <NavItem href="#accounts" current={hash !== '#transactions' && hash !== '#instruments'} label="Accounts" />
-        <NavItem href="#transactions" current={hash === '#transactions'} label="Transactions" />
-        <NavItem href="#instruments" current={hash === '#instruments'} label="Instruments" />
+        {PAGES.map((page) => (
+          <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} />
+        ))}
         <div className="sidebar-footer">
           <div className="user">
             <span>{user.username}</span>
@@ -83,9 +92,7 @@ function App() {
         </div>
       </nav>
       <main className="content">
-        {hash === '#transactions' && <Transactions />}
-        {hash === '#instruments' && <Instruments />}
-        {hash !== '#transactions' && hash !== '#instruments' && <Accounts />}
+        <current.Page />
       </main>
     </div>
   )

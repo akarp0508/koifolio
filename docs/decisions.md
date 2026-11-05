@@ -15,7 +15,8 @@
 - **Storage:** Postgres is the source of truth. Plain text is export/import plus an optional one-way git backup.
 - **Agents:** through MCP only.
 - **Accounts, not tags.** An account has a name, a free-form description and its own tax settings. There are no fixed account types; the UI offers presets.
-- **Cost basis:** `average` or `fifo`, set per account.
+- **Cost basis:** `average` or `fifo`, set per account, average by default. Changing it recalculates positions.
+- **Positions are calculated on each request,** in the `domain` package, not stored. One per account and ticker. A sale past the shares on record counts only the shares with a known cost, and the position is marked `incomplete`.
 - **Bonds:** one generic model, with Polish retail series as presets.
 - **Base currency:** configurable, default PLN.
 - **Transactions are edited in place and deleted for real in the MVP.** Revisions and soft delete come with the audit log. This replaces "never destroyed" for now.
@@ -27,7 +28,7 @@
 - **Invalid history never blocks:** a sale of more than was held is saved and marked `oversold`, because backfilled history can arrive in any order or start partway through. Negative cash is allowed too.
 - **Balance:** the account balance is stored and each transaction with `affectsBalance` changes it; editing or deleting a transaction undoes its effect. Setting the balance by hand just sets the number and records `balanceSetOn`. The UI defaults `affectsBalance` to off for dates before that day, so backfilled history isn't counted twice.
 - **Going below zero asks first:** the server refuses with `negative_balance` unless the request confirms it, and the UI offers "Save anyway". This covers anything lowering the balance, and it's a confirmation, not a ban.
-- **Instruments are a private per-user list** of tickers with optional names, filled by hand or automatically from transactions. Transactions keep the ticker as text. A shared catalog with prices can sit behind this later.
+- **Instruments are private per user,** with optional names, filled by hand or automatically from transactions. Transactions link to them with a foreign key, so removing one only hides it from the list. A shared catalog with prices can sit behind this later.
 - **MVP transactions:** deposit, withdrawal, buy, sell, dividend, fee. The ticker is plain text, amounts are in the account's currency, and deleting an account deletes its transactions.
 - **v1 tax estimate:** unrealized is gain × rate per position; realized is per calendar year and account, with losses offsetting gains in that year. No carry-forward between years.
 - **Dividends:** stored as gross + withheld; the form also accepts net only (withheld = 0).
