@@ -13,10 +13,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /**
-         * Create a user
-         * @description Only the first user can register, unless registration is open.
-         */
+        /** Create a user */
         post: operations["register"];
         delete?: never;
         options?: never;
