@@ -1,6 +1,6 @@
-# Domain model (`core`)
+# Domain model (`domain` package)
 
-`core` is pure Java: no Spring, no I/O, no users. The server loads one user's data and passes it in.
+The `domain` package in `server` is pure Java: no Spring, no I/O, no users. The server loads one user's data and passes it in.
 
 ## Central idea
 

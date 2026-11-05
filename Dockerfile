@@ -9,14 +9,11 @@ COPY web/ ./
 RUN npm run build
 
 FROM --platform=$BUILDPLATFORM maven:3-eclipse-temurin-25 AS server
-WORKDIR /src
-COPY pom.xml ./
-COPY core/pom.xml core/
-COPY server/pom.xml server/
+WORKDIR /src/server
+COPY server/pom.xml ./
 RUN mvn -q -B dependency:go-offline
-COPY core/src core/src
-COPY server/src server/src
-COPY --from=web /src/web/dist server/src/main/resources/static
+COPY server/src src
+COPY --from=web /src/web/dist src/main/resources/static
 RUN mvn -q -B -DskipTests package
 
 FROM eclipse-temurin:25-jre

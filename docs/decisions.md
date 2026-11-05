@@ -2,7 +2,7 @@
 
 ## Settled
 
-- **Stack:** Java 25, Spring Boot 4.1, Maven multi-module (`core`, `server`), Postgres 18, React + Vite + TypeScript + Recharts.
+- **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
 - **Deployment:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
 - **Storage:** Postgres is the source of truth. Plain text is export/import plus an optional one-way git backup.
 - **Agents:** through MCP only.
@@ -14,6 +14,7 @@
 - **Prices:** free APIs and scraping only, no headless browser.
 - **No Nix dev shell.** Local tools come from the system; Docker covers full builds.
 - **No CLI.** MCP covers what it was for.
+- **One backend module.** Calculations live in the `domain` package of `server`, not a separate module, because the server is their only user.
 
 ## Open
 

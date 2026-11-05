@@ -10,10 +10,14 @@ Scaffolding done (roadmap step 1); working towards v1. `docs/` holds the plans (
 
 Requires JDK 25, Maven and Node 24 installed locally (or use Docker for full builds).
 
+Server commands run in `server/`:
+
 - Build + all tests: `mvn -q -B verify`
-- One module: `mvn -q -B -pl core test` (server tests need core: `-pl server -am`)
-- Single test: `mvn -q -B -pl core test -Dtest=ClassName#method -Dsurefire.failIfNoSpecifiedTests=false`
-- Run server: `mvn -q -pl server -am spring-boot:run` (port 8080)
+- Single test: `mvn -q -B test -Dtest=ClassName#method`
+- Run server: `mvn -q spring-boot:run` (port 8080)
+
+Other:
+
 - Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm run build` (tsc + vite)
 - Docker: `cp .env.example .env`, then `docker compose up -d --build`. Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
 
@@ -25,10 +29,10 @@ koifolio is a self-hosted portfolio tracker (GPW-focused, not GPW-only). It curr
 
 ## Planned architecture
 
-Maven multi-module, Java 25, Spring Boot + Postgres, React frontend, deployed as one Docker Compose stack (app + Postgres, multi-arch image).
+Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`web/`), deployed as one Docker Compose stack (app + Postgres, multi-arch image).
 
-- `core/`: pure Java domain logic (positions, average/FIFO cost basis, P/L, tax, bond valuation, rules, plain-text export format). It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring, no I/O; unit-tested.
 - `server/`: Spring Boot.
+  - `domain` package: pure domain logic (positions, average/FIFO cost basis, P/L, tax, bond valuation, rules). It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
   - REST API with an OpenAPI spec, plus an MCP server for agents (Spring AI).
   - Spring Security: local accounts, plus an OAuth2 authorization server for MCP clients.
   - Spring Data + Flyway on Postgres.

@@ -1,4 +1,4 @@
-package io.github.akarp0508.koifolio.server;
+package io.github.akarp0508.koifolio;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

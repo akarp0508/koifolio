@@ -1,4 +1,4 @@
-package io.github.akarp0508.koifolio.server;
+package io.github.akarp0508.koifolio;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;

@@ -5,20 +5,29 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>io.github.akarp0508.koifolio</groupId>
-        <artifactId>koifolio</artifactId>
-        <version>0.1.0-SNAPSHOT</version>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.2</version>
+        <relativePath/>
     </parent>
 
+    <groupId>io.github.akarp0508.koifolio</groupId>
     <artifactId>koifolio-server</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+
     <name>koifolio-server</name>
-    <description>Spring Boot server: REST API, MCP, auth, persistence, price providers, scheduler.</description>
+    <description>Self-hosted, AI-agent-friendly portfolio tracker</description>
+    <licenses>
+        <license>
+            <name>GPL-3.0-or-later</name>
+        </license>
+    </licenses>
+
+    <properties>
+        <java.version>25</java.version>
+    </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>io.github.akarp0508.koifolio</groupId>
-            <artifactId>koifolio-core</artifactId>
-        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>

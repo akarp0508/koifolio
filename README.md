@@ -74,14 +74,12 @@ Java backend, React frontend, one Docker Compose stack.
 
 ```
 koifolio/
-├─ pom.xml            # Maven multi-module parent
-├─ core/              # domain: positions, cost basis, P/L, bonds, rules, export format (pure Java, no Spring)
-├─ server/            # Spring Boot: REST API, MCP server, auth, persistence, price providers, scheduler
+├─ server/            # Spring Boot (Maven): domain logic, REST API, MCP server, auth, persistence, price providers, scheduler
 └─ web/               # React + Vite + TypeScript, Recharts, i18n (PL/EN)
 ```
 
-- **core** holds all calculations, so the UI, MCP tools and export produce the same numbers. It has no I/O and is unit-tested.
 - **server:** Spring Boot, Java 25.
+  - The `domain` package holds all calculations as plain Java (no Spring, no I/O), so the UI, MCP tools and export produce the same numbers.
   - Spring Security (sessions, password then passkeys, OAuth2 authorization server for MCP clients)
   - Spring Data + Flyway on Postgres
   - Spring AI MCP server
