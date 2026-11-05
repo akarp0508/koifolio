@@ -42,14 +42,14 @@ class InstrumentController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add an instrument to your list", description = "Using a new ticker in a transaction also adds it.")
-    InstrumentResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateRequest request) {
+    InstrumentResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateInstrumentRequest request) {
         return InstrumentResponse.of(instruments.create(userId(jwt), request.ticker(), request.name()));
     }
 
     @PatchMapping("/{id}")
     @Operation(summary = "Rename an instrument", description = "The ticker can't be changed.")
     InstrumentResponse rename(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
-                              @Valid @RequestBody RenameRequest request) {
+                              @Valid @RequestBody RenameInstrumentRequest request) {
         return InstrumentResponse.of(instruments.rename(userId(jwt), id, request.name()));
     }
 
@@ -64,14 +64,14 @@ class InstrumentController {
         return UUID.fromString(jwt.getSubject());
     }
 
-    record CreateRequest(
+    record CreateInstrumentRequest(
             @NotNull @Schema(example = "PAS")
             @Pattern(regexp = "\\s*[A-Za-z0-9.\\-]{1,20}\\s*", message = "must be up to 20 letters, digits, dots or dashes")
             String ticker,
             @Size(max = 100, message = "must be at most 100 characters") @Schema(example = "Passus") String name) {
     }
 
-    record RenameRequest(@NotNull @Size(max = 100, message = "must be at most 100 characters") String name) {
+    record RenameInstrumentRequest(@NotNull @Size(max = 100, message = "must be at most 100 characters") String name) {
     }
 
     record InstrumentResponse(UUID id, String ticker, String name) {

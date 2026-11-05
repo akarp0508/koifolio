@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
+import { Instruments } from './components/Instruments'
 import { Login } from './components/Login'
 import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
@@ -32,7 +33,7 @@ function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(hasToken)
   const { theme, nextTheme } = useTheme()
-  const onTransactions = useHash() === '#transactions'
+  const hash = useHash()
 
   const logOut = useCallback(() => {
     clearToken()
@@ -70,8 +71,9 @@ function App() {
     <div className="layout">
       <nav className="sidebar">
         <strong className="brand">koifolio</strong>
-        <NavItem href="#accounts" current={!onTransactions} label="Accounts" />
-        <NavItem href="#transactions" current={onTransactions} label="Transactions" />
+        <NavItem href="#accounts" current={hash !== '#transactions' && hash !== '#instruments'} label="Accounts" />
+        <NavItem href="#transactions" current={hash === '#transactions'} label="Transactions" />
+        <NavItem href="#instruments" current={hash === '#instruments'} label="Instruments" />
         <div className="sidebar-footer">
           <div className="user">
             <span>{user.username}</span>
@@ -81,7 +83,9 @@ function App() {
         </div>
       </nav>
       <main className="content">
-        {onTransactions ? <Transactions /> : <Accounts />}
+        {hash === '#transactions' && <Transactions />}
+        {hash === '#instruments' && <Instruments />}
+        {hash !== '#transactions' && hash !== '#instruments' && <Accounts />}
       </main>
     </div>
   )

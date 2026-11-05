@@ -50,7 +50,7 @@ class AccountController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create an account", description = "The balance defaults to 0. The currency can't be changed later.")
-    AccountResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateRequest request) {
+    AccountResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateAccountRequest request) {
         return AccountResponse.of(accounts.create(userId(jwt), request.name(), request.description(),
                 request.currency(), request.balance()));
     }
@@ -64,7 +64,7 @@ class AccountController {
     @PatchMapping("/{id}")
     @Operation(summary = "Change an account", description = "Send only the fields to change.")
     AccountResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
-                           @Valid @RequestBody UpdateRequest request) {
+                           @Valid @RequestBody UpdateAccountRequest request) {
         return AccountResponse.of(accounts.update(userId(jwt), id, request.name(), request.description(),
                 request.balance()));
     }
@@ -80,7 +80,7 @@ class AccountController {
         return UUID.fromString(jwt.getSubject());
     }
 
-    record CreateRequest(
+    record CreateAccountRequest(
             @NotBlank @Size(max = 100, message = "must be at most 100 characters") String name,
             @Size(max = 2000, message = "must be at most 2000 characters") String description,
             @NotNull @Pattern(regexp = "[A-Z]{3}", message = "must be a 3-letter code like PLN")
@@ -89,7 +89,7 @@ class AccountController {
             @Schema(type = "string", example = "5000.00") BigDecimal balance) {
     }
 
-    record UpdateRequest(
+    record UpdateAccountRequest(
             @Pattern(regexp = ".*\\S.*", message = "must not be blank")
             @Size(max = 100, message = "must be at most 100 characters") String name,
             @Size(max = 2000, message = "must be at most 2000 characters") String description,

@@ -35,6 +35,13 @@ class SwaggerTests {
         }
 
         @Test
+        void requestTypesKeepTheirOwnSchemas() throws Exception {
+            mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.components.schemas.CreateAccountRequest.properties.currency").exists())
+                    .andExpect(jsonPath("$.components.schemas.CreateInstrumentRequest.properties.ticker").exists());
+        }
+
+        @Test
         void uiIsServed() throws Exception {
             mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk());
         }

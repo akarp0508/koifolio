@@ -26,10 +26,12 @@
 - **Fees are part of cost basis:** buy fees raise cost, sell fees reduce proceeds.
 - **Invalid history never blocks:** a sale of more than was held is saved and marked `oversold`, because backfilled history can arrive in any order or start partway through. Negative cash is allowed too.
 - **Balance:** the account balance is stored and each transaction with `affectsBalance` changes it; editing or deleting a transaction undoes its effect. Setting the balance by hand just sets the number and records `balanceSetOn`. The UI defaults `affectsBalance` to off for dates before that day, so backfilled history isn't counted twice.
+- **Going below zero asks first:** the server refuses with `negative_balance` unless the request confirms it, and the UI offers "Save anyway". This covers anything lowering the balance, and it's a confirmation, not a ban.
+- **Instruments are a private per-user list** of tickers with optional names, filled by hand or automatically from transactions. Transactions keep the ticker as text. A shared catalog with prices can sit behind this later.
 - **MVP transactions:** deposit, withdrawal, buy, sell, dividend, fee. The ticker is plain text, amounts are in the account's currency, and deleting an account deletes its transactions.
 - **v1 tax estimate:** unrealized is gain × rate per position; realized is per calendar year and account, with losses offsetting gains in that year. No carry-forward between years.
 - **Dividends:** stored as gross + withheld; the form also accepts net only (withheld = 0).
-- **Personal data is isolated, market facts are shared.** Each user's sector, risk, scenarios, thesis, plans and notes are private. Ticker, market and prices are stored once.
+- **Personal data is isolated, market facts are shared (later).** Each user's sector, risk, scenarios, thesis, plans and notes are private. When prices arrive, ticker, market and prices are stored once.
 - **FX date for costs is a setting:** previous publication by default (the Polish tax rule), or the transaction date.
 - **Agent transactions need review.** Agents can add transactions through MCP, but they arrive marked unvalidated and appear in an "Unvalidated changes" tab. They count in all numbers straight away. Approving clears the mark; rejecting soft-deletes the transaction. Agent edits to analysis apply immediately and go to the audit log. A settings screen for what MCP may do comes later.
 - **Database layer: JPA / Hibernate** with Spring Data JPA, chosen because the database will grow well beyond the current tables. Flyway owns the schema (`ddl-auto: validate`), and entities stay separate from the `domain` records. Native SQL is fine where JPA doesn't fit, e.g. `ON CONFLICT` upserts.

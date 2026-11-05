@@ -11,6 +11,10 @@ Build one small feature at a time. Each batch is committed, shown in Swagger and
 
 The MVP is complete once step 4 is tested. Scope for each step is agreed when we reach it.
 
+## Added after testing
+
+5. **Instruments and balance warning** (done): a private ticker list that fills itself, and a confirmation before going below zero.
+
 ## After the MVP
 
 The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:

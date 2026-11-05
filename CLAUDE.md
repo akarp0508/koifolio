@@ -18,8 +18,10 @@ Server commands run in `server/`:
 
 Other:
 
-- Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm test` (vitest), `npm run build` (tsc + vite), `npm run api:types` (regenerates `src/api/schema.d.ts` from a running server with Swagger on; it uses its own TypeScript 5 because openapi-typescript doesn't support the project's TypeScript 7)
+- Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm test` (vitest), `npm run build` (tsc + vite), `npm run api:types` (regenerates `src/api/schema.d.ts` from a running server with Swagger on, or from `KOIFOLIO_API`; it uses its own TypeScript 5 because openapi-typescript doesn't support the project's TypeScript 7)
 - Docker: `cp .env.example .env`, set the secrets, then `docker compose up -d --build`. Swagger UI: `http://localhost:8080/swagger-ui.html` (needs `KOIFOLIO_SWAGGER=true`). Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
+
+The Docker build type-checks `web`, so stale `schema.d.ts` fails it, and `docker compose up --build` then leaves the old container running. Check its exit code. After a breaking API change, run the new jar on a side port (`KOIFOLIO_SWAGGER=true java -jar server/target/koifolio.jar --server.port=18081`, with `.env` loaded), and generate with `KOIFOLIO_API=http://localhost:18081`. Request and response records need names unique across controllers, because springdoc merges same-named types.
 
 Spring Boot 4.1 (Boot 4 starter names, e.g. `spring-boot-starter-webmvc`). Base package `io.github.akarp0508.koifolio`. The Docker build copies `web/dist` into `server/src/main/resources/static` (git-ignored) so Spring Boot serves the UI.
 

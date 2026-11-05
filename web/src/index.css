@@ -427,3 +427,18 @@ td {
 .field-row.even .field:last-of-type {
   flex: 1;
 }
+
+.confirm {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--warning);
+  border-radius: 6px;
+}
+
+.confirm p {
+  margin: 0;
+}
+
+.confirm .modal-actions {
+  margin-top: 0.6rem;
+}

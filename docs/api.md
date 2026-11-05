@@ -103,19 +103,24 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 - Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect` and `oversold`, and leave out fields the type doesn't use.
 - Cash effects are rounded to the currency's decimals.
 - `oversold` marks a sale of more than was held at that point, per account and ticker. It's a warning, and it clears once the history adds up.
+- A change that takes the balance below zero returns `409 negative_balance`, with the resulting balance in `detail`, and saves nothing. Sending `allowNegativeBalance: true` goes ahead. Changes that don't lower the balance, and transactions with `affectsBalance` off, never ask.
 - A transaction or balance past 15 digits returns `400` (`amount_out_of_range`, `balance_out_of_range`).
 - Pagination, revisions and `version` come later.
 
 ## Instruments
 
+Implemented. Each user has their own private list of tickers.
+
 | Request | Purpose |
 |---|---|
-| `GET /instruments` | Instruments the user holds or has a profile for |
-| `GET /instruments/search?q=` | Search the catalog and price providers |
-| `POST /instruments` | Add a custom instrument or bond |
-| `GET /instruments/{id}` | Instrument + profile |
-| `PUT /instruments/{id}/profile` | Sector, risk, scenarios, thesis, Markdown note |
-| `GET /bond-presets` | Polish series templates |
+| `GET /instruments` | List yours, by ticker |
+| `POST /instruments` | `{"ticker", "name"}`; `name` is optional, a repeat gives `409 instrument_exists` |
+| `PATCH /instruments/{id}` | `{"name"}`; the ticker can't change |
+| `DELETE /instruments/{id}` | Remove from the list; transactions keep their ticker |
+
+A transaction using a new ticker adds it to the list.
+
+Planned: `GET /instruments/search`, `PUT /instruments/{id}/profile`, `GET /bond-presets`.
 
 ## Portfolio
 

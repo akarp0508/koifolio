@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Transaction, TransactionInput, TransactionType } from '../api/client'
+import type { Account, Instrument, Transaction, TransactionInput, TransactionType } from '../api/client'
 import { normalizeAmount } from '../format'
 import { TYPES, TYPE_LABELS, defaultAffectsBalance, isTrade, today } from '../transactions'
 import { Field } from './Field'
@@ -27,8 +27,16 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
   const [withheldTax, setWithheldTax] = useState(transaction?.withheldTax ?? '')
   // null until decided by hand, so the default can follow the date
   const [chosenAffectsBalance, setChosenAffectsBalance] = useState<boolean | null>(transaction?.affectsBalance ?? null)
+  const [instruments, setInstruments] = useState<Instrument[]>([])
   const [error, setError] = useState<ApiError | null>(null)
+  // The server's question when saving would take the balance below zero
+  const [balanceWarning, setBalanceWarning] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    // Only suggestions: without them, any ticker can still be typed
+    api.listInstruments().then(setInstruments).catch(() => {})
+  }, [])
 
   const account = accounts.find((candidate) => candidate.id === accountId)
   const balanceSetOn = account?.balanceSetOn ?? ''
@@ -37,10 +45,10 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
   const dividend = type === 'dividend'
   const trade = isTrade(type)
 
-  async function submit(event: FormEvent) {
-    event.preventDefault()
+  async function save(allowNegativeBalance: boolean) {
     setBusy(true)
     setError(null)
+    setBalanceWarning(null)
     const input: TransactionInput = {
       accountId,
       type,
@@ -52,6 +60,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
       amount: trade ? undefined : normalizeAmount(amount),
       withheldTax: dividend ? optionalAmount(withheldTax) : undefined,
       affectsBalance,
+      allowNegativeBalance,
     }
     try {
       if (transaction) {
@@ -61,10 +70,20 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
       }
       onSaved()
     } catch (e) {
-      setError(e as ApiError)
+      const failure = e as ApiError
+      if (failure.code === 'negative_balance') {
+        setBalanceWarning(failure.message)
+      } else {
+        setError(failure)
+      }
     } finally {
       setBusy(false)
     }
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    void save(false)
   }
 
   const fieldErrors = error?.fieldErrors ?? {}
@@ -72,7 +91,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
 
   return (
     <Modal title={transaction ? 'Edit transaction' : 'New transaction'} onClose={onClose}>
-      <form onSubmit={submit}>
+      <form onSubmit={submit} onChange={() => setBalanceWarning(null)}>
         <div className="field-row even">
           <label className="field">
             <span>Account</span>
@@ -98,12 +117,18 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
         {(trade || dividend) && (
           <Field
             label="Ticker"
+            list="tickers"
             required
             value={ticker}
             error={fieldErrors.ticker}
             onChange={(e) => setTicker(e.target.value.toUpperCase())}
           />
         )}
+        <datalist id="tickers">
+          {instruments.map((instrument) => (
+            <option key={instrument.id} value={instrument.ticker} label={instrument.name} />
+          ))}
+        </datalist>
         {trade && (
           <>
             <div className="field-row even">
@@ -166,10 +191,20 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
           <small className="check-hint">Off: dated before the balance was set on {balanceSetOn}</small>
         )}
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}
-        <div className="modal-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy}>Save</button>
-        </div>
+        {balanceWarning ? (
+          <div className="confirm" role="alert">
+            <p>{balanceWarning}. Save anyway?</p>
+            <div className="modal-actions">
+              <button type="button" onClick={() => setBalanceWarning(null)}>Go back</button>
+              <button type="button" className="primary" disabled={busy} onClick={() => save(true)}>Save anyway</button>
+            </div>
+          </div>
+        ) : (
+          <div className="modal-actions">
+            <button type="button" onClick={onClose}>Cancel</button>
+            <button className="primary" disabled={busy}>Save</button>
+          </div>
+        )}
       </form>
     </Modal>
   )

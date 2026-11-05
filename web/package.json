@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "api:types": "npx --yes -p typescript@5 -p openapi-typescript@7 openapi-typescript http://localhost:8080/v3/api-docs -o src/api/schema.d.ts"
+    "api:types": "npx --yes -p typescript@5 -p openapi-typescript@7 openapi-typescript ${KOIFOLIO_API:-http://localhost:8080}/v3/api-docs -o src/api/schema.d.ts"
   },
   "dependencies": {
     "react": "^19.3.1",

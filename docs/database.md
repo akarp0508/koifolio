@@ -19,6 +19,9 @@ transactions        id, user_id, account_id, type, date, ticker, quantity, price
                     withheld_tax, cash_effect, affects_balance, created_at
                     planned: revisions, soft delete, sequence, created_by, validated_at
 
+instruments         id, user_id, ticker, name, created_at
+                    UNIQUE (user_id, ticker)
+
 rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
 
 portfolio_snapshots user_id, account_id, date, value, cost, cash, currency

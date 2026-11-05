@@ -23,6 +23,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 
 ### v1
 - **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
+- **Instruments** — your own list of tickers, suggested when adding a transaction; new tickers join it automatically.
 - **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (Polish series as presets).
 - **Cost basis & tax** — average/FIFO and tax rate per account, with presets.
 - **Dashboard** — total value, P/L, cash, rule status (pass/fail), value over time (from daily snapshots), allocation by company / sector.

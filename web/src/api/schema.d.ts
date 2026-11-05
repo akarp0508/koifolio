@@ -50,6 +50,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/instruments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your instruments, by ticker */
+        get: operations["list_1"];
+        put?: never;
+        /**
+         * Add an instrument to your list
+         * @description Using a new ticker in a transaction also adds it.
+         */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -92,17 +113,41 @@ export interface paths {
             cookie?: never;
         };
         /** List your accounts */
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
         /**
          * Create an account
          * @description The balance defaults to 0. The currency can't be changed later.
          */
-        post: operations["create_1"];
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/instruments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove an instrument from your list
+         * @description Transactions keep their ticker.
+         */
+        delete: operations["delete_1"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename an instrument
+         * @description The ticker can't be changed.
+         */
+        patch: operations["rename"];
         trace?: never;
     };
     "/api/v1/accounts/{id}": {
@@ -120,7 +165,7 @@ export interface paths {
          * Delete an account
          * @description Also deletes its transactions.
          */
-        delete: operations["delete_1"];
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
         /**
@@ -196,6 +241,8 @@ export interface components {
             withheldTax?: string;
             /** @description Whether this changes the account balance. Off for backfilled history. */
             affectsBalance: boolean;
+            /** @description Go ahead even if this takes the balance below zero. Without it, that returns 409. */
+            allowNegativeBalance?: boolean;
         };
         TransactionResponse: {
             /** Format: uuid */
@@ -217,6 +264,18 @@ export interface components {
             affectsBalance?: boolean;
             oversold?: boolean;
         };
+        CreateInstrumentRequest: {
+            /** @example PAS */
+            ticker: string;
+            /** @example Passus */
+            name?: string;
+        };
+        InstrumentResponse: {
+            /** Format: uuid */
+            id?: string;
+            ticker?: string;
+            name?: string;
+        };
         RegisterRequest: {
             username: string;
             password: string;
@@ -235,7 +294,7 @@ export interface components {
             /** Format: int64 */
             expiresIn?: number;
         };
-        CreateRequest: {
+        CreateAccountRequest: {
             name: string;
             description?: string;
             /** @example PLN */
@@ -254,7 +313,10 @@ export interface components {
             /** Format: date */
             balanceSetOn?: string;
         };
-        UpdateRequest: {
+        RenameInstrumentRequest: {
+            name: string;
+        };
+        UpdateAccountRequest: {
             name?: string;
             description?: string;
             /** @example 5000.00 */
@@ -383,6 +445,50 @@ export interface operations {
             };
         };
     };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstrumentResponse"][];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateInstrumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstrumentResponse"];
+                };
+            };
+        };
+    };
     register: {
         parameters: {
             query?: never;
@@ -431,7 +537,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -451,7 +557,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -460,7 +566,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CreateRequest"];
+                "application/json": components["schemas"]["CreateAccountRequest"];
             };
         };
         responses: {
@@ -471,6 +577,52 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    delete_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    rename: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RenameInstrumentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstrumentResponse"];
                 };
             };
         };
@@ -497,7 +649,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    delete_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -528,7 +680,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["UpdateRequest"];
+                "application/json": components["schemas"]["UpdateAccountRequest"];
             };
         };
         responses: {
