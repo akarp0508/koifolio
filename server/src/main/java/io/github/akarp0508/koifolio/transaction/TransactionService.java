@@ -44,7 +44,7 @@ class TransactionService {
         this.instruments = instruments;
     }
 
-    record Listed(Transaction transaction, boolean oversold) {
+    record Listed(Transaction transaction, String currency, String ticker, boolean oversold) {
     }
 
     @Transactional(readOnly = true)
@@ -52,10 +52,13 @@ class TransactionService {
         authService.currentUser(userId);
         List<Transaction> all = transactions.findByUserId(userId);
         Set<UUID> oversold = oversold(all);
+        Map<UUID, String> currencies = currencies(userId);
+        Map<UUID, String> tickers = instruments.tickers(userId);
         return all.stream()
                 .filter(transaction -> accountId == null || transaction.getAccountId().equals(accountId))
                 .sorted(HISTORY_ORDER.reversed())
-                .map(transaction -> new Listed(transaction, oversold.contains(transaction.getId())))
+                .map(transaction -> new Listed(transaction, currencies.get(transaction.getAccountId()),
+                        tickers.get(transaction.getInstrumentId()), oversold.contains(transaction.getId())))
                 .toList();
     }
 
@@ -75,12 +78,10 @@ class TransactionService {
         TransactionValues values = validate(request, account.getCurrency());
         Transaction transaction = new Transaction(userId, account.getId());
         BigDecimal balanceBefore = account.getBalance();
-        transaction.apply(values);
+        transaction.apply(values, instrumentFor(userId, values));
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
-        transactions.save(transaction);
-        trackTicker(userId, values);
-        return listed(userId, transaction);
+        return listed(userId, transactions.save(transaction));
     }
 
     @Transactional
@@ -91,10 +92,9 @@ class TransactionService {
         TransactionValues values = validate(request, account.getCurrency());
         BigDecimal balanceBefore = account.getBalance();
         account.adjustBalance(transaction.balanceEffect().negate());
-        transaction.apply(values);
+        transaction.apply(values, instrumentFor(userId, values));
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
-        trackTicker(userId, values);
         return listed(userId, transaction);
     }
 
@@ -108,9 +108,7 @@ class TransactionService {
         transactions.delete(transaction);
     }
 
-    /** The account currency's decimal places, for showing amounts. */
-    @Transactional(readOnly = true)
-    Map<UUID, String> currencies(UUID userId) {
+    private Map<UUID, String> currencies(UUID userId) {
         Map<UUID, String> currencies = new HashMap<>();
         accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId)
                 .forEach(account -> currencies.put(account.getId(), account.getCurrency()));
@@ -119,7 +117,9 @@ class TransactionService {
 
     private Listed listed(UUID userId, Transaction transaction) {
         transactions.flush();
-        return new Listed(transaction, oversold(transactions.findByUserId(userId)).contains(transaction.getId()));
+        boolean oversold = oversold(transactions.findByUserId(userId)).contains(transaction.getId());
+        return new Listed(transaction, currencies(userId).get(transaction.getAccountId()),
+                instruments.tickers(userId).get(transaction.getInstrumentId()), oversold);
     }
 
     private Transaction find(UUID userId, UUID id) {
@@ -132,10 +132,8 @@ class TransactionService {
                 new ApiException(HttpStatus.NOT_FOUND, "account_not_found", "Account not found"));
     }
 
-    private void trackTicker(UUID userId, TransactionValues values) {
-        if (values.ticker() != null) {
-            instruments.addIfMissing(userId, values.ticker());
-        }
+    private UUID instrumentFor(UUID userId, TransactionValues values) {
+        return values.ticker() == null ? null : instruments.useTicker(userId, values.ticker());
     }
 
     /** Only a change that lowers the balance below zero asks, so an already negative account doesn't nag. */
@@ -158,13 +156,13 @@ class TransactionService {
 
     /** Sales of more than was held at that point, walking each account's history in order. */
     private static Set<UUID> oversold(List<Transaction> all) {
-        record Holding(UUID account, String ticker) {
+        record Holding(UUID account, UUID instrument) {
         }
 
         Map<Holding, BigDecimal> held = new HashMap<>();
         Set<UUID> oversold = new HashSet<>();
         all.stream().sorted(HISTORY_ORDER).forEach(transaction -> {
-            Holding holding = new Holding(transaction.getAccountId(), transaction.getTicker());
+            Holding holding = new Holding(transaction.getAccountId(), transaction.getInstrumentId());
             if (transaction.getType() == TransactionType.BUY) {
                 held.merge(holding, transaction.getQuantity(), BigDecimal::add);
             } else if (transaction.getType() == TransactionType.SELL) {

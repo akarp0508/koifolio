@@ -31,7 +31,8 @@ class Transaction {
     @Column(nullable = false)
     private LocalDate date;
 
-    private String ticker;
+    @Column(name = "instrument_id")
+    private UUID instrumentId;
 
     @Column(precision = 23, scale = 8)
     private BigDecimal quantity;
@@ -68,10 +69,10 @@ class Transaction {
         this.createdAt = Instant.now();
     }
 
-    void apply(TransactionValues values) {
+    void apply(TransactionValues values, UUID instrumentId) {
         type = values.type();
         date = values.date();
-        ticker = values.ticker();
+        this.instrumentId = instrumentId;
         quantity = values.quantity();
         price = values.price();
         fee = values.fee();
@@ -102,8 +103,8 @@ class Transaction {
         return date;
     }
 
-    String getTicker() {
-        return ticker;
+    UUID getInstrumentId() {
+        return instrumentId;
     }
 
     BigDecimal getQuantity() {

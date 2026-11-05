@@ -9,7 +9,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -39,11 +38,7 @@ class TransactionController {
     @GetMapping
     @Operation(summary = "List your transactions, newest first")
     List<TransactionResponse> list(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) UUID account) {
-        UUID userId = userId(jwt);
-        Map<UUID, String> currencies = transactions.currencies(userId);
-        return transactions.list(userId, account).stream()
-                .map(listed -> TransactionResponse.of(listed, currencies))
-                .toList();
+        return transactions.list(userId(jwt), account).stream().map(TransactionResponse::of).toList();
     }
 
     @PostMapping
@@ -52,23 +47,20 @@ class TransactionController {
             Amounts are in the account's currency. With affectsBalance on, the account balance follows \
             the transaction. A sale of more than is held is saved, with oversold set.""")
     TransactionResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody TransactionRequest request) {
-        UUID userId = userId(jwt);
-        return TransactionResponse.of(transactions.create(userId, request), transactions.currencies(userId));
+        return TransactionResponse.of(transactions.create(userId(jwt), request));
     }
 
     @GetMapping("/{id}")
     @Operation(summary = "Get one transaction")
     TransactionResponse get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        UUID userId = userId(jwt);
-        return TransactionResponse.of(transactions.get(userId, id), transactions.currencies(userId));
+        return TransactionResponse.of(transactions.get(userId(jwt), id));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Replace a transaction", description = "The balance follows the change. accountId is ignored.")
     TransactionResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                @Valid @RequestBody TransactionRequest request) {
-        UUID userId = userId(jwt);
-        return TransactionResponse.of(transactions.update(userId, id, request), transactions.currencies(userId));
+        return TransactionResponse.of(transactions.update(userId(jwt), id, request));
     }
 
     @DeleteMapping("/{id}")
@@ -93,10 +85,10 @@ class TransactionController {
                                String ticker, String quantity, String price, String fee, String amount,
                                String withheldTax, String cashEffect, boolean affectsBalance, boolean oversold) {
 
-        static TransactionResponse of(TransactionService.Listed listed, Map<UUID, String> currencies) {
+        static TransactionResponse of(TransactionService.Listed listed) {
             Transaction t = listed.transaction();
-            String currency = currencies.get(t.getAccountId());
-            return new TransactionResponse(t.getId(), t.getAccountId(), t.getType(), t.getDate(), currency, t.getTicker(),
+            String currency = listed.currency();
+            return new TransactionResponse(t.getId(), t.getAccountId(), t.getType(), t.getDate(), currency, listed.ticker(),
                     plain(t.getQuantity()), plain(t.getPrice()), money(t.getFee(), currency), money(t.getAmount(), currency),
                     money(t.getWithheldTax(), currency), money(t.getCashEffect(), currency),
                     t.isAffectsBalance(), listed.oversold());

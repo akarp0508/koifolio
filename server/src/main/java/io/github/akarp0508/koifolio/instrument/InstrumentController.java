@@ -55,7 +55,7 @@ class InstrumentController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Remove an instrument from your list", description = "Transactions keep their ticker.")
+    @Operation(summary = "Remove an instrument from your list", description = "Its transactions are kept.")
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
         instruments.delete(userId(jwt), id);
     }

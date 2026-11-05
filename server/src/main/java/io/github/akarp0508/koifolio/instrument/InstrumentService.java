@@ -4,7 +4,10 @@ import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,23 +29,38 @@ public class InstrumentService {
         return ticker.strip().toUpperCase(Locale.ROOT);
     }
 
-    /** Puts a ticker the user just used on their list, if it isn't there yet. */
+    /** The instrument for a ticker the user just used, putting it on their list if needed. */
     @Transactional
-    public void addIfMissing(UUID userId, String ticker) {
-        instruments.addIfMissing(userId, ticker);
+    public UUID useTicker(UUID userId, String ticker) {
+        return instruments.listAndGetId(userId, ticker);
+    }
+
+    /** Every ticker the user has by instrument id, including ones removed from their list. */
+    @Transactional(readOnly = true)
+    public Map<UUID, String> tickers(UUID userId) {
+        return instruments.findByUserId(userId).stream()
+                .collect(Collectors.toMap(Instrument::getId, Instrument::getTicker));
     }
 
     @Transactional(readOnly = true)
     List<Instrument> list(UUID userId) {
         authService.currentUser(userId);
-        return instruments.findByUserIdOrderByTicker(userId);
+        return instruments.findByUserIdAndListedTrueOrderByTicker(userId);
     }
 
     @Transactional
     Instrument create(UUID userId, String ticker, String name) {
         authService.currentUser(userId);
+        String normalized = normalizeTicker(ticker);
+        String cleanName = name == null ? "" : name.strip();
+        Optional<Instrument> existing = instruments.findByUserIdAndTicker(userId, normalized);
+        if (existing.isPresent() && !existing.get().isListed()) {
+            existing.get().setListed(true);
+            existing.get().setName(cleanName);
+            return existing.get();
+        }
         try {
-            return instruments.saveAndFlush(new Instrument(userId, normalizeTicker(ticker), name == null ? "" : name.strip()));
+            return instruments.saveAndFlush(new Instrument(userId, normalized, cleanName));
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(HttpStatus.CONFLICT, "instrument_exists", "This ticker is already on your list");
         }
@@ -59,11 +77,11 @@ public class InstrumentService {
     @Transactional
     void delete(UUID userId, UUID id) {
         authService.currentUser(userId);
-        instruments.delete(find(userId, id));
+        find(userId, id).setListed(false);
     }
 
     private Instrument find(UUID userId, UUID id) {
-        return instruments.findByIdAndUserId(id, userId).orElseThrow(() ->
+        return instruments.findByIdAndUserIdAndListedTrue(id, userId).orElseThrow(() ->
                 new ApiException(HttpStatus.NOT_FOUND, "instrument_not_found", "Instrument not found"));
     }
 }

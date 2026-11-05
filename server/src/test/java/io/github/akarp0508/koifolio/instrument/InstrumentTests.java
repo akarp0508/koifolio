@@ -130,6 +130,24 @@ class InstrumentTests {
     }
 
     @Test
+    void reAddingARemovedTickerUsesTheNewName() throws Exception {
+        String id = addedId();
+        as(anna, delete("/api/v1/instruments/" + id)).andExpect(status().isNoContent());
+
+        add(anna, "{\"ticker\":\"PAS\",\"name\":\"Renamed\"}").andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(id))
+                .andExpect(jsonPath("$.name").value("Renamed"));
+    }
+
+    @Test
+    void aRemovedInstrumentCannotBeChanged() throws Exception {
+        String id = addedId();
+        as(anna, delete("/api/v1/instruments/" + id)).andExpect(status().isNoContent());
+
+        as(anna, delete("/api/v1/instruments/" + id)).andExpect(status().isNotFound());
+    }
+
+    @Test
     void tickerMustBeValid() throws Exception {
         add(anna, "{\"ticker\":\"not valid!\"}").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errors[0].field").value("ticker"));

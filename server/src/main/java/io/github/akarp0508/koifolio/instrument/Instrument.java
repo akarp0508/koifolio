@@ -7,7 +7,7 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-/** A ticker on a user's own list. Transactions keep the ticker as text, so removing one loses nothing. */
+/** A ticker a user holds or follows. Removing one from their list only clears {@code listed}, for its transactions. */
 @Entity
 @Table(name = "instruments")
 class Instrument {
@@ -24,6 +24,9 @@ class Instrument {
     @Column(nullable = false)
     private String name;
 
+    @Column(nullable = false)
+    private boolean listed;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -35,6 +38,7 @@ class Instrument {
         this.userId = userId;
         this.ticker = ticker;
         this.name = name;
+        this.listed = true;
         this.createdAt = Instant.now();
     }
 
@@ -50,7 +54,15 @@ class Instrument {
         return name;
     }
 
+    boolean isListed() {
+        return listed;
+    }
+
     void setName(String name) {
         this.name = name;
+    }
+
+    void setListed(boolean listed) {
+        this.listed = listed;
     }
 }
