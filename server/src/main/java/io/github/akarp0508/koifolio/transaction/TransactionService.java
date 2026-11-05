@@ -5,6 +5,7 @@ import io.github.akarp0508.koifolio.FieldValidationException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
  * can't lose a balance update.
  */
 @Service
-class TransactionService {
+public class TransactionService {
 
     private static final Comparator<Transaction> HISTORY_ORDER =
             Comparator.comparing(Transaction::getDate).thenComparing(Transaction::getCreatedAt);
@@ -106,6 +107,19 @@ class TransactionService {
         account.adjustBalance(transaction.balanceEffect().negate());
         requireBalanceInRange(account);
         transactions.delete(transaction);
+    }
+
+    /** Every buy and sell, oldest first. */
+    @Transactional(readOnly = true)
+    public List<AccountTrade> tradesOldestFirst(UUID userId) {
+        return transactions.findByUserId(userId).stream()
+                .filter(transaction -> transaction.getType() == TransactionType.BUY
+                        || transaction.getType() == TransactionType.SELL)
+                .sorted(HISTORY_ORDER)
+                .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(),
+                        new Trade(transaction.getType() == TransactionType.BUY ? Trade.Side.BUY : Trade.Side.SELL,
+                                transaction.getQuantity(), transaction.getPrice(), transaction.getFee())))
+                .toList();
     }
 
     private Map<UUID, String> currencies(UUID userId) {

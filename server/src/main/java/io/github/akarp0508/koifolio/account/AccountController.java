@@ -1,5 +1,6 @@
 package io.github.akarp0508.koifolio.account;
 
+import io.github.akarp0508.koifolio.domain.CostMethod;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,7 +53,7 @@ class AccountController {
     @Operation(summary = "Create an account", description = "The balance defaults to 0. The currency can't be changed later.")
     AccountResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateAccountRequest request) {
         return AccountResponse.of(accounts.create(userId(jwt), request.name(), request.description(),
-                request.currency(), request.balance()));
+                request.currency(), request.balance(), request.costMethod()));
     }
 
     @GetMapping("/{id}")
@@ -66,7 +67,7 @@ class AccountController {
     AccountResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                            @Valid @RequestBody UpdateAccountRequest request) {
         return AccountResponse.of(accounts.update(userId(jwt), id, request.name(), request.description(),
-                request.balance()));
+                request.balance(), request.costMethod()));
     }
 
     @DeleteMapping("/{id}")
@@ -86,7 +87,8 @@ class AccountController {
             @NotNull @Pattern(regexp = "[A-Z]{3}", message = "must be a 3-letter code like PLN")
             @Schema(example = "PLN") String currency,
             @Digits(integer = 15, fraction = 4, message = DIGITS_MESSAGE)
-            @Schema(type = "string", example = "5000.00") BigDecimal balance) {
+            @Schema(type = "string", example = "5000.00") BigDecimal balance,
+            @Schema(description = "How positions work out cost. Defaults to average.") CostMethod costMethod) {
     }
 
     record UpdateAccountRequest(
@@ -94,18 +96,20 @@ class AccountController {
             @Size(max = 100, message = "must be at most 100 characters") String name,
             @Size(max = 2000, message = "must be at most 2000 characters") String description,
             @Digits(integer = 15, fraction = 4, message = DIGITS_MESSAGE)
-            @Schema(type = "string", example = "5000.00") BigDecimal balance) {
+            @Schema(type = "string", example = "5000.00") BigDecimal balance,
+            CostMethod costMethod) {
     }
 
     /** @param balanceSetOn the last day the balance was set by hand */
     record AccountResponse(UUID id, String name, String description, String currency,
-                           @Schema(example = "5000.00") String balance, LocalDate balanceSetOn) {
+                           @Schema(example = "5000.00") String balance, LocalDate balanceSetOn,
+                           CostMethod costMethod) {
 
         static AccountResponse of(Account account) {
             int digits = Currency.getInstance(account.getCurrency()).getDefaultFractionDigits();
             String balance = account.getBalance().setScale(digits, RoundingMode.UNNECESSARY).toPlainString();
             return new AccountResponse(account.getId(), account.getName(), account.getDescription(),
-                    account.getCurrency(), balance, account.getBalanceSetOn());
+                    account.getCurrency(), balance, account.getBalanceSetOn(), account.getCostMethod());
         }
     }
 }

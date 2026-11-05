@@ -1,7 +1,10 @@
 package io.github.akarp0508.koifolio.account;
 
+import io.github.akarp0508.koifolio.domain.CostMethod;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
@@ -34,6 +37,10 @@ public class Account {
     @Column(nullable = false, precision = 19, scale = 4)
     private BigDecimal balance;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cost_method", nullable = false)
+    private CostMethod costMethod;
+
     /** The last day the balance was set by hand. Transactions dated before it are backfill by default. */
     @Column(name = "balance_set_on", nullable = false)
     private LocalDate balanceSetOn;
@@ -44,13 +51,14 @@ public class Account {
     protected Account() {
     }
 
-    Account(UUID userId, String name, String description, String currency, BigDecimal balance) {
+    Account(UUID userId, String name, String description, String currency, BigDecimal balance, CostMethod costMethod) {
         this.id = UUID.randomUUID();
         this.userId = userId;
         this.name = name;
         this.description = description;
         this.currency = currency;
         this.balance = balance;
+        this.costMethod = costMethod;
         this.balanceSetOn = LocalDate.now();
         this.createdAt = Instant.now();
     }
@@ -75,8 +83,16 @@ public class Account {
         return balance;
     }
 
+    public CostMethod getCostMethod() {
+        return costMethod;
+    }
+
     LocalDate getBalanceSetOn() {
         return balanceSetOn;
+    }
+
+    void setCostMethod(CostMethod costMethod) {
+        this.costMethod = costMethod;
     }
 
     void setName(String name) {

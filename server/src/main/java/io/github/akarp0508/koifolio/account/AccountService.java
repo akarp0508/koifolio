@@ -2,6 +2,7 @@ package io.github.akarp0508.koifolio.account;
 
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.domain.CostMethod;
 import java.math.BigDecimal;
 import java.util.Currency;
 import java.util.List;
@@ -35,17 +36,18 @@ class AccountService {
     }
 
     @Transactional
-    Account create(UUID userId, String name, String description, String currencyCode, BigDecimal balance) {
+    Account create(UUID userId, String name, String description, String currencyCode, BigDecimal balance,
+                   CostMethod costMethod) {
         requireUser(userId);
         Currency currency = parseCurrency(currencyCode);
         BigDecimal amount = balance == null ? BigDecimal.ZERO : balance;
         requireFits(amount, currency);
         return accounts.save(new Account(userId, name.strip(), description == null ? "" : description,
-                currency.getCurrencyCode(), amount));
+                currency.getCurrencyCode(), amount, costMethod == null ? CostMethod.AVERAGE : costMethod));
     }
 
     @Transactional
-    Account update(UUID userId, UUID id, String name, String description, BigDecimal balance) {
+    Account update(UUID userId, UUID id, String name, String description, BigDecimal balance, CostMethod costMethod) {
         requireUser(userId);
         Account account = accounts.findForUpdate(id, userId).orElseThrow(AccountService::notFound);
         if (name != null) {
@@ -57,6 +59,9 @@ class AccountService {
         if (balance != null) {
             requireFits(balance, Currency.getInstance(account.getCurrency()));
             account.setBalance(balance);
+        }
+        if (costMethod != null) {
+            account.setCostMethod(costMethod);
         }
         return account;
     }
