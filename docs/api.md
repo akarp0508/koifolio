@@ -25,7 +25,7 @@ Implemented.
 
 | Request | Purpose |
 |---|---|
-| `POST /auth/register` | `{"username", "password"}` → `201 {"id", "username"}`. Only the first user, unless `koifolio.auth.registration-open` is on; otherwise `403 registration_closed` |
+| `POST /auth/register` | `{"username", "password"}` → `201 {"id", "username"}`, or `409 username_taken` |
 | `POST /auth/login` | `{"username", "password"}` → `{"accessToken", "expiresIn"}`, or `401 invalid_credentials` |
 | `GET /auth/me` | `{"id", "username"}`; needs a token |
 

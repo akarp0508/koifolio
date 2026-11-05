@@ -31,7 +31,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
 - **Unvalidated changes** — transactions added by agents count straight away, marked unvalidated, and wait in a tab for you to approve or reject.
-- **Login** — local user accounts (first user registers on first run), password, JWT access tokens.
+- **Login** — local user accounts with open registration, password, JWT access tokens.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 
 ### v1.1

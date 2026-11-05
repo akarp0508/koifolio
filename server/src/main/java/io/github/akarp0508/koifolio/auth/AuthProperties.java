@@ -4,5 +4,5 @@ import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 @ConfigurationProperties("koifolio.auth")
-public record AuthProperties(String jwtSecret, Duration tokenTtl, boolean registrationOpen) {
+public record AuthProperties(String jwtSecret, Duration tokenTtl) {
 }

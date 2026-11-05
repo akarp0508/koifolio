@@ -32,7 +32,7 @@ class AuthController {
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
     @SecurityRequirements
-    @Operation(summary = "Create a user", description = "Only the first user can register, unless registration is open.")
+    @Operation(summary = "Create a user")
     UserResponse register(@Valid @RequestBody RegisterRequest request) {
         return UserResponse.of(authService.register(request.username(), request.password()));
     }

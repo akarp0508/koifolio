@@ -5,7 +5,8 @@
 - **MVP first, one feature at a time:** login, then balance info, then transactions. See [roadmap.md](roadmap.md). Decisions below that go beyond the MVP are direction, not current scope.
 - **Web UI:** clean and minimal, one koi-orange accent, light/dark following the system with a toggle. Plain CSS with theme variables, no UI framework or router yet; both can be added when there's a need. English only for now; PL/EN comes later.
 - **The web token is kept in `localStorage`,** so a login survives closing the tab. That exposes it to any script on the page, which is why the app loads no third-party scripts.
-- **Auth is JWT.** Stateless HS256 access tokens through Spring Security's resource server support, signed with `KOIFOLIO_JWT_SECRET`. Passwords use BCrypt. Only the first user can register unless `koifolio.auth.registration-open` is on.
+- **Auth is JWT.** Stateless HS256 access tokens through Spring Security's resource server support, signed with `KOIFOLIO_JWT_SECRET`. Passwords use BCrypt.
+- **Registration is open to anyone who can reach the app.** Each user's data is isolated, so a new user can't affect anyone else's. Rate limiting is needed before exposing the app publicly, since nothing stops mass sign-ups or password guessing.
 - **Universal by design.** Nothing in the data model is tied to one broker, exchange, country or tax system. Polish things (bond series, tax presets, NBP) are presets and pluggable providers on top of a generic model.
 - **Automatic price fetching is limited for now** to GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse, to keep the fetching code simple. Any other instrument still works, with a manual price.
 - **Each account has one currency and one balance** in the MVP, set directly by the user. A multi-currency broker account means several accounts. This replaces the earlier plan of cash per currency within an account. How transactions affect the balance is decided in the transactions step.

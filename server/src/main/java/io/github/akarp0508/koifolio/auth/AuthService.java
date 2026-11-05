@@ -41,9 +41,6 @@ public class AuthService {
     }
 
     User register(String username, String password) {
-        if (!properties.registrationOpen() && users.count() > 0) {
-            throw new ApiException(HttpStatus.FORBIDDEN, "registration_closed", "Registration is closed");
-        }
         if (password.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
             throw new ApiException(HttpStatus.BAD_REQUEST, "password_too_long",
                     "Password must be at most " + MAX_PASSWORD_BYTES + " bytes");

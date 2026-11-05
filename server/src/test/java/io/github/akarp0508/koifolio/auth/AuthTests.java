@@ -82,11 +82,12 @@ class AuthTests {
     }
 
     @Test
-    void registrationClosesAfterTheFirstUser() throws Exception {
+    void anyoneCanRegisterButUsernamesAreUnique() throws Exception {
         postJson("register", "anna", PASSWORD).andExpect(status().isCreated());
+        postJson("register", "bob", PASSWORD).andExpect(status().isCreated());
 
-        postJson("register", "bob", PASSWORD).andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("registration_closed"));
+        postJson("register", "anna", PASSWORD).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("username_taken"));
     }
 
     @Test

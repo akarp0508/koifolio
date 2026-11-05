@@ -29,5 +29,3 @@ koifolio:
   auth:
     jwt-secret: ${KOIFOLIO_JWT_SECRET}
     token-ttl: 12h
-    # Only the first user can register unless this is on
-    registration-open: false
