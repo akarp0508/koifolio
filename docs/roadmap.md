@@ -22,3 +22,4 @@ The rest of the plans in this folder describe where the app may go, not a commit
 - Bonds, rules
 - Backfill, export/import, git backup, passkeys
 - Risk & scenarios view, rule checks with explanations
+- Rate limiting on login and registration: required before the app is exposed publicly
