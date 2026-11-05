@@ -1,6 +1,6 @@
 # REST API
 
-Base path `/api/v1`. JSON. Clients authenticate with a JWT: `Authorization: Bearer <token>`. The OpenAPI spec is generated from the controllers by `springdoc-openapi`, added in roadmap step 3, and `web` generates its types from it. Once controllers exist, the generated spec is the reference and this file is the plan. Swagger UI is open in dev and behind login in production.
+Base path `/api/v1`. JSON. Clients authenticate with a JWT: `Authorization: Bearer <token>`. The OpenAPI spec is generated from the controllers by `springdoc-openapi`, and `web` will generate its types from it. For anything implemented, the generated spec is the reference and this file is the plan. With `KOIFOLIO_SWAGGER=true`, Swagger UI is at `/swagger-ui.html` and the spec at `/v3/api-docs`.
 
 ## Conventions
 

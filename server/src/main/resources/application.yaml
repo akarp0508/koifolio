@@ -19,6 +19,12 @@ management:
       exposure:
         include: health
 
+springdoc:
+  api-docs:
+    enabled: ${KOIFOLIO_SWAGGER:false}
+  swagger-ui:
+    enabled: ${KOIFOLIO_SWAGGER:false}
+
 koifolio:
   auth:
     jwt-secret: ${KOIFOLIO_JWT_SECRET}

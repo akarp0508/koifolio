@@ -1,6 +1,6 @@
 # Roadmap
 
-Build one small feature at a time, each finished and tested before the next starts.
+Build one small feature at a time. Each batch is committed, shown in Swagger and tested by hand before the next one starts.
 
 ## MVP
 

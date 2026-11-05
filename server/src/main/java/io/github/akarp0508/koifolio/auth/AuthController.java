@@ -1,5 +1,8 @@
 package io.github.akarp0508.koifolio.auth;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
+@Tag(name = "Auth")
 class AuthController {
 
     private final AuthService authService;
@@ -28,16 +32,21 @@ class AuthController {
 
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
+    @SecurityRequirements
+    @Operation(summary = "Create a user", description = "Only the first user can register, unless registration is open.")
     UserResponse register(@Valid @RequestBody RegisterRequest request) {
         return UserResponse.of(authService.register(request.username(), request.password()));
     }
 
     @PostMapping("/login")
+    @SecurityRequirements
+    @Operation(summary = "Log in and get an access token")
     AuthService.Token login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request.username(), request.password());
     }
 
     @GetMapping("/me")
+    @Operation(summary = "Get the logged-in user")
     UserResponse me(@AuthenticationPrincipal Jwt jwt) {
         return UserResponse.of(authService.currentUser(UUID.fromString(jwt.getSubject())));
     }

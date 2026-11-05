@@ -28,7 +28,8 @@
 - **FX date for costs is a setting:** previous publication by default (the Polish tax rule), or the transaction date.
 - **Agent transactions need review.** Agents can add transactions through MCP, but they arrive marked unvalidated and appear in an "Unvalidated changes" tab. They count in all numbers straight away. Approving clears the mark; rejecting soft-deletes the transaction. Agent edits to analysis apply immediately and go to the audit log. A settings screen for what MCP may do comes later.
 - **Database layer: JPA / Hibernate** with Spring Data JPA, chosen because the database will grow well beyond the current tables. Flyway owns the schema (`ddl-auto: validate`), and entities stay separate from the `domain` records. Native SQL is fine where JPA doesn't fit, e.g. `ON CONFLICT` upserts.
-- **OpenAPI is generated from code** with `springdoc-openapi`, added with the first controllers. Swagger UI is open in dev and behind login in production.
+- **OpenAPI is generated from code** with `springdoc-openapi`, added with the first controllers. Swagger UI is switched on with `KOIFOLIO_SWAGGER` and is off by default. It's meant for local use and for testing each batch; a browser page can't send a JWT, so it can't sit behind login.
+- **Workflow:** every finished batch is committed, documented in Swagger and tested by hand by the user before the next batch starts.
 
 ## Open
 
