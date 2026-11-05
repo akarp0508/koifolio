@@ -12,22 +12,21 @@ export function Accounts() {
   const [error, setError] = useState<ApiError | null>(null)
   const [dialog, setDialog] = useState<Dialog | null>(null)
 
-  const load = useCallback(async () => {
-    setError(null)
-    try {
-      setAccounts(await api.listAccounts())
-    } catch (e) {
-      setError(e as ApiError)
-    }
-  }, [])
+  const fetchAccounts = useCallback(() =>
+    api.listAccounts()
+      .then((list) => {
+        setAccounts(list)
+        setError(null)
+      })
+      .catch((e: ApiError) => setError(e)), [])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    void fetchAccounts()
+  }, [fetchAccounts])
 
   function saved() {
     setDialog(null)
-    void load()
+    void fetchAccounts()
   }
 
   return (
@@ -39,7 +38,7 @@ export function Accounts() {
 
       {error && (
         <p className="error" role="alert">
-          {error.message} <button className="link" onClick={load}>Try again</button>
+          {error.message} <button className="link" onClick={fetchAccounts}>Try again</button>
         </p>
       )}
       {accounts === null && !error && <p className="muted">Loading…</p>}

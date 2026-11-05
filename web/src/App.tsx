@@ -18,30 +18,30 @@ function App() {
     setLoading(false)
   }, [])
 
-  const loadUser = useCallback(async () => {
-    setLoading(true)
-    try {
-      setUser(await api.me())
-    } catch {
+  const fetchUser = useCallback(() =>
+    api.me()
+      .then(setUser)
       // A rejected token already logged out; if the server is just unreachable, keep the token
-      setUser(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [logOut])
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false)), [])
 
   useEffect(() => {
     setUnauthorizedHandler(logOut)
     if (hasToken()) {
-      void loadUser()
+      void fetchUser()
     }
-  }, [loadUser, logOut])
+  }, [fetchUser, logOut])
+
+  function loggedIn() {
+    setLoading(true)
+    void fetchUser()
+  }
 
   if (loading) {
     return null
   }
   if (!user) {
-    return <Login onLogin={loadUser} />
+    return <Login onLogin={loggedIn} />
   }
 
   return (
