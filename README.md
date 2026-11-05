@@ -83,7 +83,7 @@ koifolio/
 - **server:** Spring Boot, Java 25.
   - The `domain` package holds all calculations as plain Java (no Spring, no I/O), so the UI, MCP tools and export produce the same numbers.
   - Spring Security (sessions, password then passkeys, OAuth2 authorization server for MCP clients)
-  - Spring Data + Flyway on Postgres
+  - Spring Data JPA + Flyway on Postgres
   - Spring AI MCP server
   - jsoup for scraping, JGit for the git backup
 - **web** only displays and edits data through the REST API; no calculations. TypeScript types are generated from the server's OpenAPI spec.

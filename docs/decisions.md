@@ -25,10 +25,10 @@
 - **Personal data is isolated, market facts are shared.** Each user's sector, risk, scenarios, thesis, plans and notes are private. Ticker, market and prices are stored once.
 - **FX date for costs is a setting:** previous publication by default (the Polish tax rule), or the transaction date.
 - **Agent transactions need review.** Agents can add transactions through MCP, but they arrive marked unvalidated and appear in an "Unvalidated changes" tab. They count in all numbers straight away. Approving clears the mark; rejecting soft-deletes the transaction. Agent edits to analysis apply immediately and go to the audit log. A settings screen for what MCP may do comes later.
+- **Database layer: JPA / Hibernate** with Spring Data JPA, chosen because the database will grow well beyond the current tables. Flyway owns the schema (`ddl-auto: validate`), and entities stay separate from the `domain` records. Native SQL is fine where JPA doesn't fit, e.g. `ON CONFLICT` upserts.
 
 ## Open
 
 | # | Question | Notes |
 |---|---|---|
-| 1 | Spring Data JDBC or JPA? | To debate at the end of planning. JDBC: explicit, simple, fits revisions. JPA: built-in inheritance for transaction types and easier dynamic filters. Must be settled before roadmap step 3 |
-| 2 | How do we fill the history gap for 2026? | Find the `investor-chart` parameters from the browser's network tab, or evaluate EODHD's free tier |
+| 1 | How do we fill the history gap for 2026? | Find the `investor-chart` parameters from the browser's network tab, or evaluate EODHD's free tier |

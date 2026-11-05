@@ -1,6 +1,6 @@
 # Database
 
-Postgres 18, migrations with Flyway. Money and quantities are `numeric`. Ids are UUIDs.
+Postgres 18, accessed through JPA / Hibernate. Flyway owns the schema, and Hibernate only validates it. Entities are separate from the `domain` records, with mappers between them. Money and quantities are `numeric`. Ids are UUIDs.
 
 User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is shared.
 

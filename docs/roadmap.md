@@ -8,4 +8,4 @@
 6. Backfill, export/import, git backup, passkeys. → **v1.1**
 7. Risk & scenarios view, rule checks with explanations.
 
-Step 1 is done. Next: step 2. Step 3 needs the database layer decision in [decisions.md](decisions.md).
+Step 1 is done. Next: step 2.

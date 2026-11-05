@@ -35,7 +35,7 @@ Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`w
   - `domain` package: pure domain logic (positions, average/FIFO cost basis, P/L, tax, bond valuation, rules). It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
   - REST API with an OpenAPI spec, plus an MCP server for agents (Spring AI).
   - Spring Security: local accounts, plus an OAuth2 authorization server for MCP clients.
-  - Spring Data + Flyway on Postgres.
+  - Spring Data JPA + Flyway on Postgres. Flyway owns the schema; JPA entities stay separate from `domain` records.
   - Price/FX/CPI providers and a scheduler for daily snapshots and backfill.
   - Serves the built `web` app.
 - `web/`: React + Vite + TypeScript + Recharts, PL/EN, light/dark. Display and editing only, with no calculations. API types are generated from the OpenAPI spec.
