@@ -2,6 +2,12 @@
 
 Acceptable: free APIs and scraping of public pages (no paid keys). Must work on a Raspberry Pi without a headless browser. Findings below were tested on 2026-11-04. None of the sources are official APIs, so every provider must fail gracefully.
 
+## Scope for now
+
+Automatic fetching covers GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse, all through the same providers, to keep the fetching code simple. Instruments on other exchanges work with manual prices.
+
+Coverage checked on 2026-11-05 through bankier's `instrument-search`: NVIDIA (NASDAQ), Coca-Cola (NYSE) and Siemens (Deutsche Börse) were found. Shell, LVMH and Toyota were not, so LSE, Euronext and Tokyo stay manual. Live quotes were confirmed for GPW, NewConnect and NASDAQ; NYSE and Deutsche Börse quotes still need a check.
+
 ## Current quotes
 | Source | Status |
 |---|---|

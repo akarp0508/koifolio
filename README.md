@@ -1,6 +1,6 @@
 # koifolio
 
-A self-hosted, AI-agent-friendly portfolio tracker for individual investors — built around the Warsaw Stock Exchange (GPW), but not limited to it.
+A self-hosted, AI-agent-friendly portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
 
 > **Status:** early development. The project skeleton exists; the app itself is not implemented yet.
 
@@ -15,7 +15,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
 - **Agents are first-class users.** A built-in MCP server exposes the same calculations the UI shows. Every agent change is validated and recorded in the audit log.
 - **Your data is never locked in.** Plain-text export/import in documented formats, plus an optional scheduled git backup.
-- **Multiple accounts.** Tax-advantaged and regular accounts (e.g. Polish IKE, OKI, IKZE), plus bonds — viewed separately or together.
+- **Multiple accounts.** Any kind of account, each with its own tax settings (e.g. a regular brokerage account, or a tax-free one like Polish IKE) — viewed separately or together.
 - **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
 - **Self-hosted, always on.** One Docker Compose stack (app + Postgres), light enough for a Raspberry Pi 5. Built multi-user from day one, even if you're the only user.
 
@@ -23,7 +23,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 
 ### v1
 - **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
-- **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (all Polish series).
+- **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (Polish series as presets).
 - **Cost basis & tax** — average/FIFO and tax rate per account, with presets.
 - **Dashboard** — total value, P/L, cash, rule status (pass/fail), value over time (from daily snapshots), allocation by company / sector.
 - **Prices** — quotes, FX (NBP), CPI and reference rates fetched on a schedule and cached; manual price override in the UI.

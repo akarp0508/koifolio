@@ -26,7 +26,7 @@ Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The 
 
 | Request | Purpose |
 |---|---|
-| `GET /settings` | `{"baseCurrency": "PLN"}` |
+| `GET /settings` | `{"baseCurrency": "PLN", "costFxRule": "previous_publication"}` |
 | `PATCH /settings` | Change settings; a base currency change recomputes snapshots |
 
 ## Accounts
@@ -42,8 +42,8 @@ Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The 
 ```json
 {
   "id": "…", "version": 1,
-  "name": "IKE (XTB)",
-  "description": "Long-term retirement account",
+  "name": "Retirement account",
+  "description": "Tax-free, held until retirement",
   "tax": {"method": "average", "rate": "0"}
 }
 ```

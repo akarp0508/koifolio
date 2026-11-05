@@ -2,6 +2,9 @@
 
 ## Settled
 
+- **Universal by design.** Nothing in the data model is tied to one broker, exchange, country or tax system. Polish things (bond series, tax presets, NBP) are presets and pluggable providers on top of a generic model.
+- **Automatic price fetching is limited for now** to GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse, to keep the fetching code simple. Any other instrument still works, with a manual price.
+- **Cash is tracked per currency within an account,** with a `CurrencyExchange` transaction for conversions. This suits any broker.
 - **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
 - **Deployment:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
 - **Storage:** Postgres is the source of truth. Plain text is export/import plus an optional one-way git backup.
@@ -20,7 +23,6 @@
 
 | # | Question | Recommended |
 |---|---|---|
-| 1 | Does the XTB account hold USD/EUR cash, or PLN only? | Track cash per currency in an account either way, with a `CurrencyExchange` transaction |
 | 2 | Are fees part of cost basis? | Yes: buy fees raise cost, sell fees reduce proceeds (as Polish tax does) |
 | 3 | What happens on invalid history? | Selling more than held is an error; negative cash is a warning |
 | 4 | How detailed is the v1 tax estimate? | Unrealized: gain × rate per position. Realized: per calendar year and account, losses offset gains within the year. No carry-forward between years |
@@ -29,3 +31,4 @@
 | 7 | Are instruments shared between users? | Yes: a shared catalog (ticker, market, currency, prices), with each user's sector, risk, scenarios and notes stored per user |
 | 8 | Spring Data JDBC or JPA? | Spring Data JDBC: explicit SQL, no lazy loading, fits the revision model |
 | 9 | How do we fill the history gap for 2026? | Find the `investor-chart` parameters from the browser's network tab, or evaluate EODHD's free tier |
+| 10 | Which FX date applies to costs? | A setting: previous publication (the Polish tax rule, default) or the transaction date, since other countries' rules differ |

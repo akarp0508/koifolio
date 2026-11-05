@@ -70,7 +70,7 @@ record Deposit(..., Money amount)
 record Withdrawal(..., Money amount)
 record Fee(..., Money amount)
 record Interest(..., Money amount)                       // interest on cash
-record CurrencyExchange(..., Money sold, Money bought)   // OPEN: decisions.md #1
+record CurrencyExchange(..., Money sold, Money bought)
 record BondBuy(..., InstrumentId series, BigDecimal units, Money unitPrice)
 record BondRedeem(..., InstrumentId series, BigDecimal units)
 record Split(..., InstrumentId instrument, BigDecimal ratio)
@@ -122,13 +122,13 @@ Weights and totals are computed for the selected view (one account or all).
 
 **Invalid history.** OPEN (#3): overselling is an error, negative cash a warning.
 
-**Currency.** Totals are reported in the base currency. Values use the latest NBP rate on or before `asOf`. Costs use the NBP mid rate from the last publication before the transaction date (D-1, as Polish tax rules require). NBP quotes against PLN, so other base currencies are cross rates through PLN. Foreign positions also show P/L in their own currency.
+**Currency.** Totals are reported in the base currency. Values use the latest rate on or before `asOf`. OPEN (decisions.md #10): costs use the rate from the last publication before the transaction date (the Polish tax rule) or, as a setting, the transaction date itself. The first FX provider is NBP, which quotes against PLN, so other base currencies are cross rates through PLN, limited to the currencies in its table A (32 on 2026-11-05). Foreign positions also show P/L in their own currency.
 
 **Tax.** OPEN (#4): an estimate only. Unrealized is gain × rate per position, with no tax on losses. Realized is summed per calendar year and account, with losses offsetting gains in that year.
 
 **Bonds.** Value is nominal plus interest accrued in the current period, compounded across periods when `CAPITALIZED`. The rate for each period comes from the `CouponModel`. `redemptionValue` subtracts the early-redemption fee. Exact rules (rounding, fee limits, which CPI month applies) must be verified against official data and tested against published values before presets ship.
 
-**Polish presets:** OTS, ROR, DOR, TOS, COI, EDO, ROS, ROD.
+**Presets:** Polish retail series first (OTS, ROR, DOR, TOS, COI, EDO, ROS, ROD). Any other bond can be defined by its parameters. CPI and reference rates are per-country inputs.
 
 ## Rules
 

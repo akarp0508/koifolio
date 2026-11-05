@@ -25,7 +25,7 @@ Spring Boot 4.1 (Boot 4 starter names, e.g. `spring-boot-starter-webmvc`). Base 
 
 ## What it is
 
-koifolio is a self-hosted portfolio tracker (GPW-focused, not GPW-only). It currently runs for a single user on a Raspberry Pi 5 (8 GB, arm64) over Tailscale, but it is designed multi-user from day one so it can later be hosted for others. Never commit personal portfolio data to this repo.
+koifolio is a self-hosted portfolio tracker (universal: not tied to any broker, exchange, country or tax system; Polish specifics and GPW are presets and providers on top of a generic model). It currently runs for a single user on a Raspberry Pi 5 (8 GB, arm64) over Tailscale, but it is designed multi-user from day one so it can later be hosted for others. Never commit personal portfolio data to this repo.
 
 ## Planned architecture
 
