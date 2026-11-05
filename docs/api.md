@@ -49,7 +49,7 @@ Implemented. Each account belongs to one user; another user's account returns `4
 | `POST /accounts` | Create |
 | `GET /accounts/{id}` | |
 | `PATCH /accounts/{id}` | Change `name`, `description` or `balance`; send only what changes |
-| `DELETE /accounts/{id}` | Delete |
+| `DELETE /accounts/{id}` | Delete, along with its transactions |
 
 ```json
 {
@@ -57,42 +57,54 @@ Implemented. Each account belongs to one user; another user's account returns `4
   "name": "Brokerage",
   "description": "Main account",
   "currency": "PLN",
-  "balance": "5000.00"
+  "balance": "5000.00",
+  "balanceSetOn": "2026-11-05"
 }
 ```
 
 - `balance` defaults to 0 and may be negative. It's returned as a string, with the currency's decimal places. More decimals than the currency has gives `400 invalid_amount`.
 - `currency` is a real ISO code in capitals, otherwise `400`. It can't be changed after creation.
-- Optimistic locking (`version`) and archiving come with transactions.
+- `balanceSetOn` is the last day the balance was changed by hand. Transactions don't move it.
+- Optimistic locking (`version`) and archiving come later.
 
 ## Transactions
 
+Implemented. Each belongs to one user and one account. Amounts are in the account's currency.
+
 | Request | Purpose |
 |---|---|
-| `GET /transactions` | Filters: `account`, `instrument`, `type`, `from`, `to`, `validated` |
-| `POST /transactions` | Create |
+| `GET /transactions` | Newest first; filter with `?account=` |
+| `POST /transactions` | Add; needs `accountId` |
 | `GET /transactions/{id}` | |
-| `PUT /transactions/{id}` | Edit: creates a revision |
-| `DELETE /transactions/{id}` | Soft delete |
-| `GET /transactions/{id}/revisions` | History |
-| `POST /transactions/{id}/validate` | Approve an agent transaction |
-| `POST /transactions/{id}/reject` | Reject it (soft delete) |
-
-`type` selects the fields, mirroring the records in [domain-model.md](domain-model.md):
+| `PUT /transactions/{id}` | Replace, except the account |
+| `DELETE /transactions/{id}` | Delete and undo its balance effect |
 
 ```json
 {
+  "accountId": "…",
   "type": "buy",
-  "account": "…",
   "date": "2026-03-12",
-  "instrument": "…",
-  "qty": "10",
-  "price": {"amount": "120.00", "currency": "PLN"},
-  "fee": {"amount": "0", "currency": "PLN"}
+  "ticker": "PAS",
+  "quantity": "10",
+  "price": "120.00",
+  "fee": "0",
+  "affectsBalance": true
 }
 ```
 
-Every write re-validates the account's whole history, so an edit that would oversell a later sale is rejected with `422`. `sequence` is optional and defaults to the end of that day.
+| Type | Fields | Cash effect |
+|---|---|---|
+| `deposit` | `amount` | +amount |
+| `withdrawal`, `fee` | `amount` | −amount |
+| `buy` | `ticker`, `quantity`, `price`, `fee` (optional) | −(quantity × price + fee) |
+| `sell` | `ticker`, `quantity`, `price`, `fee` (optional) | quantity × price − fee |
+| `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
+
+- Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect` and `oversold`, and leave out fields the type doesn't use.
+- Cash effects are rounded to the currency's decimals.
+- `oversold` marks a sale of more than was held at that point, per account and ticker. It's a warning, and it clears once the history adds up.
+- A transaction or balance past 15 digits returns `400` (`amount_out_of_range`, `balance_out_of_range`).
+- Pagination, revisions and `version` come later.
 
 ## Instruments
 

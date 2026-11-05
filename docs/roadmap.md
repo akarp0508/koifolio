@@ -7,9 +7,9 @@ Build one small feature at a time. Each batch is committed, shown in Swagger and
 1. **Login** (done): register, login, JWT access tokens.
 2. **Balance info** (done): accounts, each with one currency and one balance.
 3. **Frontend catch-up** (done): login page and accounts page.
-4. **Transactions:** API and screen together.
+4. **Transactions** (done): API and screen, with backfill support.
 
-Scope for each step is agreed when we reach it.
+The MVP is complete once step 4 is tested. Scope for each step is agreed when we reach it.
 
 ## After the MVP
 

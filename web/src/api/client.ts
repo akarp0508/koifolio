@@ -8,6 +8,11 @@ export type User = Required<Schemas['UserResponse']>
 export type Token = Required<Schemas['Token']>
 export type NewAccount = Schemas['CreateRequest']
 export type AccountChanges = Schemas['UpdateRequest']
+export type TransactionInput = Schemas['TransactionRequest']
+export type TransactionType = TransactionInput['type']
+// Fields a type doesn't use are left out of the response, so only these are always there
+export type Transaction = Schemas['TransactionResponse'] & Required<Pick<Schemas['TransactionResponse'],
+  'id' | 'accountId' | 'type' | 'date' | 'currency' | 'cashEffect' | 'affectsBalance' | 'oversold'>>
 
 const TOKEN_KEY = 'koifolio.token'
 
@@ -91,4 +96,9 @@ export const api = {
   createAccount: (account: NewAccount) => request<Account>('POST', '/accounts', account),
   updateAccount: (id: string, changes: AccountChanges) => request<Account>('PATCH', `/accounts/${id}`, changes),
   deleteAccount: (id: string) => request<void>('DELETE', `/accounts/${id}`),
+  listTransactions: () => request<Transaction[]>('GET', '/transactions'),
+  createTransaction: (input: TransactionInput) => request<Transaction>('POST', '/transactions', input),
+  updateTransaction: (id: string, input: TransactionInput) =>
+    request<Transaction>('PUT', `/transactions/${id}`, input),
+  deleteTransaction: (id: string) => request<void>('DELETE', `/transactions/${id}`),
 }

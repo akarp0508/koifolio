@@ -3,14 +3,36 @@ import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
 import { Login } from './components/Login'
+import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
 
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
+
+function useHash() {
+  const [hash, setHash] = useState(window.location.hash)
+
+  useEffect(() => {
+    const update = () => setHash(window.location.hash)
+    window.addEventListener('hashchange', update)
+    return () => window.removeEventListener('hashchange', update)
+  }, [])
+
+  return hash
+}
+
+function NavItem({ href, current, label }: { href: string; current: boolean; label: string }) {
+  return (
+    <a className={current ? 'nav-item active' : 'nav-item'} aria-current={current ? 'page' : undefined} href={href}>
+      {label}
+    </a>
+  )
+}
 
 function App() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(hasToken)
   const { theme, nextTheme } = useTheme()
+  const onTransactions = useHash() === '#transactions'
 
   const logOut = useCallback(() => {
     clearToken()
@@ -48,7 +70,8 @@ function App() {
     <div className="layout">
       <nav className="sidebar">
         <strong className="brand">koifolio</strong>
-        <a className="nav-item active" aria-current="page" href="#accounts">Accounts</a>
+        <NavItem href="#accounts" current={!onTransactions} label="Accounts" />
+        <NavItem href="#transactions" current={onTransactions} label="Transactions" />
         <div className="sidebar-footer">
           <div className="user">
             <span>{user.username}</span>
@@ -58,7 +81,7 @@ function App() {
         </div>
       </nav>
       <main className="content">
-        <Accounts />
+        {onTransactions ? <Transactions /> : <Accounts />}
       </main>
     </div>
   )

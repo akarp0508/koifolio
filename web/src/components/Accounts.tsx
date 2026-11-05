@@ -3,7 +3,7 @@ import { ApiError, api } from '../api/client'
 import type { Account } from '../api/client'
 import { formatAmount } from '../format'
 import { AccountDialog } from './AccountDialog'
-import { DeleteAccountDialog } from './DeleteAccountDialog'
+import { ConfirmDialog } from './ConfirmDialog'
 
 type Dialog = { kind: 'new' } | { kind: 'edit'; account: Account } | { kind: 'delete'; account: Account }
 
@@ -78,7 +78,13 @@ export function Accounts() {
         <AccountDialog account={dialog.account} onSaved={saved} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === 'delete' && (
-        <DeleteAccountDialog account={dialog.account} onDeleted={saved} onClose={() => setDialog(null)} />
+        <ConfirmDialog
+          title="Delete account?"
+          message={`“${dialog.account.name}” and all its transactions will be permanently deleted.`}
+          onConfirm={() => api.deleteAccount(dialog.account.id)}
+          onDone={saved}
+          onClose={() => setDialog(null)}
+        />
       )}
     </>
   )

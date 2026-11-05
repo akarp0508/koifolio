@@ -18,13 +18,15 @@
 - **Cost basis:** `average` or `fifo`, set per account.
 - **Bonds:** one generic model, with Polish retail series as presets.
 - **Base currency:** configurable, default PLN.
-- **Transactions are never destroyed:** edits create revisions, deletes are soft.
+- **Transactions are edited in place and deleted for real in the MVP.** Revisions and soft delete come with the audit log. This replaces "never destroyed" for now.
 - **Prices:** free APIs and scraping only, no headless browser.
 - **No Nix dev shell.** Local tools come from the system; Docker covers full builds.
 - **No CLI.** MCP covers what it was for.
 - **One backend module.** Calculations live in the `domain` package of `server`, not a separate module, because the server is their only user.
 - **Fees are part of cost basis:** buy fees raise cost, sell fees reduce proceeds.
-- **Invalid history:** selling more than held is an error; negative cash is a warning.
+- **Invalid history never blocks:** a sale of more than was held is saved and marked `oversold`, because backfilled history can arrive in any order or start partway through. Negative cash is allowed too.
+- **Balance:** the account balance is stored and each transaction with `affectsBalance` changes it; editing or deleting a transaction undoes its effect. Setting the balance by hand just sets the number and records `balanceSetOn`. The UI defaults `affectsBalance` to off for dates before that day, so backfilled history isn't counted twice.
+- **MVP transactions:** deposit, withdrawal, buy, sell, dividend, fee. The ticker is plain text, amounts are in the account's currency, and deleting an account deletes its transactions.
 - **v1 tax estimate:** unrealized is gain × rate per position; realized is per calendar year and account, with losses offsetting gains in that year. No carry-forward between years.
 - **Dividends:** stored as gross + withheld; the form also accepts net only (withheld = 0).
 - **Personal data is isolated, market facts are shared.** Each user's sector, risk, scenarios, thesis, plans and notes are private. Ticker, market and prices are stored once.

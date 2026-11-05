@@ -9,6 +9,7 @@
   --on-accent: #ffffff;
   --danger: #b91c1c;
   --on-danger: #ffffff;
+  --warning: #b45309;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
@@ -25,6 +26,7 @@
     --on-accent: #1c1c1a;
     --danger: #f87171;
     --on-danger: #1c1c1a;
+    --warning: #fbbf24;
   }
 }
 
@@ -43,6 +45,7 @@
   --on-accent: #1c1c1a;
   --danger: #f87171;
   --on-danger: #1c1c1a;
+  --warning: #fbbf24;
 }
 
 * {
@@ -68,7 +71,8 @@ h2 {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
   color: inherit;
 }
@@ -158,12 +162,18 @@ button.icon {
   font-size: 0.87rem;
 }
 
-.field input {
+.field input,
+.field select,
+.filter select {
   width: 100%;
   padding: 0.45rem 0.6rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
+}
+
+.filter select {
+  width: auto;
 }
 
 .field input[aria-invalid='true'] {
@@ -363,4 +373,57 @@ td {
   .content {
     padding: 1rem;
   }
+}
+
+/* Transactions */
+
+.filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--muted);
+  font-size: 0.87rem;
+}
+
+.not-in-balance {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.number.backfill {
+  color: var(--muted);
+}
+
+.warning {
+  margin-left: 0.4rem;
+  color: var(--warning);
+  cursor: help;
+}
+
+.check {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 0.25rem;
+}
+
+.check input {
+  margin-top: 0.3rem;
+}
+
+.check-hint {
+  display: block;
+  margin: 0 0 0.75rem 1.5rem;
+  color: var(--muted);
+  font-size: 0.87rem;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.field-row.even .field:last-of-type {
+  flex: 1;
 }

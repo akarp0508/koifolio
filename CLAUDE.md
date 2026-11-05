@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Building an MVP one feature at a time: login, balance info and their web pages are done, then transactions, API and screen together (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
+Building an MVP one feature at a time: login, balance info, their web pages and transactions are done (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
 
 ## Commands
 
@@ -42,7 +42,7 @@ Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`w
 
 Key constraints:
 - All user data is scoped by `user_id`; market data is shared. Money is `numeric`/`BigDecimal`, never floating point.
-- Transactions are never destroyed (edits create revisions, deletes are soft). Agent transactions count immediately but stay marked unvalidated until approved. Every change (UI or agent) goes to the audit log with its author.
+- Transactions are edited in place in the MVP; revisions and soft delete come with the audit log. Later, agent transactions count immediately but stay marked unvalidated until approved. Every change (UI or agent) goes to the audit log with its author.
 - Postgres is the source of truth. Plain text (YAML/JSONL/Markdown, format in `docs/export-format.md`) is export/import plus an optional one-way git backup, never a live sync.
 - Must run on arm64 with modest resources: no headless browser. Price providers are pluggable (free APIs or scraping, no paid keys) with a manual override. Current source findings and the provider chain are in `docs/price-sources.md`; respect robots.txt.
 

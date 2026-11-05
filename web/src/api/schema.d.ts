@@ -4,6 +4,52 @@
  */
 
 export interface paths {
+    "/api/v1/transactions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get one transaction */
+        get: operations["get"];
+        /**
+         * Replace a transaction
+         * @description The balance follows the change. accountId is ignored.
+         */
+        put: operations["update"];
+        post?: never;
+        /**
+         * Delete a transaction
+         * @description Undoes its effect on the balance.
+         */
+        delete: operations["delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your transactions, newest first */
+        get: operations["list"];
+        put?: never;
+        /**
+         * Add a transaction
+         * @description Amounts are in the account's currency. With affectsBalance on, the account balance follows the transaction. A sale of more than is held is saved, with oversold set.
+         */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -46,13 +92,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your accounts */
-        get: operations["list"];
+        get: operations["list_1"];
         put?: never;
         /**
          * Create an account
          * @description The balance defaults to 0. The currency can't be changed later.
          */
-        post: operations["create"];
+        post: operations["create_1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -67,18 +113,21 @@ export interface paths {
             cookie?: never;
         };
         /** Get one account */
-        get: operations["get"];
+        get: operations["get_1"];
         put?: never;
         post?: never;
-        /** Delete an account */
-        delete: operations["delete"];
+        /**
+         * Delete an account
+         * @description Also deletes its transactions.
+         */
+        delete: operations["delete_1"];
         options?: never;
         head?: never;
         /**
          * Change an account
          * @description Send only the fields to change.
          */
-        patch: operations["update"];
+        patch: operations["update_1"];
         trace?: never;
     };
     "/api/v1/auth/me": {
@@ -102,6 +151,72 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        TransactionRequest: {
+            /**
+             * Format: uuid
+             * @description Needed when creating. An existing transaction can't move to another account.
+             */
+            accountId?: string;
+            /** @enum {string} */
+            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee";
+            /**
+             * Format: date
+             * @example 2026-03-12
+             */
+            date: string;
+            /**
+             * @description buy, sell, dividend
+             * @example PAS
+             */
+            ticker?: string;
+            /**
+             * @description buy, sell
+             * @example 10
+             */
+            quantity?: string;
+            /**
+             * @description buy, sell. Per share, in the account's currency
+             * @example 120.00
+             */
+            price?: string;
+            /**
+             * @description buy, sell. Defaults to 0
+             * @example 0
+             */
+            fee?: string;
+            /**
+             * @description deposit, withdrawal, fee, and gross dividend
+             * @example 5000.00
+             */
+            amount?: string;
+            /**
+             * @description dividend. Defaults to 0
+             * @example 0
+             */
+            withheldTax?: string;
+            /** @description Whether this changes the account balance. Off for backfilled history. */
+            affectsBalance: boolean;
+        };
+        TransactionResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            accountId?: string;
+            /** @enum {string} */
+            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee";
+            /** Format: date */
+            date?: string;
+            currency?: string;
+            ticker?: string;
+            quantity?: string;
+            price?: string;
+            fee?: string;
+            amount?: string;
+            withheldTax?: string;
+            cashEffect?: string;
+            affectsBalance?: boolean;
+            oversold?: boolean;
+        };
         RegisterRequest: {
             username: string;
             password: string;
@@ -136,6 +251,8 @@ export interface components {
             currency?: string;
             /** @example 5000.00 */
             balance?: string;
+            /** Format: date */
+            balanceSetOn?: string;
         };
         UpdateRequest: {
             name?: string;
@@ -152,6 +269,120 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
+    update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
+    delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list: {
+        parameters: {
+            query?: {
+                account?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionResponse"][];
+                };
+            };
+        };
+    };
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TransactionRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
     register: {
         parameters: {
             query?: never;
@@ -200,7 +431,7 @@ export interface operations {
             };
         };
     };
-    list: {
+    list_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -220,7 +451,7 @@ export interface operations {
             };
         };
     };
-    create: {
+    create_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -244,7 +475,7 @@ export interface operations {
             };
         };
     };
-    get: {
+    get_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -266,7 +497,7 @@ export interface operations {
             };
         };
     };
-    delete: {
+    delete_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -286,7 +517,7 @@ export interface operations {
             };
         };
     };
-    update: {
+    update_1: {
         parameters: {
             query?: never;
             header?: never;

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { ApiError, api } from '../api/client'
-import type { Account } from '../api/client'
+import { ApiError } from '../api/client'
 import { Modal } from './Modal'
 
-export function DeleteAccountDialog({ account, onDeleted, onClose }: {
-  account: Account
-  onDeleted: () => void
+export function ConfirmDialog({ title, message, onConfirm, onDone, onClose }: {
+  title: string
+  message: string
+  onConfirm: () => Promise<void>
+  onDone: () => void
   onClose: () => void
 }) {
   const [error, setError] = useState<ApiError | null>(null)
@@ -15,8 +16,8 @@ export function DeleteAccountDialog({ account, onDeleted, onClose }: {
     setBusy(true)
     setError(null)
     try {
-      await api.deleteAccount(account.id)
-      onDeleted()
+      await onConfirm()
+      onDone()
     } catch (e) {
       setError(e as ApiError)
     } finally {
@@ -25,8 +26,8 @@ export function DeleteAccountDialog({ account, onDeleted, onClose }: {
   }
 
   return (
-    <Modal title="Delete account?" onClose={onClose}>
-      <p>“{account.name}” will be permanently deleted.</p>
+    <Modal title={title} onClose={onClose}>
+      <p>{message}</p>
       {error && <p className="error" role="alert">{error.message}</p>}
       <div className="modal-actions">
         <button type="button" onClick={onClose}>Cancel</button>

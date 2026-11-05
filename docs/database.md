@@ -9,19 +9,15 @@ User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is 
 ```
 users               id, username, password_hash, base_currency, cost_fx_rule, created_at
 
-accounts            id, user_id, name, description, currency, balance, created_at
+accounts            id, user_id, name, description, currency, balance, balance_set_on, created_at
                     planned: tax_method, tax_rate, archived_at
 
 instrument_profiles user_id, instrument_id, sector, risk, scenarios (jsonb), thesis, note, updated_at
                     PK (user_id, instrument_id)
 
-transactions        id, user_id, account_id, current_revision, created_by, validated_at, validated_by,
-                    deleted_at
-transaction_revisions
-                    transaction_id, revision, date, sequence, type,
-                    instrument_id, to_instrument_id, quantity, price, amount, fee, withheld_tax,
-                    currency, amount_2, currency_2, ratio, cost_fraction, created_at
-                    PK (transaction_id, revision)
+transactions        id, user_id, account_id, type, date, ticker, quantity, price, fee, amount,
+                    withheld_tax, cash_effect, affects_balance, created_at
+                    planned: revisions, soft delete, sequence, created_by, validated_at
 
 rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
 
@@ -35,11 +31,9 @@ audit_log           id, user_id, actor_type (user | agent), actor_name, entity_t
                     action, before (jsonb), after (jsonb), created_at
 ```
 
-- Editing a transaction adds a revision and bumps `current_revision`. Deleting sets `deleted_at`.
-- Agent transactions have `validated_at` null until approved; UI transactions are validated on creation. Rejecting one sets `deleted_at`.
-- Rejecting or back-dating a transaction recomputes snapshots from its date onwards.
-- Each type uses a subset of the revision columns, enforced by a `CHECK` per type.
-- `amount_2` / `currency_2` hold the bought side of a `CurrencyExchange`.
+- Each type uses a subset of the columns, enforced by a `CHECK`.
+- `cash_effect` is stored, so undoing a transaction subtracts exactly what was applied. Writes lock the account row.
+- Deleting an account deletes its transactions.
 - Accounts with transactions are archived, not deleted.
 - Snapshots are per account; the "all accounts" chart sums them. Changing the base currency recomputes them.
 
