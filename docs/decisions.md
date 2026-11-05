@@ -18,17 +18,17 @@
 - **No Nix dev shell.** Local tools come from the system; Docker covers full builds.
 - **No CLI.** MCP covers what it was for.
 - **One backend module.** Calculations live in the `domain` package of `server`, not a separate module, because the server is their only user.
+- **Fees are part of cost basis:** buy fees raise cost, sell fees reduce proceeds.
+- **Invalid history:** selling more than held is an error; negative cash is a warning.
+- **v1 tax estimate:** unrealized is gain × rate per position; realized is per calendar year and account, with losses offsetting gains in that year. No carry-forward between years.
+- **Dividends:** stored as gross + withheld; the form also accepts net only (withheld = 0).
+- **Personal data is isolated, market facts are shared.** Each user's sector, risk, scenarios, thesis, plans and notes are private. Ticker, market and prices are stored once.
+- **FX date for costs is a setting:** previous publication by default (the Polish tax rule), or the transaction date.
+- **Agent transactions need review.** Agents can add transactions through MCP, but they arrive marked unvalidated and appear in an "Unvalidated changes" tab. They count in all numbers straight away. Approving clears the mark; rejecting soft-deletes the transaction. Agent edits to analysis apply immediately and go to the audit log. A settings screen for what MCP may do comes later.
 
 ## Open
 
-| # | Question | Recommended |
+| # | Question | Notes |
 |---|---|---|
-| 2 | Are fees part of cost basis? | Yes: buy fees raise cost, sell fees reduce proceeds (as Polish tax does) |
-| 3 | What happens on invalid history? | Selling more than held is an error; negative cash is a warning |
-| 4 | How detailed is the v1 tax estimate? | Unrealized: gain × rate per position. Realized: per calendar year and account, losses offset gains within the year. No carry-forward between years |
-| 5 | How are dividends entered? | Store gross + withheld; the form also accepts net only (withheld = 0) |
-| 6 | Can agents write transactions? | Off by default: agents get read + analysis, transactions need an explicit grant |
-| 7 | Are instruments shared between users? | Yes: a shared catalog (ticker, market, currency, prices), with each user's sector, risk, scenarios and notes stored per user |
-| 8 | Spring Data JDBC or JPA? | Spring Data JDBC: explicit SQL, no lazy loading, fits the revision model |
-| 9 | How do we fill the history gap for 2026? | Find the `investor-chart` parameters from the browser's network tab, or evaluate EODHD's free tier |
-| 10 | Which FX date applies to costs? | A setting: previous publication (the Polish tax rule, default) or the transaction date, since other countries' rules differ |
+| 1 | Spring Data JDBC or JPA? | To debate at the end of planning. JDBC: explicit, simple, fits revisions. JPA: built-in inheritance for transaction types and easier dynamic filters. Must be settled before roadmap step 3 |
+| 2 | How do we fill the history gap for 2026? | Find the `investor-chart` parameters from the browser's network tab, or evaluate EODHD's free tier |

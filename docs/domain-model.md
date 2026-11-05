@@ -8,7 +8,7 @@ The `domain` package in `server` is pure Java: no Spring, no I/O, no users. The 
 PortfolioState state = Portfolio.replay(transactions, accounts, instruments, asOf, marketData);
 ```
 
-Replaying transactions up to `asOf` produces everything. The same call serves the dashboard (`asOf` = today), daily snapshots and backfill (`asOf` = a past date).
+Replaying transactions up to `asOf` produces everything. Unvalidated agent transactions are replayed like any others; the review state lives in the server. The same call serves the dashboard (`asOf` = today), daily snapshots and backfill (`asOf` = a past date).
 
 ## Values
 
@@ -47,7 +47,7 @@ record Floating(BigDecimal firstPeriodRate, BigDecimal margin)   // reference ra
 
 enum InterestMode { CAPITALIZED, PAID }
 
-// Per user, see decisions.md #7
+// Private per user
 record InstrumentProfile(InstrumentId id, String sector, Integer risk /* 1–5 */,
                          Scenarios scenarios, String thesis, String note, LocalDate updated)
 ```
@@ -118,13 +118,13 @@ Weights and totals are computed for the selected view (one account or all).
 
 **Lots.** Lots are tracked per account and instrument. A sale consumes them according to the account's method: oldest first for FIFO, the average cost for AVERAGE.
 
-**Fees.** OPEN (decisions.md #2): included in cost basis.
+**Fees.** Included in cost basis: buy fees raise cost, sell fees reduce proceeds.
 
-**Invalid history.** OPEN (#3): overselling is an error, negative cash a warning.
+**Invalid history.** Overselling is an error, negative cash a warning.
 
-**Currency.** Totals are reported in the base currency. Values use the latest rate on or before `asOf`. OPEN (decisions.md #10): costs use the rate from the last publication before the transaction date (the Polish tax rule) or, as a setting, the transaction date itself. The first FX provider is NBP, which quotes against PLN, so other base currencies are cross rates through PLN, limited to the currencies in its table A (32 on 2026-11-05). Foreign positions also show P/L in their own currency.
+**Currency.** Totals are reported in the base currency. Values use the latest rate on or before `asOf`. Costs use the rate from the last publication before the transaction date (the Polish tax rule) by default or, as a setting, the transaction date itself. The first FX provider is NBP, which quotes against PLN, so other base currencies are cross rates through PLN, limited to the currencies in its table A (32 on 2026-11-05). Foreign positions also show P/L in their own currency.
 
-**Tax.** OPEN (#4): an estimate only. Unrealized is gain × rate per position, with no tax on losses. Realized is summed per calendar year and account, with losses offsetting gains in that year.
+**Tax.** An estimate only. Unrealized is gain × rate per position, with no tax on losses. Realized is summed per calendar year and account, with losses offsetting gains in that year.
 
 **Bonds.** Value is nominal plus interest accrued in the current period, compounded across periods when `CAPITALIZED`. The rate for each period comes from the `CouponModel`. `redemptionValue` subtracts the early-redemption fee. Exact rules (rounding, fee limits, which CPI month applies) must be verified against official data and tested against published values before presets ship.
 

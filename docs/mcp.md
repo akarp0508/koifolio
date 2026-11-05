@@ -12,7 +12,7 @@ Granted per MCP client, as OAuth scopes:
 |---|---|---|
 | `portfolio:read` | All read tools | on |
 | `analysis:write` | Profiles and notes | on |
-| `transactions:write` | Adding transactions | off (OPEN: decisions.md #6) |
+| `transactions:write` | Adding transactions, marked unvalidated | on |
 | `rules:write` | Changing rules | off |
 
 ## Tools
@@ -30,6 +30,12 @@ Granted per MCP client, as OAuth scopes:
 | `update_rules` | rule definition | rules:write |
 
 Account descriptions are included in `list_accounts`, so agents can use the notes you keep there.
+
+## Unvalidated transactions
+
+Transactions added by an agent are marked unvalidated and listed in the "Unvalidated changes" tab. They count in all numbers straight away, and the UI marks them. You approve them, which clears the mark, or reject them, which soft-deletes them. Agent edits to analysis apply immediately.
+
+A settings screen for choosing what MCP may do comes later. Until then, scopes are chosen when a client is authorized.
 
 ## Audit
 

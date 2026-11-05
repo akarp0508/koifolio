@@ -13,7 +13,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 ## Core ideas
 
 - **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
-- **Agents are first-class users.** A built-in MCP server exposes the same calculations the UI shows. Every agent change is validated and recorded in the audit log.
+- **Agents are first-class users.** A built-in MCP server exposes the same calculations the UI shows. Every agent change is checked by the same code as the UI and recorded in the audit log, and agent transactions wait for your review.
 - **Your data is never locked in.** Plain-text export/import in documented formats, plus an optional scheduled git backup.
 - **Multiple accounts.** Any kind of account, each with its own tax settings (e.g. a regular brokerage account, or a tax-free one like Polish IKE) — viewed separately or together.
 - **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
@@ -30,6 +30,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
+- **Unvalidated changes** — transactions added by agents count straight away, marked unvalidated, and wait in a tab for you to approve or reject.
 - **Login** — local user accounts (first user created on first run), password.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 
@@ -45,6 +46,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - Broker import (e.g. XTB xlsx export).
 - Agent skills shipped with the repo (e.g. "update company note after quarterly report").
 - Event calendar (earnings dates) read from notes.
+- MCP settings: choose what agents may do.
 - Hosting for others: signup/invites, OIDC, admin.
 
 ## UI

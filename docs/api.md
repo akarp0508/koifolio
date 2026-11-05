@@ -52,12 +52,14 @@ Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The 
 
 | Request | Purpose |
 |---|---|
-| `GET /transactions` | Filters: `account`, `instrument`, `type`, `from`, `to` |
+| `GET /transactions` | Filters: `account`, `instrument`, `type`, `from`, `to`, `validated` |
 | `POST /transactions` | Create |
 | `GET /transactions/{id}` | |
 | `PUT /transactions/{id}` | Edit: creates a revision |
 | `DELETE /transactions/{id}` | Soft delete |
 | `GET /transactions/{id}/revisions` | History |
+| `POST /transactions/{id}/validate` | Approve an agent transaction |
+| `POST /transactions/{id}/reject` | Reject it (soft delete) |
 
 `type` selects the fields, mirroring the records in [domain-model.md](domain-model.md):
 
@@ -106,6 +108,7 @@ All take `account` (omit for all accounts) and `asOf` (default today). Calculati
   "pnl": {"amount": "4200.00", "currency": "PLN"},
   "cash": {"amount": "1000.00", "currency": "PLN"},
   "rules": {"passed": 2, "total": 2},
+  "unvalidatedTransactions": 1,
   "warnings": [{"code": "missing_price", "instrument": "…"}]
 }
 ```

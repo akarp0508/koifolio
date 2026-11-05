@@ -2,7 +2,7 @@
 
 Postgres 18, migrations with Flyway. Money and quantities are `numeric`. Ids are UUIDs.
 
-User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is shared (OPEN: decisions.md #7).
+User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is shared.
 
 ## User data
 
@@ -14,7 +14,8 @@ accounts            id, user_id, name, description, tax_method, tax_rate, archiv
 instrument_profiles user_id, instrument_id, sector, risk, scenarios (jsonb), thesis, note, updated_at
                     PK (user_id, instrument_id)
 
-transactions        id, user_id, account_id, current_revision, deleted_at
+transactions        id, user_id, account_id, current_revision, created_by, validated_at, validated_by,
+                    deleted_at
 transaction_revisions
                     transaction_id, revision, date, sequence, type,
                     instrument_id, to_instrument_id, quantity, price, amount, fee, withheld_tax,
@@ -34,6 +35,8 @@ audit_log           id, user_id, actor_type (user | agent), actor_name, entity_t
 ```
 
 - Editing a transaction adds a revision and bumps `current_revision`. Deleting sets `deleted_at`.
+- Agent transactions have `validated_at` null until approved; UI transactions are validated on creation. Rejecting one sets `deleted_at`.
+- Rejecting or back-dating a transaction recomputes snapshots from its date onwards.
 - Each type uses a subset of the revision columns, enforced by a `CHECK` per type.
 - `amount_2` / `currency_2` hold the bought side of a `CurrencyExchange`.
 - Accounts with transactions are archived, not deleted.
