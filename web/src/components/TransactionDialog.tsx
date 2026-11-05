@@ -3,11 +3,12 @@ import type { FormEvent } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Instrument, Transaction, TransactionInput, TransactionType } from '../api/client'
 import { normalizeAmount } from '../format'
-import { TYPES, TYPE_LABELS, defaultAffectsBalance, isTrade, today } from '../transactions'
+import { TYPES, TYPE_LABELS, defaultAffectsBalance, isTrade, tickerOptions, today } from '../transactions'
 import { Field } from './Field'
 import { Modal } from './Modal'
 
 const optionalAmount = (value: string) => normalizeAmount(value) || undefined
+const NEW_TICKER = 'new-ticker'
 
 export function TransactionDialog({ transaction, accounts, initialAccountId, onSaved, onClose }: {
   transaction: Transaction | null
@@ -27,15 +28,16 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
   const [withheldTax, setWithheldTax] = useState(transaction?.withheldTax ?? '')
   // null until decided by hand, so the default can follow the date
   const [chosenAffectsBalance, setChosenAffectsBalance] = useState<boolean | null>(transaction?.affectsBalance ?? null)
-  const [instruments, setInstruments] = useState<Instrument[]>([])
+  const [instruments, setInstruments] = useState<Instrument[] | null>(null)
+  const [typingTicker, setTypingTicker] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
   // The server's question when saving would take the balance below zero
   const [balanceWarning, setBalanceWarning] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   useEffect(() => {
-    // Only suggestions: without them, any ticker can still be typed
-    api.listInstruments().then(setInstruments).catch(() => {})
+    // If the list can't load, the ticker can still be typed
+    api.listInstruments().then(setInstruments).catch(() => setInstruments([]))
   }, [])
 
   const account = accounts.find((candidate) => candidate.id === accountId)
@@ -114,21 +116,49 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
           error={fieldErrors.date}
           onChange={(e) => setDate(e.target.value)}
         />
-        {(trade || dividend) && (
-          <Field
-            label="Ticker"
-            list="tickers"
-            required
-            value={ticker}
-            error={fieldErrors.ticker}
-            onChange={(e) => setTicker(e.target.value.toUpperCase())}
-          />
-        )}
-        <datalist id="tickers">
-          {instruments.map((instrument) => (
-            <option key={instrument.id} value={instrument.ticker} label={instrument.name} />
-          ))}
-        </datalist>
+        {(trade || dividend) && (typingTicker || instruments?.length === 0 ? (
+          <>
+            <Field
+              label="Ticker"
+              autoFocus={typingTicker}
+              required
+              value={ticker}
+              error={fieldErrors.ticker}
+              onChange={(e) => setTicker(e.target.value.toUpperCase())}
+            />
+            {typingTicker && (
+              <button type="button" className="link field-link" onClick={() => {
+                setTypingTicker(false)
+                setTicker('')
+              }}>Choose from my list</button>
+            )}
+          </>
+        ) : (
+          <label className="field">
+            <span>Ticker</span>
+            <select
+              required
+              disabled={instruments === null}
+              value={ticker}
+              aria-invalid={fieldErrors.ticker !== undefined}
+              onChange={(e) => {
+                if (e.target.value === NEW_TICKER) {
+                  setTypingTicker(true)
+                  setTicker('')
+                } else {
+                  setTicker(e.target.value)
+                }
+              }}
+            >
+              <option value="" disabled>{instruments === null ? 'Loading…' : 'Choose…'}</option>
+              {tickerOptions(instruments ?? [], ticker).map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+              <option value={NEW_TICKER}>New ticker…</option>
+            </select>
+            {fieldErrors.ticker && <small className="field-error">{fieldErrors.ticker}</small>}
+          </label>
+        ))}
         {trade && (
           <>
             <div className="field-row even">

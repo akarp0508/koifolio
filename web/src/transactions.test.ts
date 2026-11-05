@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from './api/client'
-import { defaultAffectsBalance, details, signedAmount, today } from './transactions'
+import { defaultAffectsBalance, details, instrumentLabel, signedAmount, tickerOptions, today } from './transactions'
 
 const THIN = ' '
 
@@ -41,6 +41,26 @@ describe('details', () => {
 
   it('is empty for cash', () => {
     expect(details({ ...base, type: 'deposit', amount: '50.00' })).toBe('')
+  })
+})
+
+describe('instrumentLabel', () => {
+  it('adds the name when there is one', () => {
+    expect(instrumentLabel({ id: '1', ticker: 'PAS', name: 'Passus' })).toBe('PAS — Passus')
+    expect(instrumentLabel({ id: '1', ticker: 'PAS', name: '' })).toBe('PAS')
+  })
+})
+
+describe('tickerOptions', () => {
+  const instruments = [{ id: '1', ticker: 'PAS', name: 'Passus' }, { id: '2', ticker: 'XTB', name: '' }]
+
+  it('lists the instruments', () => {
+    expect(tickerOptions(instruments, '').map((option) => option.value)).toEqual(['PAS', 'XTB'])
+    expect(tickerOptions(instruments, 'XTB').map((option) => option.value)).toEqual(['PAS', 'XTB'])
+  })
+
+  it('keeps a ticker that is no longer on the list', () => {
+    expect(tickerOptions(instruments, 'OLD').map((option) => option.value)).toEqual(['OLD', 'PAS', 'XTB'])
   })
 })
 

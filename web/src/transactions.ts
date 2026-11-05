@@ -1,4 +1,4 @@
-import type { Transaction, TransactionType } from './api/client'
+import type { Instrument, Transaction, TransactionType } from './api/client'
 import { formatAmount } from './format'
 
 export const TYPE_LABELS: Record<TransactionType, string> = {
@@ -33,6 +33,17 @@ export function details(transaction: Transaction) {
     return `${transaction.quantity} ${transaction.ticker} @ ${formatAmount(transaction.price ?? '')}`
   }
   return transaction.ticker ?? ''
+}
+
+export function instrumentLabel(instrument: Instrument) {
+  return instrument.name ? `${instrument.ticker} — ${instrument.name}` : instrument.ticker
+}
+
+/** The list to pick from, keeping a ticker that was removed from it but is still on the transaction. */
+export function tickerOptions(instruments: Instrument[], current: string) {
+  const listed = instruments.map((instrument) => ({ value: instrument.ticker, label: instrumentLabel(instrument) }))
+  const onList = current === '' || instruments.some((instrument) => instrument.ticker === current)
+  return onList ? listed : [{ value: current, label: current }, ...listed]
 }
 
 export function signedAmount(cashEffect: string) {
