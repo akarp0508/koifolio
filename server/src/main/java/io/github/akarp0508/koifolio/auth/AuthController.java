@@ -9,10 +9,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,13 +48,6 @@ class AuthController {
     @Operation(summary = "Get the logged-in user")
     UserResponse me(@AuthenticationPrincipal Jwt jwt) {
         return UserResponse.of(authService.currentUser(UUID.fromString(jwt.getSubject())));
-    }
-
-    @ExceptionHandler
-    ProblemDetail handle(AuthException e) {
-        ProblemDetail problem = ProblemDetail.forStatusAndDetail(e.status(), e.getMessage());
-        problem.setProperty("code", e.code());
-        return problem;
     }
 
     record RegisterRequest(

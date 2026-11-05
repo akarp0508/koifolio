@@ -6,7 +6,7 @@
 - **Auth is JWT.** Stateless HS256 access tokens through Spring Security's resource server support, signed with `KOIFOLIO_JWT_SECRET`. Passwords use BCrypt. Only the first user can register unless `koifolio.auth.registration-open` is on.
 - **Universal by design.** Nothing in the data model is tied to one broker, exchange, country or tax system. Polish things (bond series, tax presets, NBP) are presets and pluggable providers on top of a generic model.
 - **Automatic price fetching is limited for now** to GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse, to keep the fetching code simple. Any other instrument still works, with a manual price.
-- **Cash is tracked per currency within an account,** with a `CurrencyExchange` transaction for conversions. This suits any broker.
+- **Each account has one currency and one balance** in the MVP, set directly by the user. A multi-currency broker account means several accounts. This replaces the earlier plan of cash per currency within an account. How transactions affect the balance is decided in the transactions step.
 - **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
 - **Deployment:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
 - **Storage:** Postgres is the source of truth. Plain text is export/import plus an optional one-way git backup.

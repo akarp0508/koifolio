@@ -41,22 +41,29 @@ Implemented.
 
 ## Accounts
 
+Implemented. Each account belongs to one user; another user's account returns `404`.
+
 | Request | Purpose |
 |---|---|
-| `GET /accounts` | List; `?archived=true` includes archived |
+| `GET /accounts` | List yours, oldest first |
 | `POST /accounts` | Create |
 | `GET /accounts/{id}` | |
-| `PATCH /accounts/{id}` | Edit |
-| `DELETE /accounts/{id}` | Delete if empty, otherwise archive |
+| `PATCH /accounts/{id}` | Change `name`, `description` or `balance`; send only what changes |
+| `DELETE /accounts/{id}` | Delete |
 
 ```json
 {
-  "id": "…", "version": 1,
-  "name": "Retirement account",
-  "description": "Tax-free, held until retirement",
-  "tax": {"method": "average", "rate": "0"}
+  "id": "…",
+  "name": "Brokerage",
+  "description": "Main account",
+  "currency": "PLN",
+  "balance": "5000.00"
 }
 ```
+
+- `balance` defaults to 0 and may be negative. It's returned as a string, with the currency's decimal places. More decimals than the currency has gives `400 invalid_amount`.
+- `currency` is a real ISO code in capitals, otherwise `400`. It can't be changed after creation.
+- Optimistic locking (`version`) and archiving come with transactions.
 
 ## Transactions
 

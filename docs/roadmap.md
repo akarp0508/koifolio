@@ -5,7 +5,7 @@ Build one small feature at a time. Each batch is committed, shown in Swagger and
 ## MVP
 
 1. **Login** (done): register, login, JWT access tokens.
-2. **Balance info:** store each user's accounts and cash balances.
+2. **Balance info** (done): accounts, each with one currency and one balance.
 3. **Transactions:** store each user's transactions.
 
 Scope for each step is agreed when we reach it.

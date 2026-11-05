@@ -2,7 +2,7 @@
 
 A self-hosted, AI-agent-friendly portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
 
-> **Status:** early development, building an MVP. Login works. Next: balance info, then transactions. See the [roadmap](docs/roadmap.md).
+> **Status:** early development, building an MVP. Login and accounts with balances work. Next: transactions. See the [roadmap](docs/roadmap.md).
 
 ## Why
 

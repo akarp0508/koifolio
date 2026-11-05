@@ -1,5 +1,6 @@
 package io.github.akarp0508.koifolio.auth;
 
+import io.github.akarp0508.koifolio.ApiException;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Locale;
@@ -19,7 +20,7 @@ import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
 
 @Service
-class AuthService {
+public class AuthService {
 
     /** BCrypt only looks at the first 72 bytes, and Spring refuses anything longer. */
     private static final int MAX_PASSWORD_BYTES = 72;
@@ -41,16 +42,16 @@ class AuthService {
 
     User register(String username, String password) {
         if (!properties.registrationOpen() && users.count() > 0) {
-            throw new AuthException(HttpStatus.FORBIDDEN, "registration_closed", "Registration is closed");
+            throw new ApiException(HttpStatus.FORBIDDEN, "registration_closed", "Registration is closed");
         }
         if (password.getBytes(StandardCharsets.UTF_8).length > MAX_PASSWORD_BYTES) {
-            throw new AuthException(HttpStatus.BAD_REQUEST, "password_too_long",
+            throw new ApiException(HttpStatus.BAD_REQUEST, "password_too_long",
                     "Password must be at most " + MAX_PASSWORD_BYTES + " bytes");
         }
         try {
             return users.saveAndFlush(new User(normalize(username), passwordEncoder.encode(password)));
         } catch (DataIntegrityViolationException e) {
-            throw new AuthException(HttpStatus.CONFLICT, "username_taken", "Username is already taken");
+            throw new ApiException(HttpStatus.CONFLICT, "username_taken", "Username is already taken");
         }
     }
 
@@ -60,13 +61,14 @@ class AuthService {
                     new UsernamePasswordAuthenticationToken(normalize(username), password));
             return issueToken(authentication.getName());
         } catch (BadCredentialsException e) {
-            throw new AuthException(HttpStatus.UNAUTHORIZED, "invalid_credentials", "Wrong username or password");
+            throw new ApiException(HttpStatus.UNAUTHORIZED, "invalid_credentials", "Wrong username or password");
         }
     }
 
-    User currentUser(UUID id) {
+    /** The user a token belongs to. Tokens outlive deleted users, so this can fail. */
+    public User currentUser(UUID id) {
         return users.findById(id).orElseThrow(() ->
-                new AuthException(HttpStatus.UNAUTHORIZED, "unknown_user", "This user no longer exists"));
+                new ApiException(HttpStatus.UNAUTHORIZED, "unknown_user", "This user no longer exists"));
     }
 
     private Token issueToken(String userId) {

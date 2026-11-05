@@ -9,7 +9,8 @@ User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is 
 ```
 users               id, username, password_hash, base_currency, cost_fx_rule, created_at
 
-accounts            id, user_id, name, description, tax_method, tax_rate, archived_at, created_at
+accounts            id, user_id, name, description, currency, balance, created_at
+                    planned: tax_method, tax_rate, archived_at
 
 instrument_profiles user_id, instrument_id, sector, risk, scenarios (jsonb), thesis, note, updated_at
                     PK (user_id, instrument_id)

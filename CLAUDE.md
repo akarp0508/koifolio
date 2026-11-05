@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Building an MVP one feature at a time: login is done, then balance info, then transactions (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
+Building an MVP one feature at a time: login and balance info are done, then transactions (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
 
 ## Commands
 
