@@ -10,9 +10,9 @@ export type NewAccount = Schemas['CreateAccountRequest']
 export type AccountChanges = Schemas['UpdateAccountRequest']
 export type Instrument = Required<Schemas['InstrumentResponse']>
 export type CostMethod = NonNullable<Schemas['AccountResponse']['costMethod']>
-// averageCost is left out once nothing is held
+// averageCost and the price fields are left out when they don't apply
 export type Position = Schemas['PositionResponse'] & Required<Pick<Schemas['PositionResponse'],
-  'accountId' | 'ticker' | 'currency' | 'quantity' | 'cost' | 'realizedGain' | 'closed' | 'incomplete'>>
+  'accountId' | 'ticker' | 'currency' | 'quantity' | 'cost' | 'realizedGain' | 'closed' | 'incomplete' | 'currencyMismatch'>>
 export type TransactionInput = Schemas['TransactionRequest']
 export type TransactionType = TransactionInput['type']
 // Fields a type doesn't use are left out of the response, so only these are always there
@@ -106,6 +106,7 @@ export const api = {
   renameInstrument: (id: string, name: string) => request<Instrument>('PATCH', `/instruments/${id}`, { name }),
   deleteInstrument: (id: string) => request<void>('DELETE', `/instruments/${id}`),
   listPositions: () => request<Position[]>('GET', '/positions?closed=true'),
+  refreshPrices: () => request<void>('POST', '/prices/refresh'),
   listTransactions: () => request<Transaction[]>('GET', '/transactions'),
   createTransaction: (input: TransactionInput) => request<Transaction>('POST', '/transactions', input),
   updateTransaction: (id: string, input: TransactionInput) =>

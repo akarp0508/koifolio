@@ -19,7 +19,7 @@ transactions        id, user_id, account_id, instrument_id, type, date, quantity
                     withheld_tax, cash_effect, affects_balance, created_at
                     planned: revisions, soft delete, sequence, created_by, validated_at
 
-instruments         id, user_id, ticker, name, listed, created_at
+instruments         id, user_id, ticker, name, listed, quote_symbol, quote_currency, quote_checked_at, created_at
                     UNIQUE (user_id, ticker)
 
 rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
@@ -49,7 +49,7 @@ instruments         id, kind (security | bond), ticker, market, currency, isin, 
 provider_symbols    instrument_id, provider, symbol        PK (instrument_id, provider)
 prices              instrument_id, date, open, high, low, close, volume, currency, source, fetched_at
                     PK (instrument_id, date)
-latest_quotes       instrument_id, price, currency, quoted_at, source, fetched_at
+quotes              symbol, price, quoted_at, fetched_at          (implemented, PK symbol)
 fx_rates            currency, date, rate, source           PK (currency, date)
 cpi_values          month, value, source                   PK (month)
 reference_rates     date, rate, source                     PK (date)

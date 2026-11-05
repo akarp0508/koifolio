@@ -17,6 +17,17 @@ export function formatGain(amount: string) {
   return amount.startsWith('-') ? `−${formatAmount(amount.slice(1))}` : `+${formatAmount(amount)}`
 }
 
+/** The newest of some ISO timestamps, shown as a time today and with the date otherwise. */
+export function formatQuoteTime(times: (string | undefined)[], now = new Date()) {
+  const latest = times.filter((time) => time !== undefined).sort().at(-1)
+  if (latest === undefined) {
+    return null
+  }
+  const date = new Date(latest)
+  const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return date.toDateString() === now.toDateString() ? time : `${date.toLocaleDateString()} ${time}`
+}
+
 /** Accepts what people type, like "5 000,50", and returns what the API expects. */
 export function normalizeAmount(input: string) {
   return input.replace(/\s/g, '').replace(',', '.')

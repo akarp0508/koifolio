@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, formatGain, normalizeAmount } from './format'
+import { formatAmount, formatGain, formatQuoteTime, normalizeAmount } from './format'
 
 const THIN = ' '
 
@@ -33,6 +33,26 @@ describe('formatGain', () => {
   it('leaves zero without a sign', () => {
     expect(formatGain('0.00')).toBe('0.00')
     expect(formatGain('0')).toBe('0')
+  })
+})
+
+describe('formatQuoteTime', () => {
+  const now = new Date(2026, 10, 5, 18, 0)
+
+  it('is nothing without prices', () => {
+    expect(formatQuoteTime([undefined], now)).toBeNull()
+  })
+
+  it('shows only the time for today, using the newest', () => {
+    const older = new Date(2026, 10, 5, 10, 0).toISOString()
+    const newer = new Date(2026, 10, 5, 17, 0).toISOString()
+    const expected = new Date(2026, 10, 5, 17, 0).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    expect(formatQuoteTime([older, undefined, newer], now)).toBe(expected)
+  })
+
+  it('adds the date for an earlier day', () => {
+    const friday = new Date(2026, 10, 2, 17, 0)
+    expect(formatQuoteTime([friday.toISOString()], now)).toContain(friday.toLocaleDateString())
   })
 })
 

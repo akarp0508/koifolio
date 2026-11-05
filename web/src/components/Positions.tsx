@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Position } from '../api/client'
-import { formatAmount, formatGain } from '../format'
+import { formatAmount, formatGain, formatQuoteTime } from '../format'
 
 const ALL = ''
+const gainClass = (amount?: string) => {
+  if (amount === undefined || /^-?[0.]+$/.test(amount)) {
+    return 'number'
+  }
+  return amount.startsWith('-') ? 'number loss' : 'number gain'
+}
+
 const INCOMPLETE_HINT = 'A sale exceeds the shares on record, so realized gain only counts the shares with a known cost.'
 
 export function Positions() {
@@ -12,6 +19,7 @@ export function Positions() {
   const [filter, setFilter] = useState(ALL)
   const [showClosed, setShowClosed] = useState(false)
   const [error, setError] = useState<ApiError | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   const fetchAll = useCallback(() =>
     Promise.all([api.listAccounts(), api.listPositions()])
@@ -26,6 +34,20 @@ export function Positions() {
     void fetchAll()
   }, [fetchAll])
 
+  async function refresh() {
+    setRefreshing(true)
+    setError(null)
+    try {
+      await api.refreshPrices()
+      await fetchAll()
+    } catch (e) {
+      setError(e as ApiError)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
+  const quoteTime = formatQuoteTime(positions.map((position) => position.quotedAt))
   const accountName = (id: string) => accounts?.find((account) => account.id === id)?.name ?? ''
   const shown = positions
     .filter((position) => filter === ALL || position.accountId === filter)
@@ -35,6 +57,10 @@ export function Positions() {
     <>
       <header className="page-header">
         <h1>Positions</h1>
+        <div className="header-actions">
+          {quoteTime && <span className="muted">Prices as of {quoteTime}</span>}
+          <button disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+        </div>
       </header>
 
       {error && (
@@ -70,7 +96,9 @@ export function Positions() {
                 <th>Account</th>
                 <th className="number">Quantity</th>
                 <th className="number">Avg cost</th>
-                <th className="number">Cost</th>
+                <th className="number">Price</th>
+                <th className="number">Value</th>
+                <th className="number">P/L</th>
                 <th className="number">Realized</th>
               </tr>
             </thead>
@@ -86,8 +114,20 @@ export function Positions() {
                   <td>{accountName(position.accountId)}</td>
                   <td className="number">{formatAmount(position.quantity)}</td>
                   <td className="number">{position.averageCost ? formatAmount(position.averageCost) : '—'}</td>
-                  <td className="number">{formatAmount(position.cost)} {position.currency}</td>
-                  <td className="number">{formatGain(position.realizedGain)} {position.currency}</td>
+                  <td className="number">
+                    {position.price ? `${formatAmount(position.price)} ${position.priceCurrency}` : '—'}
+                  </td>
+                  <td className="number">
+                    {position.value ? `${formatAmount(position.value)} ${position.currency}` : '—'}
+                    {position.currencyMismatch && <span className="not-in-balance">priced in {position.priceCurrency}</span>}
+                  </td>
+                  <td className={gainClass(position.unrealizedGain)}>
+                    {position.unrealizedGain ? formatGain(position.unrealizedGain) : '—'}
+                    {position.unrealizedPercent && (
+                      <span className="not-in-balance">{formatGain(position.unrealizedPercent)}%</span>
+                    )}
+                  </td>
+                  <td className={gainClass(position.realizedGain)}>{formatGain(position.realizedGain)}</td>
                 </tr>
               ))}
             </tbody>

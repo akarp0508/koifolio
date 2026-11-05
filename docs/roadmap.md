@@ -15,12 +15,14 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 
 5. **Instruments and balance warning** (done): a private ticker list that fills itself, and a confirmation before going below zero.
 6. **Positions** (done): holdings, average cost and realized gains per account and ticker, with transactions linked to instruments.
+7. **Prices** (done): current quotes every 15 minutes, with value and unrealized P/L on positions.
 
 ## After the MVP
 
 The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:
 
-- Prices, then unrealized P/L, FX and tax. A first version of those calculations is on the `domain-replay-wip` branch.
+- **FX, handled properly:** a stock priced in another currency than its account currently shows no value. The user wants this fixed, with NBP rates and a base currency. A first version, with tax, is on the `domain-replay-wip` branch.
+- Manual prices, for what the source doesn't cover
 - More web UI, with each screen's look agreed first
 - Daily snapshots
 - MCP server and audit log

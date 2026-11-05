@@ -2,7 +2,7 @@
 
 A self-hosted, AI-agent-friendly portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
 
-> **Status:** early development, building an MVP. Login, accounts with balances, transactions, instruments and positions work, in the API and web UI. See the [roadmap](docs/roadmap.md).
+> **Status:** early development, building an MVP. Login, accounts with balances, transactions, instruments, positions and current prices work, in the API and web UI. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -23,12 +23,13 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 
 ### v1
 - **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
-- **Positions** — holdings, average cost and realized gains per account and ticker, with average or FIFO cost.
+- **Positions** — holdings, average cost, value and P/L per account and ticker, with average or FIFO cost.
+- **Current prices** — fetched every 15 minutes for GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse.
 - **Instruments** — your own list of tickers to pick from when adding a transaction; new tickers join it automatically.
 - **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (Polish series as presets).
 - **Cost basis & tax** — average/FIFO and tax rate per account, with presets.
 - **Dashboard** — total value, P/L, cash, rule status (pass/fail), value over time (from daily snapshots), allocation by company / sector.
-- **Prices** — quotes, FX (NBP), CPI and reference rates fetched on a schedule and cached; manual price override in the UI.
+- **More market data** — FX (NBP), CPI and reference rates fetched on a schedule; manual prices in the UI.
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.

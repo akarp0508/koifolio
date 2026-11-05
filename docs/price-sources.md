@@ -4,9 +4,19 @@ Acceptable: free APIs and scraping of public pages (no paid keys). Must work on 
 
 ## Scope for now
 
-Automatic fetching covers GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse, all through the same providers, to keep the fetching code simple. Instruments on other exchanges work with manual prices.
+Automatic prices cover GPW, NewConnect, NYSE, NASDAQ, Deutsche Börse and Polish ETFs, all through bankier. Anything else shows no price.
 
-Coverage checked on 2026-11-05 through bankier's `instrument-search`: NVIDIA (NASDAQ), Coca-Cola (NYSE) and Siemens (Deutsche Börse) were found. Shell, LVMH and Toyota were not, so LSE, Euronext and Tokyo stay manual. Live quotes were confirmed for GPW, NewConnect and NASDAQ; NYSE and Deutsche Börse quotes still need a check.
+Checked live on 2026-11-05 through the app: PKO, PAS, XTB, CDR, ETFBW20TR, AAPL, KO and SIEGN all resolved and priced. Shell, LVMH and Toyota weren't found in search, so LSE, Euronext and Tokyo aren't covered.
+
+## How bankier is used
+
+Implemented in `BankierQuoteProvider`, sent with the user agent `koifolio`.
+
+1. `instrument-search/?bankier=true&query=<ticker>` gives candidates. It has no tickers for Polish companies.
+2. `instrument-header/?symbol=<candidates>` gives each candidate's real ticker, and an exact match wins. Polish companies are preferred if a ticker exists on several markets.
+3. `investor-chart/?symbols=<symbol>` gives the currency, which quotes don't include.
+4. The symbol and currency are stored on the instrument, and tickers that aren't found are retried after a day.
+5. Every 15 minutes, one `instrument-header` request per 50 symbols updates the shared `quotes` table. If it fails, the last prices stay.
 
 ## Current quotes
 | Source | Status |
@@ -31,6 +41,6 @@ Coverage checked on 2026-11-05 through bankier's `instrument-search`: NVIDIA (NA
 | gpw.pl / newconnect.pl archive | ❌ connection reset by bot protection |
 
 ## Provider chain
-- **Current:** bankier `instrument-header` → biznesradar → manual override.
+- **Current:** bankier `instrument-header`. Planned: biznesradar as a fallback, and manual prices.
 - **History:** bankier legacy chart (until 2026-01-02) + biznesradar latest page + our own daily snapshots. Until `investor-chart` or another source fills the 2026 gap, backfill (v1.1) is incomplete for that period.
 - **Cache:** every cached price stores its source and fetch time.

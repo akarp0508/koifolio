@@ -141,7 +141,14 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
   "cost": "1650.00",
   "realizedGain": "200.00",
   "closed": false,
-  "incomplete": false
+  "incomplete": false,
+  "price": "151",
+  "priceCurrency": "PLN",
+  "quotedAt": "2026-11-05T16:00:00Z",
+  "value": "2265.00",
+  "unrealizedGain": "615.00",
+  "unrealizedPercent": "37.3",
+  "currencyMismatch": false
 }
 ```
 
@@ -149,6 +156,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - `cost` and `realizedGain` include fees. Dividends aren't part of realized gain.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
+- Price fields are left out when there's no price, or nothing is held. A price in another currency than the account sets `currencyMismatch` and leaves out `value` and the gains.
 
 ## Portfolio
 
@@ -175,12 +183,13 @@ Planned. All take `account` (omit for all accounts) and `asOf` (default today). 
 
 ## Prices
 
+Implemented. Prices update every 15 minutes on their own.
+
 | Request | Purpose |
 |---|---|
-| `GET /prices/status` | Last fetch per provider, stale instruments |
-| `POST /prices/refresh` | Fetch now |
-| `PUT /prices/{instrumentId}/override` | Set a manual price |
-| `DELETE /prices/{instrumentId}/override` | Clear it |
+| `POST /prices/refresh` | Fetch now; repeating within a minute gives `429 refresh_too_soon` |
+
+Planned: `GET /prices/status`, manual price overrides.
 
 ## Audit
 

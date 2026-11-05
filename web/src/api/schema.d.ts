@@ -50,6 +50,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/prices/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fetch prices now
+         * @description They also update on a schedule. Repeating this too soon returns 429.
+         */
+        post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/instruments": {
         parameters: {
             query?: never;
@@ -362,6 +382,14 @@ export interface components {
             realizedGain?: string;
             closed?: boolean;
             incomplete?: boolean;
+            price?: string;
+            priceCurrency?: string;
+            /** Format: date-time */
+            quotedAt?: string;
+            value?: string;
+            unrealizedGain?: string;
+            unrealizedPercent?: string;
+            currencyMismatch?: boolean;
         };
     };
     responses: never;
@@ -483,6 +511,24 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["TransactionResponse"];
                 };
+            };
+        };
+    };
+    refresh: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
