@@ -59,7 +59,7 @@ public class Account {
         return id;
     }
 
-    String getName() {
+    public String getName() {
         return name;
     }
 

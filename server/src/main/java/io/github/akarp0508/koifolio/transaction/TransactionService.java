@@ -5,6 +5,7 @@ import io.github.akarp0508.koifolio.FieldValidationException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
@@ -13,7 +14,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -34,11 +34,14 @@ class TransactionService {
     private final TransactionRepository transactions;
     private final AccountRepository accounts;
     private final AuthService authService;
+    private final InstrumentService instruments;
 
-    TransactionService(TransactionRepository transactions, AccountRepository accounts, AuthService authService) {
+    TransactionService(TransactionRepository transactions, AccountRepository accounts, AuthService authService,
+                       InstrumentService instruments) {
         this.transactions = transactions;
         this.accounts = accounts;
         this.authService = authService;
+        this.instruments = instruments;
     }
 
     record Listed(Transaction transaction, boolean oversold) {
@@ -71,10 +74,12 @@ class TransactionService {
         Account account = lockAccount(userId, request.accountId());
         TransactionValues values = validate(request, account.getCurrency());
         Transaction transaction = new Transaction(userId, account.getId());
+        BigDecimal balanceBefore = account.getBalance();
         transaction.apply(values);
         account.adjustBalance(transaction.balanceEffect());
-        requireBalanceInRange(account);
+        requireAcceptableBalance(account, balanceBefore, request);
         transactions.save(transaction);
+        trackTicker(userId, values);
         return listed(userId, transaction);
     }
 
@@ -84,10 +89,12 @@ class TransactionService {
         Transaction transaction = find(userId, id);
         Account account = lockAccount(userId, transaction.getAccountId());
         TransactionValues values = validate(request, account.getCurrency());
+        BigDecimal balanceBefore = account.getBalance();
         account.adjustBalance(transaction.balanceEffect().negate());
         transaction.apply(values);
         account.adjustBalance(transaction.balanceEffect());
-        requireBalanceInRange(account);
+        requireAcceptableBalance(account, balanceBefore, request);
+        trackTicker(userId, values);
         return listed(userId, transaction);
     }
 
@@ -123,6 +130,23 @@ class TransactionService {
     private Account lockAccount(UUID userId, UUID accountId) {
         return accounts.findForUpdate(accountId, userId).orElseThrow(() ->
                 new ApiException(HttpStatus.NOT_FOUND, "account_not_found", "Account not found"));
+    }
+
+    private void trackTicker(UUID userId, TransactionValues values) {
+        if (values.ticker() != null) {
+            instruments.addIfMissing(userId, values.ticker());
+        }
+    }
+
+    /** Only a change that lowers the balance below zero asks, so an already negative account doesn't nag. */
+    private static void requireAcceptableBalance(Account account, BigDecimal balanceBefore, TransactionRequest request) {
+        requireBalanceInRange(account);
+        BigDecimal balance = account.getBalance();
+        boolean goesNegative = balance.signum() < 0 && balance.compareTo(balanceBefore) < 0;
+        if (goesNegative && !Boolean.TRUE.equals(request.allowNegativeBalance())) {
+            throw new ApiException(HttpStatus.CONFLICT, "negative_balance", "This would take %s to %s %s".formatted(
+                    account.getName(), rounded(balance, account.getCurrency()).toPlainString(), account.getCurrency()));
+        }
     }
 
     private static void requireBalanceInRange(Account account) {
@@ -218,7 +242,7 @@ class TransactionService {
             errors.put("ticker", "must not be null");
             return null;
         }
-        return request.ticker().strip().toUpperCase(Locale.ROOT);
+        return InstrumentService.normalizeTicker(request.ticker());
     }
 
     private static BigDecimal requirePositive(String field, BigDecimal value, Map<String, String> errors) {

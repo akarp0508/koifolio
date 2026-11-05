@@ -361,7 +361,7 @@ class TransactionTests {
     @Test
     void oversoldIsCountedPerAccountAndTicker() throws Exception {
         String other = createAccount(anna, "PLN", "0.00");
-        add(anna, other, trade("buy", "2026-03-01", "10", "10"));
+        add(anna, other, trade("buy", "2026-03-01", "10", "10") + ",\"allowNegativeBalance\":true");
         add("\"type\":\"buy\",\"date\":\"2026-03-01\",\"ticker\":\"XYZ\",\"quantity\":\"10\",\"price\":\"1\",\"affectsBalance\":true");
 
         add(trade("sell", "2026-03-02", "1", "10")).andExpect(jsonPath("$.oversold").value(true));
@@ -455,6 +455,102 @@ class TransactionTests {
         as(anna, delete("/api/v1/accounts/" + account)).andExpect(status().isNoContent());
 
         as(anna, get("/api/v1/transactions")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void goingNegativeAsksFirstAndChangesNothing() throws Exception {
+        add(trade("buy", "2026-03-01", "20", "60")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("negative_balance"))
+                .andExpect(jsonPath("$.detail").value("This would take A to -200.00 PLN"));
+
+        expectBalance("1000.00");
+        as(anna, get("/api/v1/transactions")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void goingNegativeWorksOnceConfirmed() throws Exception {
+        add(trade("buy", "2026-03-01", "20", "60") + ",\"allowNegativeBalance\":true")
+                .andExpect(status().isCreated());
+
+        expectBalance("-200.00");
+    }
+
+    @Test
+    void reachingExactlyZeroDoesNotAsk() throws Exception {
+        add(trade("buy", "2026-03-01", "10", "100")).andExpect(status().isCreated());
+
+        expectBalance("0.00");
+    }
+
+    @Test
+    void withdrawalsAndFeesAskToo() throws Exception {
+        add("\"type\":\"withdrawal\",\"date\":\"2026-03-01\",\"amount\":\"1001\",\"affectsBalance\":true")
+                .andExpect(status().isConflict());
+        add("\"type\":\"fee\",\"date\":\"2026-03-01\",\"amount\":\"1001\",\"affectsBalance\":true")
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void backfillNeverAsks() throws Exception {
+        add("\"type\":\"buy\",\"date\":\"2024-03-01\",\"ticker\":\"PAS\",\"quantity\":\"100\",\"price\":\"100\",\"affectsBalance\":false")
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void editThatGoesNegativeAsksAndChangesNothing() throws Exception {
+        String id = addedId(trade("buy", "2026-03-01", "1", "100"));
+
+        replace(anna, id, trade("buy", "2026-03-01", "20", "60")).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("negative_balance"));
+
+        expectBalance("900.00");
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(jsonPath("$.quantity").value("1"));
+    }
+
+    @Test
+    void anAlreadyNegativeAccountDoesNotAskForChangesThatDoNotLowerIt() throws Exception {
+        setBalance("-50.00");
+
+        add(deposit("10")).andExpect(status().isCreated());
+        String id = addedId(deposit("10"));
+        replace(anna, id, deposit("10")).andExpect(status().isOk());
+
+        add(trade("buy", "2026-03-01", "1", "1")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void newTickerJoinsTheInstrumentList() throws Exception {
+        add(trade("buy", "2026-03-01", "1", "1"));
+        add("\"type\":\"dividend\",\"date\":\"2026-03-01\",\"ticker\":\"xtb\",\"amount\":\"1\",\"affectsBalance\":true");
+        add(trade("buy", "2026-03-02", "1", "1"));
+
+        as(anna, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$[1].ticker").value("XTB"));
+        as(bob, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void editingToANewTickerAddsIt() throws Exception {
+        String id = addedId(trade("buy", "2026-03-01", "1", "1"));
+
+        replace(anna, id, trade("buy", "2026-03-01", "1", "1").replace("PAS", "NEW"));
+
+        as(anna, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void cancelledTransactionDoesNotAddItsTicker() throws Exception {
+        add(trade("buy", "2026-03-01", "20", "60")).andExpect(status().isConflict());
+
+        as(anna, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void cashTransactionsAddNothing() throws Exception {
+        add(deposit("1"));
+
+        as(anna, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test

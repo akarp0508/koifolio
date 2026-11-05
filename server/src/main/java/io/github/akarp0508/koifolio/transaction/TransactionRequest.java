@@ -36,5 +36,7 @@ record TransactionRequest(
         @Digits(integer = 15, fraction = 4, message = "must have at most 15 digits and 4 decimal places")
         BigDecimal withheldTax,
         @NotNull @Schema(description = "Whether this changes the account balance. Off for backfilled history.")
-        Boolean affectsBalance) {
+        Boolean affectsBalance,
+        @Schema(description = "Go ahead even if this takes the balance below zero. Without it, that returns 409.")
+        Boolean allowNegativeBalance) {
 }
