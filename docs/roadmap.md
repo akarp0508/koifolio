@@ -1,11 +1,23 @@
 # Roadmap
 
-1. Scaffolding: Maven server project, web app, Dockerfile + compose, CI.
-2. `domain` package: domain model, positions/cost basis/P&L, bonds, rules + tests.
-3. `server`: persistence + migrations, audit log, login, REST API + OpenAPI/Swagger, price providers + cache + manual override, scheduler (snapshots).
-4. MCP server (read tools first, then write tools).
-5. `web`: layout, dashboard, positions, transactions modal, unvalidated changes tab, accounts, company notes, rules, i18n, themes. → **v1**
-6. Backfill, export/import, git backup, passkeys. → **v1.1**
-7. Risk & scenarios view, rule checks with explanations.
+Build one small feature at a time, each finished and tested before the next starts.
 
-Step 1 is done. Next: step 2.
+## MVP
+
+1. **Login** (done): register, login, JWT access tokens.
+2. **Balance info:** store each user's accounts and cash balances.
+3. **Transactions:** store each user's transactions.
+
+Scope for each step is agreed when we reach it.
+
+## After the MVP
+
+The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:
+
+- Domain calculations: positions, cost basis, P/L, FX, tax. A first version is on the `domain-replay-wip` branch.
+- Web UI, once its look is agreed
+- Prices and daily snapshots
+- MCP server and audit log
+- Bonds, rules
+- Backfill, export/import, git backup, passkeys
+- Risk & scenarios view, rule checks with explanations

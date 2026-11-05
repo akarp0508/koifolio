@@ -1,6 +1,6 @@
 # REST API
 
-Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The OpenAPI spec is generated from the controllers by `springdoc-openapi`, added in roadmap step 3, and `web` generates its types from it. Once controllers exist, the generated spec is the reference and this file is the plan. Swagger UI is open in dev and behind login in production.
+Base path `/api/v1`. JSON. Clients authenticate with a JWT: `Authorization: Bearer <token>`. The OpenAPI spec is generated from the controllers by `springdoc-openapi`, added in roadmap step 3, and `web` generates its types from it. Once controllers exist, the generated spec is the reference and this file is the plan. Swagger UI is open in dev and behind login in production.
 
 ## Conventions
 
@@ -15,12 +15,16 @@ Base path `/api/v1`. JSON. The web app authenticates with a session cookie. The 
 
 ## Auth
 
+Implemented.
+
 | Request | Purpose |
 |---|---|
-| `GET /auth/status` | `{"setupRequired": false, "authenticated": true, "username": "..."}` |
-| `POST /auth/setup` | Create the first user; refused once one exists |
-| `POST /auth/login` | `{"username", "password"}` |
-| `POST /auth/logout` | |
+| `POST /auth/register` | `{"username", "password"}` → `201 {"id", "username"}`. Only the first user, unless `koifolio.auth.registration-open` is on; otherwise `403 registration_closed` |
+| `POST /auth/login` | `{"username", "password"}` → `{"accessToken", "expiresIn"}`, or `401 invalid_credentials` |
+| `GET /auth/me` | `{"id", "username"}`; needs a token |
+
+- Passwords are 8 characters to 72 bytes (a BCrypt limit). Usernames ignore case and surrounding spaces.
+- There's no logout endpoint: the client discards the token. Tokens can't be revoked and last 12 hours, with no refresh tokens yet.
 
 ## Settings
 

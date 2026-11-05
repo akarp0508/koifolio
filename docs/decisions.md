@@ -2,6 +2,8 @@
 
 ## Settled
 
+- **MVP first, one feature at a time:** login, then balance info, then transactions. See [roadmap.md](roadmap.md). Decisions below that go beyond the MVP are direction, not current scope.
+- **Auth is JWT.** Stateless HS256 access tokens through Spring Security's resource server support, signed with `KOIFOLIO_JWT_SECRET`. Passwords use BCrypt. Only the first user can register unless `koifolio.auth.registration-open` is on.
 - **Universal by design.** Nothing in the data model is tied to one broker, exchange, country or tax system. Polish things (bond series, tax presets, NBP) are presets and pluggable providers on top of a generic model.
 - **Automatic price fetching is limited for now** to GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse, to keep the fetching code simple. Any other instrument still works, with a manual price.
 - **Cash is tracked per currency within an account,** with a `CurrencyExchange` transaction for conversions. This suits any broker.

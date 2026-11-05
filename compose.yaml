@@ -9,6 +9,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/koifolio
       SPRING_DATASOURCE_USERNAME: koifolio
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      KOIFOLIO_JWT_SECRET: ${KOIFOLIO_JWT_SECRET:?set KOIFOLIO_JWT_SECRET in .env}
     mem_limit: 768m
     depends_on:
       db:
@@ -17,6 +18,9 @@ services:
   db:
     image: postgres:18-alpine
     restart: unless-stopped
+    ports:
+      # For running the server outside Docker in dev
+      - "127.0.0.1:5432:5432"
     environment:
       POSTGRES_DB: koifolio
       POSTGRES_USER: koifolio

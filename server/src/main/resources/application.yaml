@@ -1,9 +1,27 @@
 spring:
   application:
     name: koifolio
+  datasource:
+    url: jdbc:postgresql://localhost:5432/koifolio
+    username: koifolio
+    password: ${POSTGRES_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  mvc:
+    problemdetails:
+      enabled: true
 
 management:
   endpoints:
     web:
       exposure:
         include: health
+
+koifolio:
+  auth:
+    jwt-secret: ${KOIFOLIO_JWT_SECRET}
+    token-ttl: 12h
+    # Only the first user can register unless this is on
+    registration-open: false

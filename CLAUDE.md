@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Scaffolding done (roadmap step 1); working towards v1. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
+Building an MVP one feature at a time: login is done, then balance info, then transactions (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
 
 ## Commands
 
@@ -12,9 +12,9 @@ Requires JDK 25, Maven and Node 24 installed locally (or use Docker for full bui
 
 Server commands run in `server/`:
 
-- Build + all tests: `mvn -q -B verify`
+- Build + all tests: `mvn -q -B verify` (tests run real Postgres through Testcontainers, so Docker must be running; use `clean verify` for accurate test counts after removing code)
 - Single test: `mvn -q -B test -Dtest=ClassName#method`
-- Run server: `mvn -q spring-boot:run` (port 8080)
+- Run server: `mvn -q spring-boot:run` (port 8080). Needs `POSTGRES_PASSWORD` and `KOIFOLIO_JWT_SECRET`, and Postgres from `docker compose up -d db`
 
 Other:
 
@@ -34,7 +34,7 @@ Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`w
 - `server/`: Spring Boot.
   - `domain` package: pure domain logic (positions, average/FIFO cost basis, P/L, tax, bond valuation, rules). It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
   - REST API with an OpenAPI spec, plus an MCP server for agents (Spring AI).
-  - Spring Security: local accounts, plus an OAuth2 authorization server for MCP clients.
+  - Spring Security: local accounts with JWT access tokens (`auth` package). Later, an OAuth2 authorization server for MCP clients.
   - Spring Data JPA + Flyway on Postgres. Flyway owns the schema; JPA entities stay separate from `domain` records.
   - Price/FX/CPI providers and a scheduler for daily snapshots and backfill.
   - Serves the built `web` app.

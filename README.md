@@ -2,7 +2,7 @@
 
 A self-hosted, AI-agent-friendly portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
 
-> **Status:** early development. The project skeleton exists; the app itself is not implemented yet.
+> **Status:** early development, building an MVP. Login works. Next: balance info, then transactions. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
@@ -31,7 +31,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
 - **Unvalidated changes** — transactions added by agents count straight away, marked unvalidated, and wait in a tab for you to approve or reject.
-- **Login** — local user accounts (first user created on first run), password.
+- **Login** — local user accounts (first user registers on first run), password, JWT access tokens.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 
 ### v1.1
@@ -82,7 +82,7 @@ koifolio/
 
 - **server:** Spring Boot, Java 25.
   - The `domain` package holds all calculations as plain Java (no Spring, no I/O), so the UI, MCP tools and export produce the same numbers.
-  - Spring Security (sessions, password then passkeys, OAuth2 authorization server for MCP clients)
+  - Spring Security (JWT access tokens, password then passkeys, OAuth2 authorization server for MCP clients)
   - Spring Data JPA + Flyway on Postgres
   - Spring AI MCP server
   - jsoup for scraping, JGit for the git backup
