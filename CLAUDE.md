@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Building an MVP one feature at a time: login and balance info are done, then transactions (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
+Building an MVP one feature at a time: login, balance info and their web pages are done, then transactions, API and screen together (`docs/roadmap.md`). Don't build ahead of the current step; plans beyond the MVP are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
 
 ## Commands
 
@@ -18,7 +18,7 @@ Server commands run in `server/`:
 
 Other:
 
-- Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm run build` (tsc + vite)
+- Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm test` (vitest), `npm run build` (tsc + vite), `npm run api:types` (regenerates `src/api/schema.d.ts` from a running server with Swagger on; it uses its own TypeScript 5 because openapi-typescript doesn't support the project's TypeScript 7)
 - Docker: `cp .env.example .env`, set the secrets, then `docker compose up -d --build`. Swagger UI: `http://localhost:8080/swagger-ui.html` (needs `KOIFOLIO_SWAGGER=true`). Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
 
 Spring Boot 4.1 (Boot 4 starter names, e.g. `spring-boot-starter-webmvc`). Base package `io.github.akarp0508.koifolio`. The Docker build copies `web/dist` into `server/src/main/resources/static` (git-ignored) so Spring Boot serves the UI.

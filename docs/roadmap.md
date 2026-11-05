@@ -1,12 +1,13 @@
 # Roadmap
 
-Build one small feature at a time. Each batch is committed, shown in Swagger and tested by hand before the next one starts.
+Build one small feature at a time. Each batch is committed, shown in Swagger and tested by hand before the next one starts. From transactions on, a batch includes both the API and its screen.
 
 ## MVP
 
 1. **Login** (done): register, login, JWT access tokens.
 2. **Balance info** (done): accounts, each with one currency and one balance.
-3. **Transactions:** store each user's transactions.
+3. **Frontend catch-up** (done): login page and accounts page.
+4. **Transactions:** API and screen together.
 
 Scope for each step is agreed when we reach it.
 
@@ -15,7 +16,7 @@ Scope for each step is agreed when we reach it.
 The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:
 
 - Domain calculations: positions, cost basis, P/L, FX, tax. A first version is on the `domain-replay-wip` branch.
-- Web UI, once its look is agreed
+- More web UI, with each screen's look agreed first
 - Prices and daily snapshots
 - MCP server and audit log
 - Bonds, rules
