@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -41,6 +42,9 @@ record TransactionRequest(
         @Schema(type = "string", description = "split. New shares for that many old ones", example = "10")
         @Digits(integer = 10, fraction = 8, message = "must have at most 10 digits and 8 decimal places")
         BigDecimal splitTo,
+        @Size(max = 2000, message = "must be at most 2000 characters")
+        @Schema(description = "Why, in your words. Any type can have one", example = "Bought after the Q3 results")
+        String note,
         @NotNull @Schema(description = "Whether this changes the account balance. Off for backfilled history. A split never does.")
         Boolean affectsBalance,
         @Schema(description = "Go ahead even if this takes the balance below zero. Without it, that returns 409.")

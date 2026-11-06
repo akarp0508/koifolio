@@ -886,6 +886,11 @@ export interface components {
              * @example 10
              */
             splitTo?: string;
+            /**
+             * @description Why, in your words. Any type can have one
+             * @example Bought after the Q3 results
+             */
+            note?: string;
             /** @description Whether this changes the account balance. Off for backfilled history. A split never does. */
             affectsBalance: boolean;
             /** @description Go ahead even if this takes the balance below zero. Without it, that returns 409. */
@@ -909,6 +914,7 @@ export interface components {
             withheldTax?: string;
             splitFrom?: string;
             splitTo?: string;
+            note?: string;
             cashEffect?: string;
             affectsBalance?: boolean;
             oversold?: boolean;

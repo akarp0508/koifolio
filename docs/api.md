@@ -107,7 +107,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
 | `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
-- Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect`, `oversold`, `unvalidated` and `createdAt`, `importId` for what an agent added in one call, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
+- Every type also needs `date` and `affectsBalance`, and can have a `note` of up to 2000 characters. Responses add `id`, `currency`, `cashEffect`, `oversold`, `unvalidated` and `createdAt`, `importId` for what an agent added in one call, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
 - `GET /transactions?unvalidated=true` lists what agents added and you haven't reviewed. `POST /transactions/{id}/approve` clears the mark. `POST /transactions/{id}/reject` removes one and undoes its effect on the balance. Either returns `409` if it isn't waiting.
 - `DELETE /transactions/{id}` removes it from every number and undoes its effect on the balance, but keeps it in the database.
 - Cash effects are rounded to the currency's decimals.

@@ -312,7 +312,7 @@ public class ReviewService {
                 if (removed) {
                     transactions.undelete(userId, entry.entityId());
                 } else {
-                    transactions.applyEdit(userId, entry.entityId(), convert(entry.before(), TransactionService.Edit.class), Actor.USER);
+                    transactions.revertEdit(userId, entry.entityId(), convert(entry.before(), TransactionService.Edit.class));
                 }
             }
             case "bond" -> bonds.delete(userId, entry.entityId(), Actor.USER);

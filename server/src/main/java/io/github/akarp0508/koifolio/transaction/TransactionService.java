@@ -78,14 +78,14 @@ public class TransactionService {
     /** A transaction for backup, with no ids of its own. */
     public record Exported(UUID accountId, TransactionType type, LocalDate date, String ticker, BigDecimal quantity,
                            BigDecimal price, BigDecimal fee, BigDecimal amount, BigDecimal withheldTax,
-                           BigDecimal splitFrom, BigDecimal splitTo, boolean affectsBalance, Instant createdAt,
+                           BigDecimal splitFrom, BigDecimal splitTo, String note, boolean affectsBalance, Instant createdAt,
                            String createdBy, boolean unvalidated) {
     }
 
     /** Changes to a transaction, with only the given fields set. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Edit(TransactionType type, LocalDate date, String ticker, BigDecimal quantity, BigDecimal price, BigDecimal fee,
-                       BigDecimal amount, BigDecimal withheldTax, BigDecimal splitFrom, BigDecimal splitTo, Boolean affectsBalance) {
+                       BigDecimal amount, BigDecimal withheldTax, BigDecimal splitFrom, BigDecimal splitTo, String note, Boolean affectsBalance) {
     }
 
     /** Oldest first. */
@@ -96,7 +96,7 @@ public class TransactionService {
         return transactions.findByUserId(userId).stream().sorted(HISTORY_ORDER)
                 .map(t -> new Exported(t.getAccountId(), t.getType(), t.getDate(), tickers.get(t.getInstrumentId()),
                         t.getQuantity(), t.getPrice(), t.getFee(), t.getAmount(), t.getWithheldTax(), t.getSplitFrom(),
-                        t.getSplitTo(), t.isAffectsBalance(), t.getCreatedAt(), t.getCreatedBy(), t.isUnvalidated()))
+                        t.getSplitTo(), t.getNote(), t.isAffectsBalance(), t.getCreatedAt(), t.getCreatedBy(), t.isUnvalidated()))
                 .toList();
     }
 
@@ -106,11 +106,12 @@ public class TransactionService {
         Account account = accounts.findByIdAndUserId(exported.accountId(), userId).orElseThrow();
         TransactionRequest request = new TransactionRequest(exported.accountId(), exported.type(), exported.date(),
                 exported.ticker(), exported.quantity(), exported.price(), exported.fee(), exported.amount(),
-                exported.withheldTax(), exported.splitFrom(), exported.splitTo(), exported.affectsBalance(), true);
+                exported.withheldTax(), exported.splitFrom(), exported.splitTo(), exported.note(), exported.affectsBalance(), true);
         checker.check(request);
         TransactionValues values = validate(request, account.getCurrency());
         Transaction transaction = new Transaction(userId, account.getId());
         transaction.apply(values, instrumentFor(userId, values));
+        transaction.setNote(request.note());
         transaction.setCreatedAt(exported.createdAt());
         transaction.addedBy(exported.createdBy(), exported.unvalidated());
         transactions.save(transaction);
@@ -181,6 +182,7 @@ public class TransactionService {
         Transaction transaction = new Transaction(userId, account.getId());
         BigDecimal balanceBefore = account.getBalance();
         transaction.apply(values, instrumentFor(userId, values));
+        transaction.setNote(request.note());
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
         if (actor.isAgent()) {
@@ -202,6 +204,7 @@ public class TransactionService {
         BigDecimal balanceBefore = account.getBalance();
         account.adjustBalance(transaction.balanceEffect().negate());
         transaction.apply(values, instrumentFor(userId, values));
+        transaction.setNote(request.note());
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
         Listed saved = listed(userId, transaction);
@@ -225,12 +228,20 @@ public class TransactionService {
         update(userId, id, merged(userId, find(userId, id), edit), actor);
     }
 
+    /** Puts back the values from before an edit. A log entry leaves out what was empty, so an empty note stays empty. */
+    @Transactional
+    public void revertEdit(UUID userId, UUID id, Edit before) {
+        applyEdit(userId, id, new Edit(before.type(), before.date(), before.ticker(), before.quantity(), before.price(), before.fee(),
+                before.amount(), before.withheldTax(), before.splitFrom(), before.splitTo(), first(before.note(), ""),
+                before.affectsBalance()), Actor.USER);
+    }
+
     private TransactionRequest merged(UUID userId, Transaction t, Edit edit) {
         return new TransactionRequest(null, first(edit.type(), t.getType()), first(edit.date(), t.getDate()),
                 first(edit.ticker(), instruments.tickers(userId).get(t.getInstrumentId())), first(edit.quantity(), t.getQuantity()),
                 first(edit.price(), t.getPrice()), first(edit.fee(), t.getFee()), first(edit.amount(), t.getAmount()),
                 first(edit.withheldTax(), t.getWithheldTax()), first(edit.splitFrom(), t.getSplitFrom()),
-                first(edit.splitTo(), t.getSplitTo()), first(edit.affectsBalance(), t.isAffectsBalance()), true);
+                first(edit.splitTo(), t.getSplitTo()), first(edit.note(), t.getNote()), first(edit.affectsBalance(), t.isAffectsBalance()), true);
     }
 
     private static <T> T first(T value, T fallback) {
@@ -374,6 +385,7 @@ public class TransactionService {
         values.put("withheldTax", t.getWithheldTax());
         values.put("splitFrom", t.getSplitFrom());
         values.put("splitTo", t.getSplitTo());
+        values.put("note", t.getNote());
         values.put("cashEffect", t.getCashEffect());
         values.put("affectsBalance", t.isAffectsBalance());
         values.put("createdBy", t.getCreatedBy());
@@ -386,7 +398,7 @@ public class TransactionService {
     @Transactional
     public void addSplit(UUID userId, UUID accountId, String ticker, LocalDate date, BigDecimal from, BigDecimal to) {
         create(userId, new TransactionRequest(accountId, TransactionType.SPLIT, date, ticker, null, null, null, null, null,
-                from, to, false, null), Actor.USER);
+                from, to, null, false, null), Actor.USER);
     }
 
     /** Every buy, sell and split, oldest first. */

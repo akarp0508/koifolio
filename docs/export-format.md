@@ -53,6 +53,7 @@ A file in another format is refused.
 - Bonds are in `bonds.yaml`, per purchase. It's optional, so older exports still restore.
 - Types are `deposit`, `withdrawal`, `buy`, `sell`, `dividend`, `fee` and `split`.
 - Amounts are in the account's currency.
+- `note` is optional and holds the reason for a transaction.
 - `createdAt` is optional and orders trades on the same day. Without it, lines keep their order in the file.
 - `createdBy` names the agent that added a line, and `unvalidated` is `true` while it waits for review. Both are optional, and restore keeps them.
 - Deleted and rejected transactions aren't exported. Neither are agent tokens, the change log or changes waiting for review, and a restore drops those waiting.

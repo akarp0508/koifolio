@@ -106,7 +106,7 @@ class TransactionController {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record TransactionResponse(UUID id, UUID accountId, TransactionType type, LocalDate date, String currency,
                                String ticker, String quantity, String price, String fee, String amount,
-                               String withheldTax, String splitFrom, String splitTo, String cashEffect,
+                               String withheldTax, String splitFrom, String splitTo, String note, String cashEffect,
                                boolean affectsBalance, boolean oversold, String createdBy, boolean unvalidated,
                                UUID importId, Instant createdAt) {
 
@@ -115,7 +115,7 @@ class TransactionController {
             String currency = listed.currency();
             return new TransactionResponse(t.getId(), t.getAccountId(), t.getType(), t.getDate(), currency, listed.ticker(),
                     plain(t.getQuantity()), plain(t.getPrice()), money(t.getFee(), currency), money(t.getAmount(), currency),
-                    money(t.getWithheldTax(), currency), plain(t.getSplitFrom()), plain(t.getSplitTo()),
+                    money(t.getWithheldTax(), currency), plain(t.getSplitFrom()), plain(t.getSplitTo()), t.getNote(),
                     money(t.getCashEffect(), currency),
                     t.isAffectsBalance(), listed.oversold(), t.getCreatedBy(), t.isUnvalidated(), t.getImportId(), t.getCreatedAt());
         }

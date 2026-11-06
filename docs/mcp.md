@@ -57,7 +57,7 @@ Scopes can't be changed later, so an older token needs replacing to get a new on
 | `save_rule` | `type`, `limitPercent`, `id?`, `account?`, `maxRisk?` | rules:write |
 | `delete_rule` | `id` | rules:write |
 
-Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company`, `update_transaction` and `update_account` propose only the fields they're given, and `update_company` adds the company if it's new. Agents can't change plans or delete accounts.
+Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company`, `update_transaction` and `update_account` propose only the fields they're given, and `update_company` adds the company if it's new. Agents can't change plans or delete accounts. `note` holds the reason for a transaction, and empty text in `update_transaction` removes it.
 
 `add_transactions` adds all its rows or none. It checks every row, in order, and if any is refused nothing is added and `rows` says what's wrong with each.
 

@@ -57,6 +57,8 @@ public class Transaction {
     @Column(name = "split_to", precision = 18, scale = 8)
     private BigDecimal splitTo;
 
+    private String note;
+
     /** What this transaction does to cash: negative for a buy, for example. */
     @Column(name = "cash_effect", nullable = false, precision = 19, scale = 4)
     private BigDecimal cashEffect;
@@ -97,6 +99,15 @@ public class Transaction {
     void addedBy(String agent, boolean unvalidated) {
         createdBy = agent;
         validatedAt = unvalidated ? null : validatedAt;
+    }
+
+    /** A blank note is no note. */
+    void setNote(String note) {
+        this.note = note == null || note.isBlank() ? null : note.strip();
+    }
+
+    String getNote() {
+        return note;
     }
 
     void setImportId(UUID importId) {

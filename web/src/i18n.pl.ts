@@ -3,6 +3,7 @@ export const pl: Record<string, string> = {
   '+ Account': '+ Konto',
   '{date}, {count} items': '{date}, {count} poz.',
   'All imports': 'Wszystkie importy',
+  Note: 'Notatka',
   Import: 'Import',
   "This transaction isn't deleted": 'Ta transakcja nie jest usunięta',
   'Older prices are still loading for {count}, so those holdings show at their trade prices for now. It takes up to 15 minutes.':

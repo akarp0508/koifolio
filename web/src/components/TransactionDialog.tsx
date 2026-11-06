@@ -31,6 +31,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
   const [withheldTax, setWithheldTax] = useState(transaction?.withheldTax ?? '')
   const [splitFrom, setSplitFrom] = useState(transaction?.splitFrom ?? '1')
   const [splitTo, setSplitTo] = useState(transaction?.splitTo ?? '')
+  const [note, setNote] = useState(transaction?.note ?? '')
   // null until decided by hand, so the default can follow the date
   const [chosenAffectsBalance, setChosenAffectsBalance] = useState<boolean | null>(transaction?.affectsBalance ?? null)
   const [instruments, setInstruments] = useState<Instrument[] | null>(null)
@@ -69,6 +70,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
       withheldTax: dividend ? optionalAmount(withheldTax) : undefined,
       splitFrom: split ? normalizeAmount(splitFrom) : undefined,
       splitTo: split ? normalizeAmount(splitTo) : undefined,
+      note,
       affectsBalance,
       allowNegativeBalance,
     }
@@ -238,6 +240,11 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
             onChange={(e) => setWithheldTax(e.target.value)}
           />
         )}
+        <label className="field">
+          <span>{t('Note')}</span>
+          <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
+          {fieldErrors.note && <small className="field-error">{fieldErrors.note}</small>}
+        </label>
         {!split && (
           <label className="check">
             <input

@@ -51,6 +51,7 @@ class TransactionTools {
                                        @McpToolParam(required = false, description = "Tax withheld from a dividend") String withheldTax,
                                        @McpToolParam(required = false, description = "Old shares in a split") String splitFrom,
                                        @McpToolParam(required = false, description = "New shares for that many old ones") String splitTo,
+                                       @McpToolParam(required = false, description = "Why, in the user's words, if they gave a reason") String note,
                                        @McpToolParam(required = false, description = """
                                                Go ahead if this takes the balance below zero. Otherwise it's refused, so \
                                                ask the user first.""") Boolean allowNegativeBalance) {
@@ -59,7 +60,7 @@ class TransactionTools {
                 ticker, ToolArguments.decimal("quantity", quantity), ToolArguments.decimal("price", price),
                 ToolArguments.decimal("fee", fee), ToolArguments.decimal("amount", amount),
                 ToolArguments.decimal("withheldTax", withheldTax), ToolArguments.decimal("splitFrom", splitFrom),
-                ToolArguments.decimal("splitTo", splitTo), affectsBalance, allowNegativeBalance);
+                ToolArguments.decimal("splitTo", splitTo), note, affectsBalance, allowNegativeBalance);
         checker.check(request);
         return TransactionResponse.of(transactions.create(caller.userId(), request, caller.actor()));
     }
@@ -74,6 +75,7 @@ class TransactionTools {
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String withheldTax,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String splitFrom,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String splitTo,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String note,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) Boolean allowNegativeBalance) {
     }
 
@@ -107,7 +109,7 @@ class TransactionTools {
                 row.ticker(), ToolArguments.decimal("quantity", row.quantity()), ToolArguments.decimal("price", row.price()),
                 ToolArguments.decimal("fee", row.fee()), ToolArguments.decimal("amount", row.amount()),
                 ToolArguments.decimal("withheldTax", row.withheldTax()), ToolArguments.decimal("splitFrom", row.splitFrom()),
-                ToolArguments.decimal("splitTo", row.splitTo()), row.affectsBalance(), row.allowNegativeBalance());
+                ToolArguments.decimal("splitTo", row.splitTo()), row.note(), row.affectsBalance(), row.allowNegativeBalance());
     }
 
     @McpTool(name = "update_transaction", description = """
@@ -127,13 +129,14 @@ class TransactionTools {
                                              @McpToolParam(required = false, description = "Tax withheld from a dividend") String withheldTax,
                                              @McpToolParam(required = false, description = "Old shares in a split") String splitFrom,
                                              @McpToolParam(required = false, description = "New shares for that many old ones") String splitTo,
+                                             @McpToolParam(required = false, description = "Why, in the user's words. Empty text removes it") String note,
                                              @McpToolParam(required = false, description = "Whether this moves the account's cash balance") Boolean affectsBalance) {
         AgentCaller caller = AgentCaller.of(context).require(AgentScope.TRANSACTIONS_WRITE);
         return review.proposeTransactionUpdate(caller.userId(), caller.name(), id, new TransactionService.Edit(
                 type == null ? null : ToolArguments.choice(TransactionType.class, "type", type), date, ticker,
                 ToolArguments.decimal("quantity", quantity), ToolArguments.decimal("price", price), ToolArguments.decimal("fee", fee),
                 ToolArguments.decimal("amount", amount), ToolArguments.decimal("withheldTax", withheldTax),
-                ToolArguments.decimal("splitFrom", splitFrom), ToolArguments.decimal("splitTo", splitTo), affectsBalance));
+                ToolArguments.decimal("splitFrom", splitFrom), ToolArguments.decimal("splitTo", splitTo), note, affectsBalance));
     }
 
     @McpTool(name = "delete_transaction", description = """

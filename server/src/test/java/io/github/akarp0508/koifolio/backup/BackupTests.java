@@ -104,7 +104,7 @@ class BackupTests {
         String account = "\"accountId\":\"%s\",\"date\":\"2026-02-01\",\"affectsBalance\":%s,";
         String pln = account.formatted(ike, "true");
         transaction("{" + pln + "\"type\":\"deposit\",\"amount\":\"5000\"}");
-        transaction("{" + pln + "\"type\":\"buy\",\"ticker\":\"PAS\",\"quantity\":\"10.5\",\"price\":\"120.123456\",\"fee\":\"3.15\"}");
+        transaction("{" + pln + "\"note\":\"After the results\",\"type\":\"buy\",\"ticker\":\"PAS\",\"quantity\":\"10.5\",\"price\":\"120.123456\",\"fee\":\"3.15\"}");
         transaction("{" + pln + "\"type\":\"sell\",\"ticker\":\"PAS\",\"quantity\":\"2\",\"price\":\"130\"}");
         transaction("{" + pln + "\"type\":\"dividend\",\"ticker\":\"PAS\",\"amount\":\"25\",\"withheldTax\":\"4.75\"}");
         transaction("{" + pln + "\"type\":\"fee\",\"amount\":\"1\"}");

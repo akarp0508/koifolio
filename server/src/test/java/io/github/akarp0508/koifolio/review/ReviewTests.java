@@ -756,4 +756,30 @@ class ReviewTests {
         assertThat(balanceOf(account)).isEqualTo("170.00");
         as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(2));
     }
+
+    @Test
+    void aNoteCanBeProposedAndRevertedToNone() throws Exception {
+        String id = agentDeposit(account(), "100");
+
+        call(claude, "update_transaction", "{\"id\":\"%s\",\"note\":\"  Paid in for the Q3 dip  \"}".formatted(id));
+        approveNext();
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(jsonPath("$.note").value("Paid in for the Q3 dip"));
+
+        as(anna, post("/api/v1/review/log/" + lastAgentChange() + "/revert")).andExpect(status().isNoContent());
+
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(jsonPath("$.note").doesNotExist());
+    }
+
+    @Test
+    void anEditKeepsANoteItDoesntMention() throws Exception {
+        String account = account();
+        String added = call(claude, "add_transaction", """
+                {"account":"%s","type":"deposit","date":"2026-03-12","affectsBalance":true,"amount":"10","note":"Why"}""".formatted(account));
+        String id = JsonPath.read(added, "$.id");
+
+        call(claude, "update_transaction", "{\"id\":\"%s\",\"amount\":\"20\"}".formatted(id));
+        approveNext();
+
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(jsonPath("$.note").value("Why"));
+    }
 }

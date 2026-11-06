@@ -52,6 +52,7 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
                 {transaction.unvalidated && (
                   <span className="not-in-balance"><a href="#review">{t('unvalidated')}</a>, {t('from {name}', { name: transaction.createdBy ?? '' })}</span>
                 )}
+                {transaction.note && <span className="not-in-balance">{transaction.note}</span>}
               </td>
               <td className={transaction.affectsBalance ? 'number' : 'number backfill'}>
                 {transactionAmount(transaction)}
