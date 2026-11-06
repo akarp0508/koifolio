@@ -212,6 +212,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Replace all your data with an export
+         * @description Deletes your accounts, transactions, companies, plans and rules, then loads the file. Any problem leaves everything as it was. mode must be replace, so this can't happen by accident.
+         */
+        post: operations["restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -422,6 +442,26 @@ export interface paths {
         };
         /** The company and your plan for a position */
         get: operations["details"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download all your data as a zip of plain-text files
+         * @description Accounts, transactions, companies, plans, rules and settings, but no password or shared market data.
+         */
+        get: operations["export"];
         put?: never;
         post?: never;
         delete?: never;
@@ -665,6 +705,18 @@ export interface components {
             thesis?: string;
             analysis?: string;
             tags?: string[];
+        };
+        RestoredResponse: {
+            /** Format: int32 */
+            accounts?: number;
+            /** Format: int32 */
+            transactions?: number;
+            /** Format: int32 */
+            companies?: number;
+            /** Format: int32 */
+            plans?: number;
+            /** Format: int32 */
+            rules?: number;
         };
         RegisterRequest: {
             username: string;
@@ -1338,6 +1390,35 @@ export interface operations {
             };
         };
     };
+    restore: {
+        parameters: {
+            query: {
+                mode: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RestoredResponse"];
+                };
+            };
+        };
+    };
     register: {
         parameters: {
             query?: never;
@@ -1669,6 +1750,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DetailsResponse"];
+                };
+            };
+        };
+    };
+    export: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
                 };
             };
         };

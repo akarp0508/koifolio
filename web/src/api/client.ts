@@ -16,6 +16,7 @@ export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
   'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
 export type Settings = Required<Schemas['SettingsResponse']>
+export type RestoredData = Required<Schemas['RestoredResponse']>
 export type Rule = Schemas['RuleResponse'] & Required<Pick<Schemas['RuleResponse'], 'id' | 'type' | 'limitPercent'>>
 export type RuleInput = Schemas['RuleRequest']
 export type RuleResult = Omit<Required<Schemas['RuleCheckResponse']>, 'actual' | 'rule'> & { actual?: string; rule: Rule }
@@ -78,10 +79,11 @@ async function toApiError(response: Response) {
   return new ApiError(response.status, message, problem?.code, fieldErrors)
 }
 
-async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+async function send(method: string, path: string, body?: unknown): Promise<Response> {
   const token = localStorage.getItem(TOKEN_KEY)
   const headers: Record<string, string> = {}
-  if (body !== undefined) {
+  const upload = body instanceof FormData
+  if (body !== undefined && !upload) {
     headers['Content-Type'] = 'application/json'
   }
   if (token) {
@@ -93,7 +95,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
     response = await fetch(`/api/v1${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined || upload ? body as FormData | undefined : JSON.stringify(body),
     })
   } catch {
     throw new ApiError(0, "Can't reach the server")
@@ -106,6 +108,11 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (!response.ok) {
     throw await toApiError(response)
   }
+  return response
+}
+
+async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  const response = await send(method, path, body)
   return response.status === 204 ? (undefined as T) : response.json()
 }
 
@@ -158,6 +165,16 @@ export const api = {
   updateRule: (id: string, input: RuleInput) => request<Rule>('PUT', `/rules/${id}`, input),
   deleteRule: (id: string) => request<void>('DELETE', `/rules/${id}`),
   checkRules: () => request<RuleResult[]>('GET', '/rules/check'),
+  async exportData() {
+    const response = await send('GET', '/export')
+    const name = response.headers.get('Content-Disposition')?.match(/filename="?([^"]+)"?/)?.[1] ?? 'koifolio-export.zip'
+    return { blob: await response.blob(), name }
+  },
+  restoreData(file: File) {
+    const form = new FormData()
+    form.append('file', file)
+    return request<RestoredData>('POST', '/import?mode=replace', form)
+  },
   settings: () => request<Settings>('GET', '/settings'),
   updateSettings: (changes: Schemas['SettingsRequest']) => request<Settings>('PATCH', '/settings', changes),
   refreshPrices: () => request<void>('POST', '/prices/refresh'),

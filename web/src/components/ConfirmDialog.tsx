@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { ApiError } from '../api/client'
 import { Modal } from './Modal'
 
-export function ConfirmDialog({ title, message, onConfirm, onDone, onClose }: {
+export function ConfirmDialog({ title, message, action = 'Delete', onConfirm, onDone, onClose }: {
   title: string
   message: string
+  action?: string
   onConfirm: () => Promise<void>
   onDone: () => void
   onClose: () => void
@@ -31,7 +32,7 @@ export function ConfirmDialog({ title, message, onConfirm, onDone, onClose }: {
       {error && <p className="error" role="alert">{error.message}</p>}
       <div className="modal-actions">
         <button type="button" onClick={onClose}>Cancel</button>
-        <button className="danger" disabled={busy} onClick={confirm}>Delete</button>
+        <button className="danger" disabled={busy} onClick={confirm}>{action}</button>
       </div>
     </Modal>
   )
