@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { PortfolioPoint } from '../api/client'
 import { formatAmount, formatGain } from '../format'
+import { t } from '../i18n'
 
 type ChartPoint = PortfolioPoint & { valueNumber: number; costNumber: number }
 
@@ -16,9 +17,9 @@ function ChartTooltip({ active, payload, currency }: {
   return (
     <div className="chart-tooltip">
       <strong>{point.date}</strong>
-      <div><span>Value</span>{formatAmount(point.value ?? '')} {currency}</div>
-      <div><span>Cost</span>{formatAmount(point.cost ?? '')} {currency}</div>
-      <div><span>Total gain</span>{formatGain(point.gain ?? '')} {currency}</div>
+      <div><span>{t('Value')}</span>{formatAmount(point.value ?? '')} {currency}</div>
+      <div><span>{t('Cost')}</span>{formatAmount(point.cost ?? '')} {currency}</div>
+      <div><span>{t('Total gain')}</span>{formatGain(point.gain ?? '')} {currency}</div>
     </div>
   )
 }

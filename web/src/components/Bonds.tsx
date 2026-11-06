@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Bond } from '../api/client'
-import { formatAmount, formatGain, gainClass } from '../format'
+import { decimal, formatAmount, formatGain, gainClass } from '../format'
 import { BondDialog } from './BondDialog'
 import { ConfirmDialog } from './ConfirmDialog'
+import { t } from '../i18n'
 
 export function Bonds() {
   const [bonds, setBonds] = useState<Bond[] | null>(null)
@@ -28,35 +29,32 @@ export function Bonds() {
   return (
     <>
       <header className="page-header">
-        <h1>Bonds</h1>
-        <button className="primary" onClick={() => setAdding(true)}>+ Bonds</button>
+        <h1>{t('Bonds')}</h1>
+        <button className="primary" onClick={() => setAdding(true)}>{t('+ Bonds')}</button>
       </header>
 
-      {error && <p className="error" role="alert">{error.message} <button className="link" onClick={load}>Try again</button></p>}
-      {!bonds && !error && <p className="muted">Loading…</p>}
+      {error && <p className="error" role="alert">{error.message} <button className="link" onClick={load}>{t('Try again')}</button></p>}
+      {!bonds && !error && <p className="muted">{t('Loading…')}</p>}
 
       {bonds && (
         <>
-          <p className="muted">
-            Polish TOS, ROS, EDO and ROD bonds in PLN. Value grows daily from each bond's rate, as in the official interest
-            tables, and counts in your totals. Redeeming shows what you'd get after the early redemption fee, before tax.
-          </p>
-          {bonds.length === 0 && <p className="muted">No bonds yet.</p>}
+          <p className="muted">{t("Polish TOS, ROS, EDO and ROD bonds in PLN. Value grows daily from each bond's rate, as in the official interest tables, and counts in your totals. Redeeming shows what you'd get after the early redemption fee, before tax.")}</p>
+          {bonds.length === 0 && <p className="muted">{t('No bonds yet.')}</p>}
           {bonds.length > 0 && (
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th>Series</th>
-                    <th>Account</th>
-                    <th className="number">Bonds</th>
-                    <th>Bought</th>
-                    <th>Matures</th>
-                    <th className="number">Rates</th>
-                    <th className="number">Value</th>
-                    <th className="number">Interest</th>
-                    <th className="number">If redeemed</th>
-                    <th><span className="visually-hidden">Actions</span></th>
+                    <th>{t('Series')}</th>
+                    <th>{t('Account')}</th>
+                    <th className="number">{t('Bonds')}</th>
+                    <th>{t('Bought')}</th>
+                    <th>{t('Matures')}</th>
+                    <th className="number">{t('Rates')}</th>
+                    <th className="number">{t('Value')}</th>
+                    <th className="number">{t('Interest')}</th>
+                    <th className="number">{t('If redeemed')}</th>
+                    <th><span className="visually-hidden">{t('Actions')}</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -71,12 +69,12 @@ export function Bonds() {
                       <td className="number">{bond.quantity}</td>
                       <td className="nowrap">{bond.purchaseDate}</td>
                       <td className="nowrap">{bond.maturityDate}</td>
-                      <td className="number">{bond.rates?.map((rate) => `${rate}%`).join(', ')}</td>
+                      <td className="number">{bond.rates?.map((rate) => `${decimal(rate ?? '')}%`).join(', ')}</td>
                       <td className="number">{formatAmount(bond.value ?? '')}</td>
                       <td className={`number ${gainClass(bond.interest)}`}>{formatGain(bond.interest ?? '')}</td>
                       <td className="number">{formatAmount(bond.ifRedeemedToday ?? '')}</td>
                       <td className="actions">
-                        <button className="icon" aria-label={`Remove ${bond.series}`} title="Remove" onClick={() => setRemoving(bond)}>✕</button>
+                        <button className="icon" aria-label={t('Remove {name}', { name: bond.series ?? '' })} title={t('Remove')} onClick={() => setRemoving(bond)}>✕</button>
                       </td>
                     </tr>
                   ))}
@@ -99,9 +97,9 @@ export function Bonds() {
       )}
       {removing && (
         <ConfirmDialog
-          title={`Remove ${removing.series}?`}
-          message="Use this for a mistake or once it's redeemed. If it was paid from the account's cash, the cost goes back there."
-          action="Remove"
+          title={t('Remove {name}?', { name: removing.series ?? '' })}
+          message={t("Use this for a mistake or once it's redeemed. If it was paid from the account's cash, the cost goes back there.")}
+          action={t('Remove')}
           onConfirm={() => api.deleteBond(removing.id ?? '')}
           onDone={() => {
             setRemoving(null)

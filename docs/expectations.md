@@ -31,7 +31,7 @@ Last reviewed: 2026-11-06.
 | Purchase-date FX, with currency gains separated | ✅ Done |
 | Editing transactions without losing history | ✅ The change log keeps old values, and deletes are soft |
 | Manual prices | ❌ Not built |
-| PL / EN interface | ❌ English only |
+| PL / EN interface | ✅ Done, chosen with the PL/EN button in the sidebar. Change log summaries and some detailed server messages stay in English |
 | Light / dark theme | ✅ Done |
 
 ## Later ideas from the original plan

@@ -1,6 +1,7 @@
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import type { HistoryPoint } from '../api/client'
 import { formatAmount } from '../format'
+import { t } from '../i18n'
 
 type ChartPoint = HistoryPoint & { valueNumber?: number; costNumber?: number; closeNumber: number }
 
@@ -17,11 +18,11 @@ function ChartTooltip({ active, payload, currency, priceOnly }: {
   return (
     <div className="chart-tooltip">
       <strong>{point.date}</strong>
-      {!priceOnly && <div><span>Value</span>{formatAmount(point.value ?? '')} {currency}</div>}
-      {!priceOnly && <div><span>Cost</span>{formatAmount(point.cost ?? '')} {currency}</div>}
-      <div><span>Quantity</span>{point.quantity}</div>
-      <div><span>Close</span>{formatAmount(point.close ?? '')}</div>
-      {point.traded && <div><span>Bought or sold</span></div>}
+      {!priceOnly && <div><span>{t('Value')}</span>{formatAmount(point.value ?? '')} {currency}</div>}
+      {!priceOnly && <div><span>{t('Cost')}</span>{formatAmount(point.cost ?? '')} {currency}</div>}
+      <div><span>{t('Quantity')}</span>{point.quantity}</div>
+      <div><span>{t('Close')}</span>{formatAmount(point.close ?? '')}</div>
+      {point.traded && <div><span>{t('Bought or sold')}</span></div>}
     </div>
   )
 }

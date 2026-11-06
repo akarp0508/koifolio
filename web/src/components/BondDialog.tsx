@@ -6,6 +6,7 @@ import { normalizeAmount } from '../format'
 import { today } from '../transactions'
 import { Field } from './Field'
 import { Modal } from './Modal'
+import { t } from '../i18n'
 
 export function BondDialog({ accounts, onSaved, onClose }: {
   accounts: Account[]
@@ -47,32 +48,30 @@ export function BondDialog({ accounts, onSaved, onClose }: {
   }
 
   return (
-    <Modal title="Add bonds" onClose={onClose}>
+    <Modal title={t('Add bonds')} onClose={onClose}>
       <form onSubmit={submit}>
-        <Field label="Series" placeholder="TOS0828" required value={series} error={fieldErrors.series}
+        <Field label={t('Series')} placeholder={t('TOS0828')} required value={series} error={fieldErrors.series}
                onChange={(e) => setSeries(e.target.value)} />
         <label className="field">
-          <span>Account</span>
+          <span>{t('Account')}</span>
           <select value={accountId} onChange={(e) => setAccountId(e.target.value)}>
             {plnAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
           </select>
         </label>
-        <Field label="Bonds, each 100 PLN" inputMode="numeric" required value={quantity} error={fieldErrors.quantity}
+        <Field label={t('Bonds, each 100 PLN')} inputMode="numeric" required value={quantity} error={fieldErrors.quantity}
                onChange={(e) => setQuantity(e.target.value)} />
-        <Field label="Purchase date" type="date" required value={purchaseDate} error={fieldErrors.purchaseDate}
+        <Field label={t('Purchase date')} type="date" required value={purchaseDate} error={fieldErrors.purchaseDate}
                onChange={(e) => setPurchaseDate(e.target.value)} />
-        <Field label="Rate in percent. For EDO, ROS and ROD, each year's so far, with spaces between" inputMode="decimal" required
+        <Field label={t("Rate in percent. For EDO, ROS and ROD, each year's so far, with spaces between")} inputMode="decimal" required
                placeholder="5.40" value={rates} error={fieldErrors.rates} onChange={(e) => setRates(e.target.value)} />
-        <Field label="Early redemption fee per bond (not needed for TOS)" inputMode="decimal" value={earlyFee}
+        <Field label={t('Early redemption fee per bond (not needed for TOS)')} inputMode="decimal" value={earlyFee}
                error={fieldErrors.earlyFee} onChange={(e) => setEarlyFee(e.target.value)} />
         <label className="check">
-          <input type="checkbox" checked={affectsBalance} onChange={(e) => setAffectsBalance(e.target.checked)} />
-          Paid from this account's cash
-        </label>
+          <input type="checkbox" checked={affectsBalance} onChange={(e) => setAffectsBalance(e.target.checked)} />{t("Paid from this account's cash")}</label>
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy || !accountId}>Save</button>
+          <button type="button" onClick={onClose}>{t('Cancel')}</button>
+          <button className="primary" disabled={busy || !accountId}>{t('Save')}</button>
         </div>
       </form>
     </Modal>

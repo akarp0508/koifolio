@@ -5,10 +5,11 @@ import { fieldChanges } from '../auditChanges'
 import { reviewChanged } from '../reviewCount'
 import { TYPE_LABELS, details, transactionAmount } from '../transactions'
 import { ConfirmDialog } from './ConfirmDialog'
+import { t } from '../i18n'
 
 const ALL = ''
 
-const who = (entry: AuditEntry) => entry.actorType === 'AGENT' ? entry.actorName : 'You'
+const who = (entry: AuditEntry) => entry.actorType === 'AGENT' ? entry.actorName : t('You')
 
 function Changes({ before, after, beforeLabel, afterLabel }: {
   before: unknown
@@ -18,14 +19,14 @@ function Changes({ before, after, beforeLabel, afterLabel }: {
 }) {
   const changes = fieldChanges(before, after)
   if (changes.length === 0) {
-    return <p className="muted">No values changed.</p>
+    return <p className="muted">{t('No values changed.')}</p>
   }
 
   return (
     <table className="log-changes">
       <thead>
         <tr>
-          <th>Field</th>
+          <th>{t('Field')}</th>
           <th>{beforeLabel}</th>
           <th>{afterLabel}</th>
         </tr>
@@ -53,12 +54,12 @@ function ChangeRow({ change, onApprove, onReject }: {
       <header>
         <h2>{change.summary}</h2>
         <div className="actions">
-          <button className="trade buy" aria-label={`Approve ${change.summary}`} onClick={onApprove}>Approve</button>
-          <button className="trade sell" aria-label={`Reject ${change.summary}`} onClick={onReject}>Reject</button>
+          <button className="trade buy" aria-label={t('Approve {name}', { name: change.summary ?? '' })} onClick={onApprove}>{t('Approve')}</button>
+          <button className="trade sell" aria-label={t('Reject {name}', { name: change.summary ?? '' })} onClick={onReject}>{t('Reject')}</button>
         </div>
       </header>
       <p className="muted">From {change.agentName}</p>
-      <Changes before={change.current} after={change.proposed} beforeLabel="Now" afterLabel="Proposed" />
+      <Changes before={change.current} after={change.proposed} beforeLabel={t('Now')} afterLabel={t('Proposed')} />
     </section>
   )
 }
@@ -70,7 +71,7 @@ function LogEntry({ entry, onRevert }: { entry: AuditEntry; onRevert: () => void
     <>
       <tr className="clickable" onClick={() => setOpen(!open)}>
         <td className="nowrap">
-          <button className="expand" aria-expanded={open} aria-label={`Details of ${entry.summary}`}>{open ? '▾' : '▸'}</button>
+          <button className="expand" aria-expanded={open} aria-label={t('Details of {name}', { name: entry.summary ?? '' })}>{open ? '▾' : '▸'}</button>
           {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ''}
         </td>
         <td>{who(entry)}</td>
@@ -79,21 +80,19 @@ function LogEntry({ entry, onRevert }: { entry: AuditEntry; onRevert: () => void
           {entry.revertible && (
             <button
               className="link"
-              aria-label={`Revert ${entry.summary}`}
+              aria-label={t('Revert {name}', { name: entry.summary ?? '' })}
               onClick={(event) => {
                 event.stopPropagation()
                 onRevert()
               }}
-            >
-              Revert
-            </button>
+            >{t('Revert')}</button>
           )}
         </td>
       </tr>
       {open && (
         <tr>
           <td colSpan={4}>
-            <Changes before={entry.before} after={entry.after} beforeLabel="Before" afterLabel="After" />
+            <Changes before={entry.before} after={entry.after} beforeLabel={t('Before')} afterLabel={t('After')} />
           </td>
         </tr>
       )}
@@ -145,39 +144,36 @@ export function Review() {
   return (
     <>
       <header className="page-header">
-        <h1>Review</h1>
+        <h1>{t('Review')}</h1>
         {agents.length > 1 && (
           <label className="filter-check">
-            From
+            {t('From')}
             <select value={shownAgent} onChange={(e) => setAgent(e.target.value)}>
-              <option value={ALL}>All agents</option>
+              <option value={ALL}>{t('All agents')}</option>
               {agents.map((name) => <option key={name} value={name}>{name}</option>)}
             </select>
           </label>
         )}
         {total > 1 && (
           <>
-            <button className="primary" onClick={() => run(api.approveAll(shownAgent || undefined))}>Approve all</button>
-            <button onClick={() => setRejectingAll(true)}>Reject all</button>
+            <button className="primary" onClick={() => run(api.approveAll(shownAgent || undefined))}>{t('Approve all')}</button>
+            <button onClick={() => setRejectingAll(true)}>{t('Reject all')}</button>
           </>
         )}
       </header>
 
       {error && (
         <p className="error" role="alert">
-          {error.message} <button className="link" onClick={load}>Try again</button>
+          {error.message} <button className="link" onClick={load}>{t('Try again')}</button>
         </p>
       )}
-      {!waiting && !error && <p className="muted">Loading…</p>}
+      {!waiting && !error && <p className="muted">{t('Loading…')}</p>}
 
       {waiting && (
         <>
-          <p className="muted">
-            Transactions from agents count straight away, until you reject them. Company, rule and account changes apply only
-            once you approve them, and can still be reverted from the change log.
-          </p>
+          <p className="muted">{t('Transactions from agents count straight away, until you reject them. Company, rule and account changes apply only once you approve them, and can still be reverted from the change log.')}</p>
 
-          {total === 0 && <p className="muted">Nothing is waiting for review.</p>}
+          {total === 0 && <p className="muted">{t('Nothing is waiting for review.')}</p>}
 
           {shownChanges.map((change) => (
             <ChangeRow
@@ -193,13 +189,13 @@ export function Review() {
               <table>
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Account</th>
-                    <th>Type</th>
-                    <th>Details</th>
-                    <th className="number">Amount</th>
-                    <th>From</th>
-                    <th><span className="visually-hidden">Actions</span></th>
+                    <th>{t('Date')}</th>
+                    <th>{t('Account')}</th>
+                    <th>{t('Type')}</th>
+                    <th>{t('Details')}</th>
+                    <th className="number">{t('Amount')}</th>
+                    <th>{t('From')}</th>
+                    <th><span className="visually-hidden">{t('Actions')}</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -212,10 +208,10 @@ export function Review() {
                       <td className="number">{transactionAmount(transaction)}</td>
                       <td>{transaction.createdBy}</td>
                       <td className="actions">
-                        <button className="trade buy" aria-label={`Approve ${details(transaction)}`}
-                                onClick={() => run(api.approveTransaction(transaction.id))}>Approve</button>
-                        <button className="trade sell" aria-label={`Reject ${details(transaction)}`}
-                                onClick={() => setRejecting(transaction)}>Reject</button>
+                        <button className="trade buy" aria-label={t('Approve {name}', { name: details(transaction) })}
+                                onClick={() => run(api.approveTransaction(transaction.id))}>{t('Approve')}</button>
+                        <button className="trade sell" aria-label={t('Reject {name}', { name: details(transaction) })}
+                                onClick={() => setRejecting(transaction)}>{t('Reject')}</button>
                       </td>
                     </tr>
                   ))}
@@ -224,17 +220,17 @@ export function Review() {
             </div>
           )}
 
-          <h2 className="section-title">Change log</h2>
-          {log.length === 0 && <p className="muted">Changes to transactions, companies, rules, accounts and plans will show here.</p>}
+          <h2 className="section-title">{t('Change log')}</h2>
+          {log.length === 0 && <p className="muted">{t('Changes to transactions, companies, rules, accounts and plans will show here.')}</p>}
           {log.length > 0 && (
             <div className="table-scroll">
               <table>
                 <thead>
                   <tr>
-                    <th>When</th>
-                    <th>Who</th>
-                    <th>What</th>
-                    <th><span className="visually-hidden">Actions</span></th>
+                    <th>{t('When')}</th>
+                    <th>{t('Who')}</th>
+                    <th>{t('What')}</th>
+                    <th><span className="visually-hidden">{t('Actions')}</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -248,9 +244,9 @@ export function Review() {
 
       {rejecting && (
         <ConfirmDialog
-          title="Reject this transaction?"
-          message="It will be removed from all your numbers, and its effect on the account balance undone."
-          action="Reject"
+          title={t('Reject this transaction?')}
+          message={t('It will be removed from all your numbers, and its effect on the account balance undone.')}
+          action={t('Reject')}
           onConfirm={() => api.rejectTransaction(rejecting.id)}
           onDone={() => {
             setRejecting(null)
@@ -261,9 +257,9 @@ export function Review() {
       )}
       {rejectingAll && (
         <ConfirmDialog
-          title={`Reject ${total} ${total === 1 ? 'change' : 'changes'}${shownAgent ? ` from ${shownAgent}` : ''}?`}
-          message="Rejected transactions come out of all your numbers, and company and rule changes are dropped."
-          action="Reject all"
+          title={shownAgent ? t('Reject {count} from {name}?', { count: total, name: shownAgent }) : t('Reject {count}?', { count: total })}
+          message={t('Rejected transactions come out of all your numbers, and company and rule changes are dropped.')}
+          action={t('Reject all')}
           onConfirm={() => api.rejectAll(shownAgent || undefined)}
           onDone={() => {
             setRejectingAll(false)
@@ -274,11 +270,11 @@ export function Review() {
       )}
       {reverting && (
         <ConfirmDialog
-          title="Revert this change?"
+          title={t('Revert this change?')}
           message={reverting.changedSince
-            ? 'This has changed again since, and reverting puts back the older values, which undoes those later changes too.'
-            : 'The values from before this change will be put back.'}
-          action="Revert"
+            ? t('This has changed again since, and reverting puts back the older values, which undoes those later changes too.')
+            : t('The values from before this change will be put back.')}
+          action={t('Revert')}
           onConfirm={() => api.revertChange(reverting.id ?? '', reverting.changedSince ?? false)}
           onDone={() => {
             setReverting(null)

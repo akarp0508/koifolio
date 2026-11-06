@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { ApiError } from '../api/client'
 import { Modal } from './Modal'
+import { t } from '../i18n'
 
-export function ConfirmDialog({ title, message, action = 'Delete', onConfirm, onDone, onClose }: {
+export function ConfirmDialog({ title, message, action = t('Delete'), onConfirm, onDone, onClose }: {
   title: string
   message: string
   action?: string
@@ -31,7 +32,7 @@ export function ConfirmDialog({ title, message, action = 'Delete', onConfirm, on
       <p>{message}</p>
       {error && <p className="error" role="alert">{error.message}</p>}
       <div className="modal-actions">
-        <button type="button" onClick={onClose}>Cancel</button>
+        <button type="button" onClick={onClose}>{t('Cancel')}</button>
         <button className="danger" disabled={busy} onClick={confirm}>{action}</button>
       </div>
     </Modal>

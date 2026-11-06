@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import type { MouseEvent } from 'react'
 import type { Dashboard, Instrument } from '../api/client'
-import { formatAmount, formatGain, gainClass } from '../format'
+import { decimal, formatAmount, formatGain, gainClass } from '../format'
+import { t } from '../i18n'
 
 type Holding = NonNullable<Dashboard['holdings']>[number]
 type AccountHolding = NonNullable<Holding['accounts']>[number]
 
 export type TradeRequest = { type: 'buy' | 'sell'; ticker: string; accountId?: string }
 
-const INCOMPLETE_HINT = 'A sale exceeds the shares on record, so realized gain only counts the shares with a known cost.'
+const INCOMPLETE_HINT = t('A sale exceeds the shares on record, so realized gain only counts the shares with a known cost.')
 
 const companyHash = (instrumentId?: string, accountId?: string) =>
   accountId ? `#companies/${instrumentId}/${accountId}` : `#companies/${instrumentId}`
@@ -17,7 +18,7 @@ function Numbers({ row }: { row: Holding | AccountHolding }) {
   return (
     <>
       <td className="number">{row.value ? formatAmount(row.value) : '—'}</td>
-      <td className="number">{row.weight ? `${row.weight}%` : '—'}</td>
+      <td className="number">{row.weight ? `${decimal(row.weight ?? '')}%` : '—'}</td>
       <td className={`number ${gainClass(row.unrealizedGain)}`}>
         {row.unrealizedGain ? formatGain(row.unrealizedGain) : '—'}
         {row.unrealizedPercent && <span className="not-in-balance">{formatGain(row.unrealizedPercent)}%</span>}
@@ -41,8 +42,8 @@ function TradeButtons({ ticker, accountId, canSell, onTrade }: {
 
   return (
     <td className="actions">
-      <button className="trade buy" aria-label={`Buy ${ticker}`} onClick={(e) => trade(e, 'buy')}>Buy</button>
-      {canSell && <button className="trade sell" aria-label={`Sell ${ticker}`} onClick={(e) => trade(e, 'sell')}>Sell</button>}
+      <button className="trade buy" aria-label={t('Buy {name}', { name: ticker })} onClick={(e) => trade(e, 'buy')}>{t('Buy')}</button>
+      {canSell && <button className="trade sell" aria-label={t('Sell {name}', { name: ticker })} onClick={(e) => trade(e, 'sell')}>{t('Sell')}</button>}
     </td>
   )
 }
@@ -66,7 +67,7 @@ function Company({ holding, onTrade }: { holding: Holding; onTrade: (request: Tr
       <tr className={holding.held ? 'clickable' : 'closed clickable'} onClick={() => { window.location.hash = href }}>
         <td>
           {several
-            ? <button className="expand" aria-expanded={open} aria-label={`Accounts holding ${ticker}`} onClick={toggle}>{open ? '▾' : '▸'}</button>
+            ? <button className="expand" aria-expanded={open} aria-label={t('Accounts holding {name}', { name: ticker })} onClick={toggle}>{open ? '▾' : '▸'}</button>
             : <span className="expand" />}
           <a href={href} onClick={(e) => e.stopPropagation()}>{ticker}</a>
           {accounts.length === 1 && <span className="muted holding-account">{accounts[0].accountName}</span>}
@@ -105,7 +106,7 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
   ]
 
   if (held.length === 0 && notHeld.length === 0) {
-    return <p className="muted">No positions here yet. They appear once you add buys in <a href="#activity">Activity</a>.</p>
+    return <p className="muted">{t('No positions here yet. They appear once you add buys in')} <a href="#activity">{t('Activity')}</a>.</p>
   }
 
   return (
@@ -113,13 +114,13 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
       <table>
         <thead>
           <tr>
-            <th>Company</th>
-            <th className="number">Value ({currency})</th>
-            <th className="number" title="Share of the selected account, or of everything, cash included">Weight</th>
-            <th className="number">P/L</th>
-            <th className="number">Realized</th>
-            <th className="number" title="Received, after tax withheld">Dividends</th>
-            <th><span className="visually-hidden">Actions</span></th>
+            <th>{t('Company')}</th>
+            <th className="number">{t('Value')} ({currency})</th>
+            <th className="number" title={t('Share of the selected account, or of everything, cash included')}>{t('Weight')}</th>
+            <th className="number">{t('P/L')}</th>
+            <th className="number">{t('Realized')}</th>
+            <th className="number" title={t('Received, after tax withheld')}>{t('Dividends')}</th>
+            <th><span className="visually-hidden">{t('Actions')}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -127,8 +128,8 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
           {notHeld.length > 0 && (
             <tr className="clickable" onClick={() => setShowNotHeld(!showNotHeld)}>
               <td colSpan={7}>
-                <button className="expand" aria-expanded={showNotHeld} aria-label="Companies not held">{showNotHeld ? '▾' : '▸'}</button>
-                <span className="muted">Not held ({notHeld.length})</span>
+                <button className="expand" aria-expanded={showNotHeld} aria-label={t('Companies not held')}>{showNotHeld ? '▾' : '▸'}</button>
+                <span className="muted">{t('Not held ({count})', { count: notHeld.length })}</span>
               </td>
             </tr>
           )}

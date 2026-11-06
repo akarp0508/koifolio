@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Dashboard, Instrument, PortfolioHistory, Position, PositionDetails, PositionHistory, Transaction } from '../api/client'
-import { formatAmount, formatGain, gainClass } from '../format'
-import { RANGES, inRange } from '../history'
+import { decimal, formatAmount, formatGain, gainClass } from '../format'
+import { RANGES, RANGE_LABELS, inRange } from '../history'
 import type { Range } from '../history'
 import { today } from '../transactions'
 import { CompanySection } from './CompanySection'
@@ -15,6 +15,7 @@ import { PortfolioChart } from './PortfolioChart'
 import { PositionChart } from './PositionChart'
 import { TransactionDialog } from './TransactionDialog'
 import { TransactionTable } from './TransactionTable'
+import { t } from '../i18n'
 
 type Holding = NonNullable<Dashboard['holdings']>[number]
 
@@ -61,18 +62,18 @@ function Figure({ label, value, percent, gain }: { label: string; value: string;
 function CombinedSummary({ holding, currency }: { holding: Holding; currency: string }) {
   return (
     <div className="summary">
-      {holding.value && <Figure label="Value" value={`${formatAmount(holding.value)} ${currency}`} />}
+      {holding.value && <Figure label={t('Value')} value={`${formatAmount(holding.value)} ${currency}`} />}
       {holding.unrealizedGain && (
-        <Figure label="P/L" gain={holding.unrealizedGain} percent={holding.unrealizedPercent}
+        <Figure label={t('P/L')} gain={holding.unrealizedGain} percent={holding.unrealizedPercent}
                 value={`${formatGain(holding.unrealizedGain)} ${currency}`} />
       )}
       {holding.realizedGain && (
-        <Figure label="Realized" gain={holding.realizedGain} value={`${formatGain(holding.realizedGain)} ${currency}`} />
+        <Figure label={t('Realized')} gain={holding.realizedGain} value={`${formatGain(holding.realizedGain)} ${currency}`} />
       )}
       {gainClass(holding.dividends) && (
-        <Figure label="Dividends" gain={holding.dividends} value={`${formatGain(holding.dividends ?? '')} ${currency}`} />
+        <Figure label={t('Dividends')} gain={holding.dividends} value={`${formatGain(holding.dividends ?? '')} ${currency}`} />
       )}
-      {holding.weight && <Figure label="Weight" value={`${holding.weight}%`} />}
+      {holding.weight && <Figure label={t('Weight')} value={`${decimal(holding.weight ?? '')}%`} />}
     </div>
   )
 }
@@ -82,26 +83,26 @@ function AccountSummary({ position }: { position: Position }) {
   return (
     <>
       <div className="summary">
-        {position.value && <Figure label="Value" value={`${formatAmount(position.value)} ${currency}`} />}
+        {position.value && <Figure label={t('Value')} value={`${formatAmount(position.value)} ${currency}`} />}
         {position.unrealizedGain && (
-          <Figure label="P/L" gain={position.unrealizedGain} percent={position.unrealizedPercent}
+          <Figure label={t('P/L')} gain={position.unrealizedGain} percent={position.unrealizedPercent}
                   value={`${formatGain(position.unrealizedGain)} ${currency}`} />
         )}
-        <Figure label="Realized" gain={position.realizedGain} value={`${formatGain(position.realizedGain)} ${currency}`} />
+        <Figure label={t('Realized')} gain={position.realizedGain} value={`${formatGain(position.realizedGain)} ${currency}`} />
         {gainClass(position.dividends) && (
-          <Figure label="Dividends" gain={position.dividends} value={`${formatGain(position.dividends ?? '')} ${currency}`} />
+          <Figure label={t('Dividends')} gain={position.dividends} value={`${formatGain(position.dividends ?? '')} ${currency}`} />
         )}
-        {position.weight && <Figure label="Weight" value={`${position.weight}%`} />}
-        <Figure label="Quantity" value={formatAmount(position.quantity)} />
-        {position.averageCost && <Figure label="Avg cost" value={`${formatAmount(position.averageCost)} ${currency}`} />}
-        {position.price && <Figure label="Price" value={`${formatAmount(position.price)} ${position.priceCurrency}`} />}
+        {position.weight && <Figure label={t('Weight')} value={`${decimal(position.weight ?? '')}%`} />}
+        <Figure label={t('Quantity')} value={formatAmount(position.quantity)} />
+        {position.averageCost && <Figure label={t('Avg cost')} value={`${formatAmount(position.averageCost)} ${currency}`} />}
+        {position.price && <Figure label={t('Price')} value={`${formatAmount(position.price)} ${position.priceCurrency}`} />}
       </div>
       {inBase?.gain && (
         <p className="muted">
-          In {inBase.currency}: {formatAmount(inBase.value ?? '')}, P/L{' '}
+          {t('In {currency}: {value}, P/L', { currency: inBase.currency ?? '', value: formatAmount(inBase.value ?? '') })}{' '}
           <span className={gainClass(inBase.gain)}>{formatGain(inBase.gain)}</span>
           {inBase.currencyGain && gainClass(inBase.currencyGain) && (
-            <>, of which currency <span className={gainClass(inBase.currencyGain)}>{formatGain(inBase.currencyGain)}</span></>
+            <>, {t('of which currency')} <span className={gainClass(inBase.currencyGain)}>{formatGain(inBase.currencyGain)}</span></>
           )}
         </p>
       )}
@@ -161,8 +162,8 @@ export function CompanyDetail({ id, accountId }: { id: string; accountId?: strin
       <>
         {backLink}
         {error
-          ? <p className="error" role="alert">{error.message} <button className="link" onClick={fetchCompany}>Try again</button></p>
-          : <p className="muted">Loading…</p>}
+          ? <p className="error" role="alert">{error.message} <button className="link" onClick={fetchCompany}>{t('Try again')}</button></p>
+          : <p className="muted">{t('Loading…')}</p>}
       </>
     )
   }
@@ -185,26 +186,26 @@ export function CompanyDetail({ id, accountId }: { id: string; accountId?: strin
         <div className="header-actions wrap">
           {accounts.length > 0 && (
             <>
-              <button className="buy" onClick={() => setTrade({ type: 'buy', ticker: instrument.ticker, accountId: tradeAccount })}>Buy</button>
+              <button className="buy" onClick={() => setTrade({ type: 'buy', ticker: instrument.ticker, accountId: tradeAccount })}>{t('Buy')}</button>
               {canSell && (
-                <button className="sell" onClick={() => setTrade({ type: 'sell', ticker: instrument.ticker, accountId: tradeAccount })}>Sell</button>
+                <button className="sell" onClick={() => setTrade({ type: 'sell', ticker: instrument.ticker, accountId: tradeAccount })}>{t('Sell')}</button>
               )}
-              <button onClick={() => setTrade({ ticker: instrument.ticker, accountId: tradeAccount })}>+ Transaction</button>
+              <button onClick={() => setTrade({ ticker: instrument.ticker, accountId: tradeAccount })}>{t('+ Transaction')}</button>
             </>
           )}
-          {positions.length === 0 && <button onClick={() => setRemoving(true)}>Remove</button>}
+          {positions.length === 0 && <button onClick={() => setRemoving(true)}>{t('Remove')}</button>}
         </div>
       </header>
 
       {error && (
         <p className="error" role="alert">
-          {error.message} <button className="link" onClick={fetchCompany}>Try again</button>
+          {error.message} <button className="link" onClick={fetchCompany}>{t('Try again')}</button>
         </p>
       )}
 
       {positions.length > 1 && (
         <nav className="tabs">
-          <a href={`#companies/${id}`} aria-current={selected ? undefined : 'page'}>All</a>
+          <a href={`#companies/${id}`} aria-current={selected ? undefined : 'page'}>{t('All')}</a>
           {positions.map((item) => (
             <a key={item.accountId} href={`#companies/${id}/${item.accountId}`}
                aria-current={item.accountId === selected ? 'page' : undefined}>{accountName(item.accountId)}</a>
@@ -212,44 +213,44 @@ export function CompanyDetail({ id, accountId }: { id: string; accountId?: strin
         </nav>
       )}
 
-      {positions.length === 0 && <p className="muted">You don't hold this. Use Buy to add your first trade.</p>}
+      {positions.length === 0 && <p className="muted">{t("You don't hold this. Use Buy to add your first trade.")}</p>}
       {position && <AccountSummary position={position} />}
       {!position && holding && <CombinedSummary holding={holding} currency={currency} />}
 
       {positions.length > 0 && (
         <section className="panel chart-panel">
           <header>
-            <h2>Value over time</h2>
+            <h2>{t('Value over time')}</h2>
             <div className="ranges">
               {RANGES.map((option) => (
-                <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{option}</button>
+                <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{RANGE_LABELS[option]}</button>
               ))}
             </div>
           </header>
           {position && shownHistory && !shownHistory.covered && (
-            <p className="muted">No price history: the price source doesn't cover this ticker.</p>
+            <p className="muted">{t("No price history: the price source doesn't cover this ticker.")}</p>
           )}
           {position && shownHistory?.covered && shownHistory.points.length === 0 && (
-            <p className="muted">Price history is being fetched. It can take a few minutes for a new position.</p>
+            <p className="muted">{t('Price history is being fetched. It can take a few minutes for a new position.')}</p>
           )}
           {position && shownHistory?.currencyMismatch && shownHistory.points.length > 0 && (
-            <p className="muted">Showing the share price: it isn't in the account's currency, so value isn't available yet.</p>
+            <p className="muted">{t("Showing the share price: it isn't in the account's currency, so value isn't available yet.")}</p>
           )}
           {position && shownHistory && positionPoints.length > 0 && (
             <PositionChart points={positionPoints} currency={shownHistory.currency} priceOnly={shownHistory.currencyMismatch} />
           )}
           {position && shownHistory && shownHistory.points.length > 0 && positionPoints.length === 0 && (
-            <p className="muted">Nothing in this range.</p>
+            <p className="muted">{t('Nothing in this range.')}</p>
           )}
           {!position && (combinedPoints.length > 0
             ? <PortfolioChart points={combinedPoints} currency={currency} />
-            : <p className="muted">Nothing to show in this range yet.</p>)}
+            : <p className="muted">{t('Nothing to show in this range yet.')}</p>)}
         </section>
       )}
 
       <div className="panels">
         <CompanySection
-          title="Company"
+          title={t('Company')}
           sector={instrument.sector}
           risk={instrument.risk}
           thesis={instrument.thesis}
@@ -270,7 +271,7 @@ export function CompanyDetail({ id, accountId }: { id: string; accountId?: strin
 
       {shownTransactions.length > 0 && (
         <>
-          <h2 className="section-title">Trades</h2>
+          <h2 className="section-title">{t('Trades')}</h2>
           <TransactionTable transactions={shownTransactions} accounts={accounts} onChanged={saved} />
         </>
       )}
@@ -290,8 +291,8 @@ export function CompanyDetail({ id, accountId }: { id: string; accountId?: strin
       )}
       {removing && (
         <ConfirmDialog
-          title={`Remove ${instrument.ticker}?`}
-          message="It leaves your list, and using it again adds it back."
+          title={t('Remove {name}?', { name: instrument.ticker })}
+          message={t('It leaves your list, and using it again adds it back.')}
           onConfirm={() => api.deleteInstrument(instrument.id)}
           onDone={() => { window.location.hash = '#portfolio' }}
           onClose={() => setRemoving(false)}

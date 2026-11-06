@@ -1,12 +1,13 @@
 import type { Position } from './api/client'
+import { t } from './i18n'
 
 type Signal = NonNullable<Position['signal']>
 
 export const SIGNAL_LABELS: Record<Signal, string> = {
-  NEAR_TARGET: 'near target',
-  TARGET_REACHED: 'target reached',
-  NEAR_STOP: 'near stop',
-  STOP_HIT: 'stop hit',
+  NEAR_TARGET: t('near target'),
+  TARGET_REACHED: t('target reached'),
+  NEAR_STOP: t('near stop'),
+  STOP_HIT: t('stop hit'),
 }
 
 export function signalClass(signal: Signal) {
@@ -14,11 +15,11 @@ export function signalClass(signal: Signal) {
 }
 
 export const RISK_LABELS: Record<number, string> = {
-  1: '1 — very low',
-  2: '2 — low',
-  3: '3 — medium',
-  4: '4 — high',
-  5: '5 — very high',
+  1: t('1 — very low'),
+  2: t('2 — low'),
+  3: t('3 — medium'),
+  4: t('4 — high'),
+  5: t('5 — very high'),
 }
 
 /** Sectors already used, for suggestions, so breakdowns stay tidy. */

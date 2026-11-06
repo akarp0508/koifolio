@@ -6,6 +6,7 @@ import { normalizeAmount } from '../format'
 import { TYPES, TYPE_LABELS, defaultAffectsBalance, isTrade, tickerOptions, today } from '../transactions'
 import { Field } from './Field'
 import { Modal } from './Modal'
+import { t } from '../i18n'
 
 const optionalAmount = (value: string) => normalizeAmount(value) || undefined
 const NEW_TICKER = 'new-ticker'
@@ -99,24 +100,24 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
   const currency = account?.currency ?? ''
 
   return (
-    <Modal title={transaction ? 'Edit transaction' : 'New transaction'} onClose={onClose}>
+    <Modal title={transaction ? t('Edit transaction') : t('New transaction')} onClose={onClose}>
       <form onSubmit={submit} onChange={() => setBalanceWarning(null)}>
         <div className="field-row even">
           <label className="field">
-            <span>Account</span>
+            <span>{t('Account')}</span>
             <select value={accountId} disabled={transaction !== null} onChange={(e) => setAccountId(e.target.value)}>
               {accounts.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
             </select>
           </label>
           <label className="field">
-            <span>Type</span>
+            <span>{t('Type')}</span>
             <select value={type} onChange={(e) => setType(e.target.value as TransactionType)}>
               {TYPES.map((option) => <option key={option} value={option}>{TYPE_LABELS[option]}</option>)}
             </select>
           </label>
         </div>
         <Field
-          label="Date"
+          label={t('Date')}
           type="date"
           required
           value={date}
@@ -126,7 +127,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
         {(trade || dividend || split) && (typingTicker || instruments?.length === 0 ? (
           <>
             <Field
-              label="Ticker"
+              label={t('Ticker')}
               autoFocus={typingTicker}
               required
               value={ticker}
@@ -137,12 +138,12 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
               <button type="button" className="link field-link" onClick={() => {
                 setTypingTicker(false)
                 setTicker('')
-              }}>Choose from my list</button>
+              }}>{t('Choose from my list')}</button>
             )}
           </>
         ) : (
           <label className="field">
-            <span>Ticker</span>
+            <span>{t('Ticker')}</span>
             <select
               required
               disabled={instruments === null}
@@ -157,11 +158,11 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
                 }
               }}
             >
-              <option value="" disabled>{instruments === null ? 'Loading…' : 'Choose…'}</option>
+              <option value="" disabled>{instruments === null ? t('Loading…') : t('Choose…')}</option>
               {tickerOptions(instruments ?? [], ticker).map((option) => (
                 <option key={option.value} value={option.value}>{option.label}</option>
               ))}
-              <option value={NEW_TICKER}>New ticker…</option>
+              <option value={NEW_TICKER}>{t('New ticker…')}</option>
             </select>
             {fieldErrors.ticker && <small className="field-error">{fieldErrors.ticker}</small>}
           </label>
@@ -170,7 +171,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
           <>
             <div className="field-row even">
               <Field
-                label="Quantity"
+                label={t('Quantity')}
                 inputMode="decimal"
                 required
                 value={quantity}
@@ -178,7 +179,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
                 onChange={(e) => setQuantity(e.target.value)}
               />
               <Field
-                label={`Price (${currency})`}
+                label={`${t('Price')} (${currency})`}
                 inputMode="decimal"
                 required
                 value={price}
@@ -187,7 +188,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
               />
             </div>
             <Field
-              label={`Fee (${currency})`}
+              label={`${t('Fee')} (${currency})`}
               inputMode="decimal"
               placeholder="0.00"
               value={fee}
@@ -199,7 +200,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
         {split && (
           <div className="field-row even">
             <Field
-              label="New shares"
+              label={t('New shares')}
               inputMode="decimal"
               placeholder="10"
               required
@@ -208,7 +209,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
               onChange={(e) => setSplitTo(e.target.value)}
             />
             <Field
-              label="For every old shares"
+              label={t('For every old shares')}
               inputMode="decimal"
               required
               value={splitFrom}
@@ -219,7 +220,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
         )}
         {!trade && !split && (
           <Field
-            label={`${dividend ? 'Gross amount' : 'Amount'} (${currency})`}
+            label={`${dividend ? t('Gross amount') : t('Amount')} (${currency})`}
             inputMode="decimal"
             required
             value={amount}
@@ -229,7 +230,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
         )}
         {dividend && (
           <Field
-            label={`Tax withheld (${currency})`}
+            label={`${t('Tax withheld')} (${currency})`}
             inputMode="decimal"
             placeholder="0.00"
             value={withheldTax}
@@ -244,25 +245,25 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
               checked={affectsBalance}
               onChange={(e) => setChosenAffectsBalance(e.target.checked)}
             />
-            <span>Update account balance</span>
+            <span>{t('Update account balance')}</span>
           </label>
         )}
         {!split && !suggested && chosenAffectsBalance === null && (
-          <small className="check-hint">Off: dated before the balance was set on {balanceSetOn}</small>
+          <small className="check-hint">{t('Off: dated before the balance was set on {date}', { date: balanceSetOn })}</small>
         )}
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}
         {balanceWarning ? (
           <div className="confirm" role="alert">
-            <p>{balanceWarning}. Save anyway?</p>
+            <p>{balanceWarning}. {t('Save anyway?')}</p>
             <div className="modal-actions">
-              <button type="button" onClick={() => setBalanceWarning(null)}>Go back</button>
-              <button type="button" className="primary" disabled={busy} onClick={() => save(true)}>Save anyway</button>
+              <button type="button" onClick={() => setBalanceWarning(null)}>{t('Go back')}</button>
+              <button type="button" className="primary" disabled={busy} onClick={() => save(true)}>{t('Save anyway')}</button>
             </div>
           </div>
         ) : (
           <div className="modal-actions">
-            <button type="button" onClick={onClose}>Cancel</button>
-            <button className="primary" disabled={busy}>Save</button>
+            <button type="button" onClick={onClose}>{t('Cancel')}</button>
+            <button className="primary" disabled={busy}>{t('Save')}</button>
           </div>
         )}
       </form>

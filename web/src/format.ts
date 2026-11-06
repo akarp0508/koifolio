@@ -1,3 +1,5 @@
+import { language } from './i18n'
+
 const THIN_SPACE = ' '
 
 /** Groups thousands in a decimal string. Works on the text, so the value never passes through a float. */
@@ -6,7 +8,12 @@ export function formatAmount(amount: string) {
   if (whole === undefined) {
     return amount
   }
-  return sign + whole.replace(/\B(?=(\d{3})+$)/g, THIN_SPACE) + (fraction ?? '')
+  return decimal(sign + whole.replace(/\B(?=(\d{3})+$)/g, THIN_SPACE) + (fraction ?? ''))
+}
+
+/** Polish writes decimals with a comma. Works on the text, like the rest of this file. */
+export function decimal(value: string) {
+  return language === 'pl' ? value.replace('.', ',') : value
 }
 
 /** A gain or loss, with its direction. Zero has none. */

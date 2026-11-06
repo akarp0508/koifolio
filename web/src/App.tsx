@@ -13,24 +13,25 @@ import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
 import { useReviewCount } from './reviewCount'
 import { useTheme } from './theme'
+import { language, setLanguage, t } from './i18n'
 
 // Holds the chart library, which most pages don't need
 const CompanyDetail = lazy(() =>
   import('./components/CompanyDetail').then((module) => ({ default: module.CompanyDetail })))
 
-const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
+const THEME_LABELS = { system: t('Theme: system'), light: t('Theme: light'), dark: t('Theme: dark') }
 
 const MAIN_PAGES = [
-  { hash: '#portfolio', label: 'Portfolio', Page: Portfolio },
-  { hash: '#activity', label: 'Activity', Page: Transactions },
+  { hash: '#portfolio', label: t('Portfolio'), Page: Portfolio },
+  { hash: '#activity', label: t('Activity'), Page: Transactions },
 ]
 
 const OTHER_PAGES = [
-  { hash: '#accounts', label: 'Accounts', Page: Accounts },
-  { hash: '#bonds', label: 'Bonds', Page: Bonds },
-  { hash: '#rules', label: 'Rules', Page: Rules },
-  { hash: '#review', label: 'Review', Page: Review },
-  { hash: '#tax', label: 'Tax', Page: Tax },
+  { hash: '#accounts', label: t('Accounts'), Page: Accounts },
+  { hash: '#bonds', label: t('Bonds'), Page: Bonds },
+  { hash: '#rules', label: t('Rules'), Page: Rules },
+  { hash: '#review', label: t('Review'), Page: Review },
+  { hash: '#tax', label: t('Tax'), Page: Tax },
 ]
 
 const PAGES = [...MAIN_PAGES, ...OTHER_PAGES]
@@ -61,7 +62,7 @@ function NavItem({ href, current, label, main = false, count = 0 }: {
       href={href}
     >
       {label}
-      {count > 0 && <span className="nav-count" aria-label={`${count} waiting`}>{count}</span>}
+      {count > 0 && <span className="nav-count" aria-label={t('{count} waiting', { count })}>{count}</span>}
     </a>
   )
 }
@@ -130,13 +131,17 @@ function App() {
         <div className="sidebar-footer">
           <div className="user">
             <a className="user-link" aria-current={profile ? 'page' : undefined} href="#profile">{user.username}</a>
-            <button className="icon" aria-label={THEME_LABELS[theme]} title={THEME_LABELS[theme]} onClick={nextTheme}>◐</button>
+            <span>
+              <button className="icon" aria-label={t('Switch language')} title={t('Switch language')}
+                      onClick={() => setLanguage(language === 'pl' ? 'en' : 'pl')}>{language === 'pl' ? 'EN' : 'PL'}</button>
+              <button className="icon" aria-label={THEME_LABELS[theme]} title={THEME_LABELS[theme]} onClick={nextTheme}>◐</button>
+            </span>
           </div>
-          <button className="link" onClick={logOut}>Log out</button>
+          <button className="link" onClick={logOut}>{t('Log out')}</button>
         </div>
       </nav>
       <main className="content">
-        <Suspense fallback={<p className="muted">Loading…</p>}>
+        <Suspense fallback={<p className="muted">{t('Loading…')}</p>}>
           {company && <CompanyDetail key={company[1]} id={company[1]} accountId={company[2]} />}
           {profile && <Profile user={user} />}
           {!company && current && <current.Page />}

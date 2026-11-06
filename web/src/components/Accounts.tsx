@@ -4,6 +4,7 @@ import type { Account } from '../api/client'
 import { formatAmount } from '../format'
 import { AccountDialog } from './AccountDialog'
 import { ConfirmDialog } from './ConfirmDialog'
+import { t } from '../i18n'
 
 type Dialog = { kind: 'new' } | { kind: 'edit'; account: Account } | { kind: 'delete'; account: Account }
 
@@ -32,26 +33,26 @@ export function Accounts() {
   return (
     <>
       <header className="page-header">
-        <h1>Accounts</h1>
-        <button className="primary" onClick={() => setDialog({ kind: 'new' })}>+ Account</button>
+        <h1>{t('Accounts')}</h1>
+        <button className="primary" onClick={() => setDialog({ kind: 'new' })}>{t('+ Account')}</button>
       </header>
 
       {error && (
         <p className="error" role="alert">
-          {error.message} <button className="link" onClick={fetchAccounts}>Try again</button>
+          {error.message} <button className="link" onClick={fetchAccounts}>{t('Try again')}</button>
         </p>
       )}
-      {accounts === null && !error && <p className="muted">Loading…</p>}
-      {accounts?.length === 0 && <p className="muted">No accounts yet. Add your first one.</p>}
+      {accounts === null && !error && <p className="muted">{t('Loading…')}</p>}
+      {accounts?.length === 0 && <p className="muted">{t('No accounts yet. Add your first one.')}</p>}
       {accounts && accounts.length > 0 && (
         <div className="table-scroll">
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Description</th>
-                <th className="number">Balance</th>
-                <th><span className="visually-hidden">Actions</span></th>
+                <th>{t('Name')}</th>
+                <th>{t('Description')}</th>
+                <th className="number">{t('Balance')}</th>
+                <th><span className="visually-hidden">{t('Actions')}</span></th>
               </tr>
             </thead>
             <tbody>
@@ -61,9 +62,9 @@ export function Accounts() {
                   <td className="muted">{account.description}</td>
                   <td className="number">{formatAmount(account.balance)} {account.currency}</td>
                   <td className="actions">
-                    <button className="icon" aria-label={`Edit ${account.name}`} title="Edit"
+                    <button className="icon" aria-label={t('Edit {name}', { name: account.name })} title={t('Edit')}
                             onClick={() => setDialog({ kind: 'edit', account })}>✎</button>
-                    <button className="icon" aria-label={`Delete ${account.name}`} title="Delete"
+                    <button className="icon" aria-label={t('Delete {name}', { name: account.name })} title={t('Delete')}
                             onClick={() => setDialog({ kind: 'delete', account })}>✕</button>
                   </td>
                 </tr>
@@ -79,8 +80,8 @@ export function Accounts() {
       )}
       {dialog?.kind === 'delete' && (
         <ConfirmDialog
-          title="Delete account?"
-          message={`“${dialog.account.name}” and all its transactions will be permanently deleted.`}
+          title={t('Delete account?')}
+          message={t('“{name}” and all its transactions will be permanently deleted.', { name: dialog.account.name })}
           onConfirm={() => api.deleteAccount(dialog.account.id)}
           onDone={saved}
           onClose={() => setDialog(null)}

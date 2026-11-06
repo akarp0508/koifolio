@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Dashboard, DashboardSlice, Instrument, PeriodChange, PortfolioHistory, Position, RuleResult, TaxEstimate } from '../api/client'
 import { formatAmount, formatGain, formatQuoteTime, gainClass } from '../format'
-import { RANGES, inRange } from '../history'
+import { RANGES, RANGE_LABELS, inRange } from '../history'
 import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
 import { ruleLabel } from '../rules'
@@ -14,6 +14,7 @@ import type { TradeRequest } from './Holdings'
 import { SplitSuggestions } from './SplitSuggestions'
 import { TagFilter } from './TagFilter'
 import { TransactionDialog } from './TransactionDialog'
+import { plural, t } from '../i18n'
 
 // Holds the chart library, so the rest of the page opens without it
 const PortfolioChart = lazy(() =>
@@ -22,26 +23,26 @@ const PortfolioChart = lazy(() =>
 const ALL = ''
 
 const PERIOD_LABELS: Record<NonNullable<PeriodChange['period']>, string> = {
-  DAY: '1D',
-  WEEK: '1W',
-  MONTH: '1M',
-  YEAR_TO_DATE: 'YTD',
-  YEAR: '1Y',
+  DAY: t('1D'),
+  WEEK: t('1W'),
+  MONTH: t('1M'),
+  YEAR_TO_DATE: t('YTD'),
+  YEAR: t('1Y'),
 }
 
 function gainNote(dashboard: Dashboard) {
   const percent = dashboard.unrealizedPercent && `${formatGain(dashboard.unrealizedPercent)}%`
   const currency = dashboard.currencyGain && gainClass(dashboard.currencyGain)
-    ? `currency ${formatGain(dashboard.currencyGain)}`
+    ? t('currency {amount}', { amount: formatGain(dashboard.currencyGain) })
     : undefined
   return [percent, currency].filter(Boolean).join(' · ') || undefined
 }
 
 function taxNote(tax: TaxEstimate) {
   const unset = tax.unsetAccounts?.length ?? 0
-  const sold = tax.totalIfSoldToday && `${formatGain(tax.totalIfSoldToday)} if sold today`
-  const dividends = gainClass(tax.totalDividendTax) ? `${formatAmount(tax.totalDividendTax ?? '')} on dividends` : undefined
-  return [sold, dividends, unset > 0 ? `${unset} without a rate` : undefined].filter(Boolean).join(' · ') || undefined
+  const sold = tax.totalIfSoldToday && t('{amount} if sold today', { amount: formatGain(tax.totalIfSoldToday) })
+  const dividends = gainClass(tax.totalDividendTax) ? t('{amount} on dividends', { amount: formatAmount(tax.totalDividendTax ?? '') }) : undefined
+  return [sold, dividends, unset > 0 ? t('{count} without a rate', { count: unset }) : undefined].filter(Boolean).join(' · ') || undefined
 }
 
 function Tile({ label, children, note, tone = '' }: {
@@ -80,10 +81,10 @@ function Bars({ title, slices, currency }: { title: string; slices: DashboardSli
   return (
     <section className="panel">
       <header><h2>{title}</h2></header>
-      {slices.length === 0 && <p className="muted">Nothing to show.</p>}
+      {slices.length === 0 && <p className="muted">{t('Nothing to show.')}</p>}
       {slices.map((slice) => (
         <div className="bar-row" key={slice.label ?? 'none'} title={`${formatAmount(slice.value ?? '')} ${currency}`}>
-          <span className={slice.label ? undefined : 'muted'}>{slice.label ?? 'Not set'}</span>
+          <span className={slice.label ? undefined : 'muted'}>{slice.label === 'Bonds' ? t('Bonds') : slice.label ?? t('Not set')}</span>
           <div className="bar"><div style={{ width: `${slice.percent}%` }} /></div>
           <span className="number">{slice.percent}%</span>
         </div>
@@ -173,12 +174,12 @@ export function Portfolio() {
   return (
     <>
       <header className="page-header">
-        <h1>Portfolio</h1>
+        <h1>{t('Portfolio')}</h1>
         <div className="header-actions wrap">
-          {quoteTime && <span className="muted">Prices as of {quoteTime}</span>}
-          <button disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
-          <button onClick={() => setAddingCompany(true)}>+ Company</button>
-          <button className="primary" disabled={accounts.length === 0} onClick={() => setTrade({})}>+ Transaction</button>
+          {quoteTime && <span className="muted">{t('Prices as of {time}', { time: quoteTime })}</span>}
+          <button disabled={refreshing} onClick={refresh}>{refreshing ? t('Refreshing…') : t('Refresh')}</button>
+          <button onClick={() => setAddingCompany(true)}>{t('+ Company')}</button>
+          <button className="primary" disabled={accounts.length === 0} onClick={() => setTrade({})}>{t('+ Transaction')}</button>
         </div>
       </header>
 
@@ -186,57 +187,57 @@ export function Portfolio() {
 
       <div className="filter wrap">
         <label className="filter-check">
-          Account
+          {t('Account')}
           <select value={account} onChange={(e) => setAccount(e.target.value)}>
-            <option value={ALL}>All</option>
+            <option value={ALL}>{t('All')}</option>
             {accounts.map((option) => <option key={option.id} value={option.id}>{option.name}</option>)}
           </select>
         </label>
-        <TagFilter label="Company tags" tags={allTags(positions, 'instrumentTags')} selected={instrumentTags}
+        <TagFilter label={t('Company tags')} tags={allTags(positions, 'instrumentTags')} selected={instrumentTags}
                    onChange={setInstrumentTags} />
-        <TagFilter label="Position tags" tags={allTags(positions, 'positionTags')} selected={positionTags}
+        <TagFilter label={t('Position tags')} tags={allTags(positions, 'positionTags')} selected={positionTags}
                    onChange={setPositionTags} />
       </div>
 
       {error && (
         <p className="error" role="alert">
-          {error.message} <button className="link" onClick={fetchDashboard}>Try again</button>
+          {error.message} <button className="link" onClick={fetchDashboard}>{t('Try again')}</button>
         </p>
       )}
-      {!dashboard && !error && <p className="muted">Loading…</p>}
+      {!dashboard && !error && <p className="muted">{t('Loading…')}</p>}
 
       {dashboard && (
         <>
           <div className="tiles">
-            <Tile label="Value">{formatAmount(dashboard.value)} {currency}</Tile>
-            <Tile label="P/L" tone={gainClass(dashboard.unrealizedGain)} note={gainNote(dashboard)}>
+            <Tile label={t('Value')}>{formatAmount(dashboard.value)} {currency}</Tile>
+            <Tile label={t('P/L')} tone={gainClass(dashboard.unrealizedGain)} note={gainNote(dashboard)}>
               {formatGain(dashboard.unrealizedGain)} {currency}
             </Tile>
-            <Tile label="Realized" tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>
+            <Tile label={t('Realized')} tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>
             <Tile
-              label="Dividends"
+              label={t('Dividends')}
               tone={gainClass(dashboard.dividends)}
-              note={gainClass(dashboard.dividendsWithheld) ? `withheld ${formatAmount(dashboard.dividendsWithheld)}` : undefined}
+              note={gainClass(dashboard.dividendsWithheld) ? t('withheld {amount}', { amount: formatAmount(dashboard.dividendsWithheld) }) : undefined}
             >
               {formatGain(dashboard.dividends)} {currency}
             </Tile>
             {gainClass(dashboard.bondsValue) && (
-              <Tile label="Bonds" note={`interest ${formatGain(dashboard.bondsGain)}`}>
+              <Tile label={t('Bonds')} note={t('interest {amount}', { amount: formatGain(dashboard.bondsGain) })}>
                 <a className="tile-link" href="#bonds">{formatAmount(dashboard.bondsValue)} {currency}</a>
               </Tile>
             )}
             {tax && (
-              <Tile label={`Est. tax ${tax.year}`} note={taxNote(tax)}>
+              <Tile label={t('Est. tax {year}', { year: tax.year ?? '' })} note={taxNote(tax)}>
                 <a className="tile-link" href="#tax">{formatAmount(tax.totalTax ?? '')} {tax.currency}</a>
               </Tile>
             )}
-            <Tile label="Cash" note={filteredByTags ? 'not filtered by tags' : undefined}>
+            <Tile label={t('Cash')} note={filteredByTags ? t('not filtered by tags') : undefined}>
               {dashboard.cash ? `${formatAmount(dashboard.cash)} ${currency}` : '—'}
             </Tile>
           </div>
 
           {(dashboard.attention.length > 0 || failedRules.length > 0 || toReview > 0) && (
-            <ul className="attention" aria-label="Needs attention">
+            <ul className="attention" aria-label={t('Needs attention')}>
               {failedRules.map(({ rule, actual }) => (
                 <li key={rule.id}>
                   <a href="#rules">{ruleLabel(rule)}</a>
@@ -245,7 +246,7 @@ export function Portfolio() {
               ))}
               {toReview > 0 && (
                 <li>
-                  <a href="#review">{toReview} agent {toReview === 1 ? 'change' : 'changes'} to review</a>
+                  <a href="#review">{t('{count} {changes} to review', { count: toReview, changes: plural(toReview, t('agent change'), t('agent changes'), t('agent changes (many)')) })}</a>
                 </li>
               )}
               {dashboard.attention.map((item) => (
@@ -264,32 +265,31 @@ export function Portfolio() {
               {history && history.points.length > 0 && (
                 <section className="panel chart-panel">
                   <header>
-                    <h2>Value over time</h2>
+                    <h2>{t('Value over time')}</h2>
                     <div className="ranges">
                       {RANGES.map((option) => (
-                        <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{option}</button>
+                        <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{RANGE_LABELS[option]}</button>
                       ))}
                     </div>
                   </header>
                   {points.length > 0 ? (
-                    <Suspense fallback={<p className="muted">Loading…</p>}>
+                    <Suspense fallback={<p className="muted">{t('Loading…')}</p>}>
                       <PortfolioChart points={points} currency={currency} />
                     </Suspense>
-                  ) : <p className="muted">Nothing in this range.</p>}
+                  ) : <p className="muted">{t('Nothing in this range.')}</p>}
                 </section>
               )}
               {history && <Periods changes={history.changes} currency={currency} />}
             </div>
             <div className="overview-side">
-              <Bars title="By sector" slices={dashboard.bySector} currency={currency} />
-              <Bars title="By risk" slices={dashboard.byRisk} currency={currency} />
+              <Bars title={t('By sector')} slices={dashboard.bySector} currency={currency} />
+              <Bars title={t('By risk')} slices={dashboard.byRisk} currency={currency} />
             </div>
           </div>
 
           {dashboard.unpriced > 0 && (
             <p className="muted">
-              {dashboard.unpriced === 1 ? '1 position has' : `${dashboard.unpriced} positions have`} no price or exchange
-              rate, so {dashboard.unpriced === 1 ? "it isn't" : "they aren't"} counted.
+              {dashboard.unpriced === 1 ? t("1 position has no price or exchange rate, so it isn't counted.") : t("{count} positions have no price or exchange rate, so they aren't counted.", { count: dashboard.unpriced })}
             </p>
           )}
 

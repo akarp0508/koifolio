@@ -7,6 +7,7 @@ import { parseTags } from '../plans'
 import { Field, TextAreaField } from './Field'
 import { Modal } from './Modal'
 import { RiskField } from './RiskField'
+import { t } from '../i18n'
 
 export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved, onClose }: {
   accountId: string
@@ -46,15 +47,15 @@ export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved,
 
   const fieldErrors = error?.fieldErrors ?? {}
   const currency = priceCurrency ? ` (${priceCurrency})` : ''
-  const companyRisk = details.companyRisk === undefined ? 'not set' : details.companyRisk
+  const companyRisk = details.companyRisk === undefined ? t('not set') : details.companyRisk
 
   return (
-    <Modal title={`My plan for ${ticker}`} onClose={onClose}>
+    <Modal title={t('My plan for {name}', { name: ticker })} onClose={onClose}>
       <form onSubmit={submit}>
         <TextAreaField
-          label="Plan"
+          label={t('Plan')}
           rows={6}
-          placeholder="Why do you hold it here? What would make you sell? Markdown works."
+          placeholder={t('Why do you hold it here? What would make you sell? Markdown works.')}
           autoFocus
           value={plan}
           error={fieldErrors.plan}
@@ -62,14 +63,14 @@ export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved,
         />
         <div className="field-row even">
           <Field
-            label={`Target price${currency}`}
+            label={`${t('Target price')}${currency}`}
             inputMode="decimal"
             value={target}
             error={fieldErrors.targetPrice}
             onChange={(e) => setTarget(e.target.value)}
           />
           <Field
-            label={`Stop price${currency}`}
+            label={`${t('Stop price')}${currency}`}
             inputMode="decimal"
             value={stop}
             error={fieldErrors.stopPrice}
@@ -77,22 +78,22 @@ export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved,
           />
         </div>
         <RiskField
-          label="Risk in this account"
-          emptyLabel={`Same as the company (${companyRisk})`}
+          label={t('Risk in this account')}
+          emptyLabel={t('Same as the company ({risk})', { risk: companyRisk })}
           value={risk}
           error={fieldErrors.risk}
           onChange={setRisk}
         />
         <Field
-          label="Position tags"
-          placeholder="Comma separated, e.g. core, swing"
+          label={t('Position tags')}
+          placeholder={t('Comma separated, e.g. core, swing')}
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy}>Save</button>
+          <button type="button" onClick={onClose}>{t('Cancel')}</button>
+          <button className="primary" disabled={busy}>{t('Save')}</button>
         </div>
       </form>
     </Modal>

@@ -4,10 +4,11 @@ import type { Account, Transaction } from '../api/client'
 import { TYPE_LABELS, details, transactionAmount } from '../transactions'
 import { ConfirmDialog } from './ConfirmDialog'
 import { TransactionDialog } from './TransactionDialog'
+import { t } from '../i18n'
 
 type Dialog = { kind: 'edit'; transaction: Transaction } | { kind: 'delete'; transaction: Transaction }
 
-const OVERSOLD_HINT = 'This sells more than the earlier transactions bought. It clears once the history adds up.'
+const OVERSOLD_HINT = t('This sells more than the earlier transactions bought. It clears once the history adds up.')
 
 export function TransactionTable({ transactions, accounts, onChanged }: {
   transactions: Transaction[]
@@ -29,12 +30,12 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
         <table>
         <thead>
           <tr>
-            <th>Date</th>
-            <th>Account</th>
-            <th>Type</th>
-            <th>Details</th>
-            <th className="number">Amount</th>
-            <th><span className="visually-hidden">Actions</span></th>
+            <th>{t('Date')}</th>
+            <th>{t('Account')}</th>
+            <th>{t('Type')}</th>
+            <th>{t('Details')}</th>
+            <th className="number">{t('Amount')}</th>
+            <th><span className="visually-hidden">{t('Actions')}</span></th>
           </tr>
         </thead>
         <tbody>
@@ -49,19 +50,19 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
                   <span className="warning" role="img" aria-label={OVERSOLD_HINT} title={OVERSOLD_HINT}>⚠</span>
                 )}
                 {transaction.unvalidated && (
-                  <span className="not-in-balance"><a href="#review">unvalidated</a>, from {transaction.createdBy}</span>
+                  <span className="not-in-balance"><a href="#review">{t('unvalidated')}</a>, {t('from {name}', { name: transaction.createdBy ?? '' })}</span>
                 )}
               </td>
               <td className={transaction.affectsBalance ? 'number' : 'number backfill'}>
                 {transactionAmount(transaction)}
                 {!transaction.affectsBalance && transaction.type !== 'split' && (
-                  <span className="not-in-balance">not in balance</span>
+                  <span className="not-in-balance">{t('not in balance')}</span>
                 )}
               </td>
               <td className="actions">
-                <button className="icon" aria-label="Edit transaction" title="Edit"
+                <button className="icon" aria-label={t('Edit transaction')} title={t('Edit')}
                         onClick={() => setDialog({ kind: 'edit', transaction })}>✎</button>
-                <button className="icon" aria-label="Delete transaction" title="Delete"
+                <button className="icon" aria-label={t('Delete transaction')} title={t('Delete')}
                         onClick={() => setDialog({ kind: 'delete', transaction })}>✕</button>
               </td>
             </tr>
@@ -81,10 +82,10 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
       )}
       {dialog?.kind === 'delete' && (
         <ConfirmDialog
-          title="Delete transaction?"
+          title={t('Delete transaction?')}
           message={dialog.transaction.affectsBalance
-            ? 'It will be removed from all your numbers, and its effect on the account balance undone.'
-            : 'It will be removed from all your numbers.'}
+            ? t('It will be removed from all your numbers, and its effect on the account balance undone.')
+            : t('It will be removed from all your numbers.')}
           onConfirm={() => api.deleteTransaction(dialog.transaction.id)}
           onDone={saved}
           onClose={() => setDialog(null)}

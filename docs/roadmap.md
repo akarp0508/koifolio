@@ -32,6 +32,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 21. **MCP read tools** (done): agent tokens on the profile page, and read tools at `/mcp`.
 22. **MCP writes** (done): agents add transactions and propose company and rule changes, per token. Everything waits on a Review page, with approve and reject one at a time or all together, a change log of who changed what, and a revert for approved changes. Deleted transactions are kept out of the numbers but not erased.
 23. **Polish bonds** (done): TOS, ROS, EDO and ROD valued daily from their terms, checked against official tables, and counted in totals, weights, rules, the chart and the tax estimate.
+24. **Polish interface** (done): every label in Polish, from the browser's language or a sidebar button, with decimal commas.
 
 ## Current focus: extending the site
 
@@ -51,7 +52,6 @@ Rough priorities, to be picked one batch at a time:
 - **Broker import,** which backfill really needs
 - **More bonds:** COI, ROR, DOR and OTS, redemption, and rates fetched automatically
 - **Manual prices,** for what the source doesn't cover
-- **PL / EN** interface
 - Mobile polish
 
 ## Deferred, on purpose

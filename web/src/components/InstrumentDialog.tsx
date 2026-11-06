@@ -6,6 +6,7 @@ import { parseTags, usedSectors } from '../plans'
 import { Field, TextAreaField } from './Field'
 import { Modal } from './Modal'
 import { RiskField } from './RiskField'
+import { t } from '../i18n'
 
 export function InstrumentDialog({ instrument, onSaved, onClose }: {
   instrument: Instrument | null
@@ -52,11 +53,11 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
   const shownInline = tickerError || Object.keys(fieldErrors).length > 0
 
   return (
-    <Modal title={instrument ? `Edit ${instrument.ticker}` : 'New instrument'} onClose={onClose}>
+    <Modal title={instrument ? t('Edit {name}', { name: instrument.ticker }) : t('New instrument')} onClose={onClose}>
       <form onSubmit={submit}>
         <div className="field-row even">
           <Field
-            label="Ticker"
+            label={t('Ticker')}
             autoFocus={instrument === null}
             required
             disabled={instrument !== null}
@@ -65,9 +66,9 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
             onChange={(e) => setTicker(e.target.value.toUpperCase())}
           />
           <Field
-            label="Name"
+            label={t('Name')}
             autoFocus={instrument !== null}
-            placeholder="Optional"
+            placeholder={t('Optional')}
             value={name}
             error={fieldErrors.name}
             onChange={(e) => setName(e.target.value)}
@@ -75,9 +76,9 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
         </div>
         <div className="field-row even">
           <Field
-            label="Sector"
+            label={t('Sector')}
             list="sectors"
-            placeholder="Optional"
+            placeholder={t('Optional')}
             value={sector}
             error={fieldErrors.sector}
             onChange={(e) => setSector(e.target.value)}
@@ -85,33 +86,33 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
           <datalist id="sectors">
             {sectors.map((option) => <option key={option} value={option} />)}
           </datalist>
-          <RiskField label="Risk" emptyLabel="Not set" value={risk} error={fieldErrors.risk} onChange={setRisk} />
+          <RiskField label={t('Risk')} emptyLabel={t('Not set')} value={risk} error={fieldErrors.risk} onChange={setRisk} />
         </div>
         <Field
-          label="Thesis"
-          placeholder="Why this company, in a sentence"
+          label={t('Thesis')}
+          placeholder={t('Why this company, in a sentence')}
           value={thesis}
           error={fieldErrors.thesis}
           onChange={(e) => setThesis(e.target.value)}
         />
         <Field
-          label="Company tags"
-          placeholder="Comma separated, e.g. dividend, long-term"
+          label={t('Company tags')}
+          placeholder={t('Comma separated, e.g. dividend, long-term')}
           value={tags}
           onChange={(e) => setTags(e.target.value)}
         />
         <TextAreaField
-          label="Analysis"
+          label={t('Analysis')}
           rows={10}
-          placeholder="Markdown works."
+          placeholder={t('Markdown works.')}
           value={analysis}
           error={fieldErrors.analysis}
           onChange={(e) => setAnalysis(e.target.value)}
         />
         {error && !shownInline && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy}>Save</button>
+          <button type="button" onClick={onClose}>{t('Cancel')}</button>
+          <button className="primary" disabled={busy}>{t('Save')}</button>
         </div>
       </form>
     </Modal>

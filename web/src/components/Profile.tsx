@@ -3,6 +3,7 @@ import { ApiError, api } from '../api/client'
 import type { RestoredData, Settings, User } from '../api/client'
 import { AgentTokens } from './AgentTokens'
 import { ConfirmDialog } from './ConfirmDialog'
+import { t } from '../i18n'
 
 function saveFile(blob: Blob, name: string) {
   const url = URL.createObjectURL(blob)
@@ -65,50 +66,43 @@ export function Profile({ user }: { user: User }) {
 
       <div className="panels">
         <section className="panel">
-          <header><h2>Settings</h2></header>
-          {!settings && !error && <p className="muted">Loading…</p>}
+          <header><h2>{t('Settings')}</h2></header>
+          {!settings && !error && <p className="muted">{t('Loading…')}</p>}
           {settings && (
             <>
               <label className="field">
-                <span>Base currency</span>
+                <span>{t('Base currency')}</span>
                 <select value={settings.baseCurrency} onChange={(e) => changeSettings({ baseCurrency: e.target.value })}>
                   {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
                 </select>
               </label>
               <label className="field">
-                <span>Trade FX rate</span>
+                <span>{t('Trade FX rate')}</span>
                 <select
                   value={settings.costFxRule}
                   onChange={(e) => changeSettings({ costFxRule: e.target.value as Settings['costFxRule'] })}
                 >
-                  <option value="previous_publication">Day before (Polish tax)</option>
-                  <option value="transaction_date">Trade date</option>
+                  <option value="previous_publication">{t('Day before (Polish tax)')}</option>
+                  <option value="transaction_date">{t('Trade date')}</option>
                 </select>
               </label>
-              <p className="muted">Which day's exchange rate converts a buy or sell to the base currency.</p>
+              <p className="muted">{t("Which day's exchange rate converts a buy or sell to the base currency.")}</p>
             </>
           )}
         </section>
         <section className="panel">
-          <header><h2>Export</h2></header>
-          <p className="muted">
-            Everything you've entered, as a zip of plain-text files you can read and keep: accounts, transactions, companies,
-            plans, rules and settings. It holds your finances, so store it somewhere private.
-          </p>
-          <button className="primary" disabled={exporting} onClick={exportData}>{exporting ? 'Exporting…' : 'Download export'}</button>
+          <header><h2>{t('Export')}</h2></header>
+          <p className="muted">{t("Everything you've entered, as a zip of plain-text files you can read and keep: accounts, transactions, companies, plans, rules and settings. It holds your finances, so store it somewhere private.")}</p>
+          <button className="primary" disabled={exporting} onClick={exportData}>{exporting ? t('Exporting…') : t('Download export')}</button>
         </section>
         <section className="panel">
-          <header><h2>Restore</h2></header>
-          <p className="muted">
-            Replaces all your data with an export. If anything in the file is wrong, nothing changes. Prices come back on the
-            next update, within about 15 minutes.
-          </p>
-          <input ref={input} type="file" accept=".zip,application/zip" aria-label="Export file"
+          <header><h2>{t('Restore')}</h2></header>
+          <p className="muted">{t('Replaces all your data with an export. If anything in the file is wrong, nothing changes. Prices come back on the next update, within about 15 minutes.')}</p>
+          <input ref={input} type="file" accept=".zip,application/zip" aria-label={t('Export file')}
                  onChange={(e) => chosen(e.target.files)} />
           {restored && (
             <p>
-              Restored {restored.accounts} accounts, {restored.transactions} transactions, {restored.companies} companies,{' '}
-              {restored.plans} plans and {restored.rules} rules.
+              {t('Restored {accounts} accounts, {transactions} transactions, {companies} companies, {plans} plans and {rules} rules.', { accounts: restored.accounts, transactions: restored.transactions, companies: restored.companies, plans: restored.plans, rules: restored.rules })}
             </p>
           )}
         </section>
@@ -117,9 +111,9 @@ export function Profile({ user }: { user: User }) {
 
       {file && (
         <ConfirmDialog
-          title="Replace all your data?"
-          message={`Everything in this app will be replaced by ${file.name}. This can't be undone, so download an export first if you might want your current data.`}
-          action="Replace"
+          title={t('Replace all your data?')}
+          message={t("Everything in this app will be replaced by {name}. This can't be undone, so download an export first if you might want your current data.", { name: file.name })}
+          action={t('Replace')}
           onConfirm={() => api.restoreData(file).then(setRestored)}
           onDone={closeConfirm}
           onClose={closeConfirm}

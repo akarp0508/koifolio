@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 export function TagFilter({ label, tags, selected, onChange }: {
   label: string
   tags: string[]
@@ -10,12 +11,12 @@ export function TagFilter({ label, tags, selected, onChange }: {
     <div className="tag-filter">
       <span>{label}</span>
       {selected.map((tag) => (
-        <button key={tag} className="tag" aria-label={`Remove ${tag}`}
+        <button key={tag} className="tag" aria-label={t('Remove {name}', { name: tag })}
                 onClick={() => onChange(selected.filter((other) => other !== tag))}>{tag} ×</button>
       ))}
       {available.length > 0 && (
-        <select aria-label={`Add ${label}`} value="" onChange={(e) => onChange([...selected, e.target.value])}>
-          <option value="">+ tag</option>
+        <select aria-label={t('Add {name}', { name: label })} value="" onChange={(e) => onChange([...selected, e.target.value])}>
+          <option value="">{t('+ tag')}</option>
           {available.map((tag) => <option key={tag} value={tag}>{tag}</option>)}
         </select>
       )}

@@ -1,4 +1,5 @@
 import type { components } from './schema'
+import { t } from '../i18n'
 
 type Schemas = components['schemas']
 
@@ -79,9 +80,9 @@ export function clearToken() {
 async function toApiError(response: Response) {
   const problem = await response.json().catch(() => null)
   const fieldErrors = Object.fromEntries(
-    (problem?.errors ?? []).map((error: { field: string; message: string }) => [error.field, error.message]),
+    (problem?.errors ?? []).map((error: { field: string; message: string }) => [error.field, t(error.message)]),
   )
-  const message = problem?.detail ?? `The server answered with an error (${response.status})`
+  const message = problem?.detail ? t(problem.detail) : t('The server answered with an error ({status})', { status: response.status })
   return new ApiError(response.status, message, problem?.code, fieldErrors)
 }
 
@@ -104,7 +105,7 @@ async function send(method: string, path: string, body?: unknown): Promise<Respo
       body: body === undefined || upload ? body as FormData | undefined : JSON.stringify(body),
     })
   } catch {
-    throw new ApiError(0, "Can't reach the server")
+    throw new ApiError(0, t("Can't reach the server"))
   }
 
   if (response.status === 401 && token) {

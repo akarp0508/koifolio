@@ -4,12 +4,13 @@ import { ApiError, api } from '../api/client'
 import type { AgentScope, AgentToken, NewAgentToken } from '../api/client'
 import { ConfirmDialog } from './ConfirmDialog'
 import { Field } from './Field'
+import { t } from '../i18n'
 
 const SCOPES: { scope: AgentScope; label: string; short: string }[] = [
-  { scope: 'transactions:write', label: 'Add transactions and propose bonds, for you to review', short: 'transactions' },
-  { scope: 'analysis:write', label: 'Propose company changes, for you to review', short: 'companies' },
-  { scope: 'accounts:write', label: 'Propose new accounts, for you to review', short: 'accounts' },
-  { scope: 'rules:write', label: 'Propose rule changes, for you to review', short: 'rules' },
+  { scope: 'transactions:write', label: t('Add transactions and propose bonds, for you to review'), short: t('transactions') },
+  { scope: 'analysis:write', label: t('Propose company changes, for you to review'), short: t('companies') },
+  { scope: 'accounts:write', label: t('Propose new accounts, for you to review'), short: t('accounts') },
+  { scope: 'rules:write', label: t('Propose rule changes, for you to review'), short: t('rules') },
 ]
 
 const DEFAULT_SCOPES: AgentScope[] = ['transactions:write', 'analysis:write', 'accounts:write']
@@ -51,23 +52,22 @@ export function AgentTokens() {
 
   return (
     <section className="panel">
-      <header><h2>Agents</h2></header>
+      <header><h2>{t('Agents')}</h2></header>
       <p className="muted">
-        A token lets an agent read your portfolio through MCP, and do what you tick below. It doesn't work anywhere else on
-        this site. Give each agent its own, so the <a href="#review">change log</a> names it and you can revoke it alone.
+        {t("A token lets an agent read your portfolio through MCP, and do what you tick below. It doesn't work anywhere else on this site. Give each agent its own, so the change log names it and you can revoke it alone.")}
       </p>
 
       {error && <p className="error" role="alert">{error.message}</p>}
 
       {created && (
         <div className="notice">
-          <p>Copy the token for {created.token.name} now. It won't be shown again.</p>
+          <p>{t("Copy the token for {name} now. It won't be shown again.", { name: created.token.name })}</p>
           <code className="agent-secret">{created.secret}</code>
-          <p className="muted">For Claude Code:</p>
+          <p className="muted">{t('For Claude Code:')}</p>
           <code className="agent-secret">
             claude mcp add --transport http koifolio {window.location.origin}/mcp --header "Authorization: Bearer {created.secret}"
           </code>
-          <button className="link" onClick={() => setCreated(null)}>Done</button>
+          <button className="link" onClick={() => setCreated(null)}>{t('Done')}</button>
         </div>
       )}
 
@@ -76,22 +76,22 @@ export function AgentTokens() {
           <table>
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Can propose</th>
-                <th>Last used</th>
-                <th>Expires</th>
-                <th><span className="visually-hidden">Actions</span></th>
+                <th>{t('Name')}</th>
+                <th>{t('Can propose')}</th>
+                <th>{t('Last used')}</th>
+                <th>{t('Expires')}</th>
+                <th><span className="visually-hidden">{t('Actions')}</span></th>
               </tr>
             </thead>
             <tbody>
               {tokens.map((token) => (
                 <tr key={token.id}>
                   <td>{token.name}</td>
-                  <td>{SCOPES.filter(({ scope }) => token.scopes?.includes(scope)).map(({ short }) => short).join(', ') || 'Read only'}</td>
-                  <td>{token.lastUsedAt ? formatDay(token.lastUsedAt) : 'Never'}</td>
-                  <td>{token.expiresOn ?? 'Never'}</td>
+                  <td>{SCOPES.filter(({ scope }) => token.scopes?.includes(scope)).map(({ short }) => short).join(', ') || t('Read only')}</td>
+                  <td>{token.lastUsedAt ? formatDay(token.lastUsedAt) : t('Never')}</td>
+                  <td>{token.expiresOn ?? t('Never')}</td>
                   <td className="actions">
-                    <button className="link" aria-label={`Revoke ${token.name}`} onClick={() => setRevoking(token)}>Revoke</button>
+                    <button className="link" aria-label={t('Revoke {name}', { name: token.name })} onClick={() => setRevoking(token)}>{t('Revoke')}</button>
                   </td>
                 </tr>
               ))}
@@ -101,22 +101,22 @@ export function AgentTokens() {
       )}
 
       <form onSubmit={create}>
-        <Field label="Agent name" required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
-        <Field label="Last day it works (optional)" type="date" value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} />
+        <Field label={t('Agent name')} required maxLength={100} value={name} onChange={(e) => setName(e.target.value)} />
+        <Field label={t('Last day it works (optional)')} type="date" value={expiresOn} onChange={(e) => setExpiresOn(e.target.value)} />
         {SCOPES.map(({ scope, label }) => (
           <label className="check" key={scope}>
             <input type="checkbox" checked={scopes.includes(scope)} onChange={(e) => toggle(scope, e.target.checked)} />
             {label}
           </label>
         ))}
-        <button className="primary" disabled={!name.trim()}>Create token</button>
+        <button className="primary" disabled={!name.trim()}>{t('Create token')}</button>
       </form>
 
       {revoking && (
         <ConfirmDialog
-          title={`Revoke ${revoking.name}?`}
-          message="The agent stops working at once, and the token can't be brought back."
-          action="Revoke"
+          title={t('Revoke {name}?', { name: revoking.name })}
+          message={t("The agent stops working at once, and the token can't be brought back.")}
+          action={t('Revoke')}
           onConfirm={() => api.revokeAgentToken(revoking.id)}
           onDone={() => {
             setRevoking(null)

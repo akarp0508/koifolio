@@ -1,5 +1,16 @@
+import { t } from './i18n'
+
 export const RANGES = ['1W', '1M', '6M', 'YTD', '1Y', 'All'] as const
 export type Range = (typeof RANGES)[number]
+
+export const RANGE_LABELS: Record<Range, string> = {
+  '1W': t('1W'),
+  '1M': t('1M'),
+  '6M': t('6M'),
+  YTD: t('YTD'),
+  '1Y': t('1Y'),
+  All: t('All'),
+}
 
 const MONTHS: Record<'1M' | '6M' | '1Y', number> = { '1M': 1, '6M': 6, '1Y': 12 }
 

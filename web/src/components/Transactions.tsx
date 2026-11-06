@@ -3,6 +3,7 @@ import { ApiError, api } from '../api/client'
 import type { Account, Transaction } from '../api/client'
 import { TransactionDialog } from './TransactionDialog'
 import { TransactionTable } from './TransactionTable'
+import { t } from '../i18n'
 
 const ALL = ''
 
@@ -37,31 +38,29 @@ export function Transactions() {
   return (
     <>
       <header className="page-header">
-        <h1>Activity</h1>
-        <button className="primary" disabled={!hasAccounts} onClick={() => setAdding(true)}>
-          + Transaction
-        </button>
+        <h1>{t('Activity')}</h1>
+        <button className="primary" disabled={!hasAccounts} onClick={() => setAdding(true)}>{t('+ Transaction')}</button>
       </header>
 
       {error && (
         <p className="error" role="alert">
-          {error.message} <button className="link" onClick={fetchAll}>Try again</button>
+          {error.message} <button className="link" onClick={fetchAll}>{t('Try again')}</button>
         </p>
       )}
-      {accounts === null && !error && <p className="muted">Loading…</p>}
+      {accounts === null && !error && <p className="muted">{t('Loading…')}</p>}
       {accounts?.length === 0 && (
-        <p className="muted">Transactions belong to an account. <a href="#accounts">Add an account first.</a></p>
+        <p className="muted">{t('Transactions belong to an account.')}<a href="#accounts">{t('Add an account first.')}</a></p>
       )}
       {hasAccounts && (
         <label className="filter">
-          Account
+          {t('Account')}
           <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value={ALL}>All</option>
+            <option value={ALL}>{t('All')}</option>
             {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
           </select>
         </label>
       )}
-      {hasAccounts && shown.length === 0 && <p className="muted">No transactions yet.</p>}
+      {hasAccounts && shown.length === 0 && <p className="muted">{t('No transactions yet.')}</p>}
       {hasAccounts && shown.length > 0 && <TransactionTable transactions={shown} accounts={accounts} onChanged={fetchAll} />}
 
       {hasAccounts && adding && (

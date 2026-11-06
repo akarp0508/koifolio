@@ -40,7 +40,7 @@ Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`w
   - Spring Data JPA + Flyway on Postgres. Flyway owns the schema; JPA entities stay separate from `domain` records.
   - `price` package: a pluggable `QuoteProvider` (bankier) and a 15-minute schedule that updates quotes and fills `daily_closes`. Never call a provider inside a database transaction. `FxService` converts at NBP's latest or past rates. CPI comes later.
   - Serves the built `web` app.
-- `web/`: React + Vite + TypeScript + Recharts, PL/EN, light/dark. Display and editing only, with no calculations. API types are generated from the OpenAPI spec.
+- `web/`: React + Vite + TypeScript + Recharts, PL/EN, light/dark. Display and editing only, with no calculations. API types are generated from the OpenAPI spec. All visible text goes through `t()` from `src/i18n.ts`, with its Polish in `src/i18n.pl.ts`.
 
 Key constraints:
 - All user data is scoped by `user_id`; market data is shared. Money is `numeric`/`BigDecimal`, never floating point.

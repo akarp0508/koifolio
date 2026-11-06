@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Logo } from './Logo'
 import { ApiError, api } from '../api/client'
 import { Field } from './Field'
+import { t } from '../i18n'
 
 export function Login({ onLogin }: { onLogin: () => void }) {
   const [registering, setRegistering] = useState(false)
@@ -41,7 +42,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
         <Logo className="login-logo" />
         <h1>koifolio</h1>
         <Field
-          label="Username"
+          label={t('Username')}
           autoComplete="username"
           autoFocus
           required
@@ -50,7 +51,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           onChange={(e) => setUsername(e.target.value)}
         />
         <Field
-          label="Password"
+          label={t('Password')}
           type="password"
           autoComplete={registering ? 'new-password' : 'current-password'}
           required
@@ -59,9 +60,9 @@ export function Login({ onLogin }: { onLogin: () => void }) {
           onChange={(e) => setPassword(e.target.value)}
         />
         {error && !hasFieldErrors && <p className="error" role="alert">{error.message}</p>}
-        <button className="primary" disabled={busy}>{registering ? 'Create account' : 'Log in'}</button>
+        <button className="primary" disabled={busy}>{registering ? t('Create account') : t('Log in')}</button>
         <button type="button" className="link" onClick={switchMode}>
-          {registering ? 'I already have an account' : 'Create an account'}
+          {registering ? t('I already have an account') : t('Create an account')}
         </button>
       </form>
     </main>

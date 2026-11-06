@@ -5,6 +5,7 @@ import type { Account, CostMethod } from '../api/client'
 import { normalizeAmount } from '../format'
 import { Field } from './Field'
 import { Modal } from './Modal'
+import { t } from '../i18n'
 
 const COMMON_CURRENCIES = ['PLN', 'USD', 'EUR', 'GBP', 'CHF']
 
@@ -53,10 +54,10 @@ export function AccountDialog({ account, onSaved, onClose }: {
   const shownInline = Object.keys(fieldErrors).length > 0 || amountError || currencyError
 
   return (
-    <Modal title={account ? 'Edit account' : 'New account'} onClose={onClose}>
+    <Modal title={account ? t('Edit account') : t('New account')} onClose={onClose}>
       <form onSubmit={submit}>
         <Field
-          label="Name"
+          label={t('Name')}
           autoFocus
           required
           value={name}
@@ -64,14 +65,14 @@ export function AccountDialog({ account, onSaved, onClose }: {
           onChange={(e) => setName(e.target.value)}
         />
         <Field
-          label="Description"
+          label={t('Description')}
           value={description}
           error={fieldErrors.description}
           onChange={(e) => setDescription(e.target.value)}
         />
         <div className="field-row">
           <Field
-            label="Balance"
+            label={t('Balance')}
             inputMode="decimal"
             placeholder="0.00"
             required={account !== null}
@@ -80,7 +81,7 @@ export function AccountDialog({ account, onSaved, onClose }: {
             onChange={(e) => setBalance(e.target.value)}
           />
           <Field
-            label="Currency"
+            label={t('Currency')}
             list="currencies"
             maxLength={3}
             required
@@ -94,27 +95,27 @@ export function AccountDialog({ account, onSaved, onClose }: {
           </datalist>
         </div>
         <label className="field">
-          <span>Cost method</span>
+          <span>{t('Cost method')}</span>
           <select value={costMethod} onChange={(e) => setCostMethod(e.target.value as CostMethod)}>
-            <option value="average">Average cost</option>
-            <option value="fifo">FIFO (oldest shares sold first)</option>
+            <option value="average">{t('Average cost')}</option>
+            <option value="fifo">{t('FIFO (oldest shares sold first)')}</option>
           </select>
         </label>
         <div className="field-row even">
           <label className="field">
-            <span>Tax</span>
+            <span>{t('Tax')}</span>
             <select value={taxChoice} aria-invalid={fieldErrors.taxRate !== undefined}
                     onChange={(e) => setTaxChoice(e.target.value)}>
-              <option value="">Not set</option>
-              <option value="19">Regular (19%)</option>
-              <option value="0">Tax free (0%)</option>
-              <option value="custom">Custom…</option>
+              <option value="">{t('Not set')}</option>
+              <option value="19">{t('Regular (19%)')}</option>
+              <option value="0">{t('Tax free (0%)')}</option>
+              <option value="custom">{t('Custom…')}</option>
             </select>
             {taxChoice !== 'custom' && fieldErrors.taxRate && <small className="field-error">{fieldErrors.taxRate}</small>}
           </label>
           {taxChoice === 'custom' && (
             <Field
-              label="Rate (%)"
+              label={t('Rate (%)')}
               inputMode="decimal"
               required
               value={customRate}
@@ -125,8 +126,8 @@ export function AccountDialog({ account, onSaved, onClose }: {
         </div>
         {error && !shownInline && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button className="primary" disabled={busy}>Save</button>
+          <button type="button" onClick={onClose}>{t('Cancel')}</button>
+          <button className="primary" disabled={busy}>{t('Save')}</button>
         </div>
       </form>
     </Modal>

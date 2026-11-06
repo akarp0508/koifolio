@@ -1,14 +1,15 @@
 import type { Instrument, Transaction, TransactionType } from './api/client'
 import { formatAmount } from './format'
+import { t } from './i18n'
 
 export const TYPE_LABELS: Record<TransactionType, string> = {
-  deposit: 'Deposit',
-  withdrawal: 'Withdrawal',
-  buy: 'Buy',
-  sell: 'Sell',
-  dividend: 'Dividend',
-  fee: 'Fee',
-  split: 'Split',
+  deposit: t('Deposit'),
+  withdrawal: t('Withdrawal'),
+  buy: t('Buy'),
+  sell: t('Sell'),
+  dividend: t('Dividend'),
+  fee: t('Fee'),
+  split: t('Split'),
 }
 
 export const TYPES = Object.keys(TYPE_LABELS) as TransactionType[]
@@ -31,7 +32,7 @@ export function defaultAffectsBalance(date: string, balanceSetOn: string) {
 
 export function details(transaction: Transaction) {
   if (transaction.type === 'split') {
-    return `${transaction.ticker} ${transaction.splitTo} for ${transaction.splitFrom}`
+    return t('{ticker} {to} for {from}', { ticker: transaction.ticker ?? '', to: transaction.splitTo ?? '', from: transaction.splitFrom ?? '' })
   }
   if (isTrade(transaction.type)) {
     return `${transaction.quantity} ${transaction.ticker} @ ${formatAmount(transaction.price ?? '')}`
