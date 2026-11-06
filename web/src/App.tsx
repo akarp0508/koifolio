@@ -12,6 +12,9 @@ import { useTheme } from './theme'
 const PositionDetail = lazy(() =>
   import('./components/PositionDetail').then((module) => ({ default: module.PositionDetail })))
 
+const InstrumentDetail = lazy(() =>
+  import('./components/InstrumentDetail').then((module) => ({ default: module.InstrumentDetail })))
+
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
 
 const PAGES = [
@@ -47,7 +50,9 @@ function App() {
   const { theme, nextTheme } = useTheme()
   const hash = useHash()
   const detail = hash.match(/^#positions\/([^/]+)\/(.+)$/)
-  const current = (detail ? PAGES.find((page) => page.hash === '#positions') : PAGES.find((page) => page.hash === hash)) ?? PAGES[0]
+  const instrumentDetail = hash.match(/^#instruments\/(.+)$/)
+  const parent = detail ? '#positions' : instrumentDetail ? '#instruments' : hash
+  const current = PAGES.find((page) => page.hash === parent) ?? PAGES[0]
 
   const logOut = useCallback(() => {
     clearToken()
@@ -97,13 +102,11 @@ function App() {
         </div>
       </nav>
       <main className="content">
-        {detail
-          ? (
-            <Suspense fallback={<p className="muted">Loading…</p>}>
-              <PositionDetail key={hash} accountId={detail[1]} ticker={decodeURIComponent(detail[2])} />
-            </Suspense>
-          )
-          : <current.Page />}
+        <Suspense fallback={<p className="muted">Loading…</p>}>
+          {detail && <PositionDetail key={hash} accountId={detail[1]} ticker={decodeURIComponent(detail[2])} />}
+          {instrumentDetail && <InstrumentDetail key={hash} id={instrumentDetail[1]} />}
+          {!detail && !instrumentDetail && <current.Page />}
+        </Suspense>
       </main>
     </div>
   )

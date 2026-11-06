@@ -29,6 +29,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/positions/{accountId}/{ticker}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace your plan for a position
+         * @description Prices are in the instrument's price currency. A plan stays if you sell out and buy back.
+         */
+        put: operations["savePlan"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/instruments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get one instrument
+         * @description Also finds ones removed from your list that you still hold.
+         */
+        get: operations["get_1"];
+        /**
+         * Replace what you know about an instrument
+         * @description The ticker can't be changed.
+         */
+        put: operations["update_1"];
+        post?: never;
+        /**
+         * Remove an instrument from your list
+         * @description Its transactions are kept.
+         */
+        delete: operations["delete_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions": {
         parameters: {
             query?: never;
@@ -146,30 +194,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/instruments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove an instrument from your list
-         * @description Its transactions are kept.
-         */
-        delete: operations["delete_1"];
-        options?: never;
-        head?: never;
-        /**
-         * Rename an instrument
-         * @description The ticker can't be changed.
-         */
-        patch: operations["rename"];
-        trace?: never;
-    };
     "/api/v1/accounts/{id}": {
         parameters: {
             query?: never;
@@ -178,7 +202,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get one account */
-        get: operations["get_1"];
+        get: operations["get_2"];
         put?: never;
         post?: never;
         /**
@@ -192,7 +216,7 @@ export interface paths {
          * Change an account
          * @description Send only the fields to change.
          */
-        patch: operations["update_1"];
+        patch: operations["update_2"];
         trace?: never;
     };
     "/api/v1/positions": {
@@ -227,6 +251,23 @@ export interface paths {
          * @description Closes are stored daily and missing days are filled in automatically, so a new or backfilled position can take a few minutes to appear. Prices are adjusted for splits.
          */
         get: operations["history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/positions/{accountId}/{ticker}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The company and your plan for a position */
+        get: operations["details"];
         put?: never;
         post?: never;
         delete?: never;
@@ -324,17 +365,67 @@ export interface components {
             affectsBalance?: boolean;
             oversold?: boolean;
         };
-        CreateInstrumentRequest: {
-            /** @example PAS */
-            ticker: string;
-            /** @example Passus */
+        PlanRequest: {
+            plan?: string;
+            /**
+             * Format: int32
+             * @description Overrides the company's risk for this position
+             */
+            risk?: number;
+            /** @example 180 */
+            targetPrice?: string;
+            /** @example 120 */
+            stopPrice?: string;
+        };
+        DetailsResponse: {
+            /** Format: uuid */
+            instrumentId?: string;
             name?: string;
+            sector?: string;
+            /** Format: int32 */
+            companyRisk?: number;
+            thesis?: string;
+            analysis?: string;
+            plan?: string;
+            /** Format: int32 */
+            risk?: number;
+            targetPrice?: string;
+            stopPrice?: string;
+            targetDistance?: string;
+            stopDistance?: string;
+            /** @enum {string} */
+            signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
+        };
+        UpdateInstrumentRequest: {
+            name?: string;
+            sector?: string;
+            /** Format: int32 */
+            risk?: number;
+            thesis?: string;
+            analysis?: string;
         };
         InstrumentResponse: {
             /** Format: uuid */
             id?: string;
             ticker?: string;
             name?: string;
+            sector?: string;
+            /** Format: int32 */
+            risk?: number;
+            thesis?: string;
+            analysis?: string;
+        };
+        CreateInstrumentRequest: {
+            /** @example PAS */
+            ticker: string;
+            /** @example Passus */
+            name?: string;
+            /** @example IT / cybersecurity */
+            sector?: string;
+            /** Format: int32 */
+            risk?: number;
+            thesis?: string;
+            analysis?: string;
         };
         RegisterRequest: {
             username: string;
@@ -380,9 +471,6 @@ export interface components {
             /** @enum {string} */
             costMethod?: "average" | "fifo";
         };
-        RenameInstrumentRequest: {
-            name: string;
-        };
         UpdateAccountRequest: {
             name?: string;
             description?: string;
@@ -410,6 +498,13 @@ export interface components {
             unrealizedGain?: string;
             unrealizedPercent?: string;
             currencyMismatch?: boolean;
+            /** Format: uuid */
+            instrumentId?: string;
+            sector?: string;
+            /** Format: int32 */
+            risk?: number;
+            /** @enum {string} */
+            signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
         };
         HistoryPoint: {
             /** Format: date */
@@ -487,6 +582,101 @@ export interface operations {
         };
     };
     delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    savePlan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PlanRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DetailsResponse"];
+                };
+            };
+        };
+    };
+    get_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstrumentResponse"];
+                };
+            };
+        };
+    };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateInstrumentRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["InstrumentResponse"];
+                };
+            };
+        };
+    };
+    delete_1: {
         parameters: {
             query?: never;
             header?: never;
@@ -706,53 +896,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description No Content */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    rename: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RenameInstrumentRequest"];
-            };
-        };
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["InstrumentResponse"];
-                };
-            };
-        };
-    };
-    get_1: {
+    get_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -794,7 +938,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -862,6 +1006,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["HistoryResponse"];
+                };
+            };
+        };
+    };
+    details: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DetailsResponse"];
                 };
             };
         };

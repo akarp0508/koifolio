@@ -17,6 +17,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 6. **Positions** (done): holdings, average cost and realized gains per account and ticker, with transactions linked to instruments.
 7. **Prices** (done): current quotes every 15 minutes, with value and unrealized P/L on positions.
 8. **Position history** (done): stored daily closes that repair themselves, and a chart per position.
+9. **Company details and plans** (done): sector, risk, thesis and analysis per company, and a plan with target, stop and risk per account.
 
 ## After the MVP
 
@@ -26,9 +27,10 @@ The rest of the plans in this folder describe where the app may go, not a commit
 - Manual prices, for what the source doesn't cover
 - **Split transactions:** price history is split-adjusted, so a position held through a split shows wrong past values until splits can be entered
 - A value-over-time chart for the whole portfolio
+- **Risk and sector breakdown** across the portfolio: uses the plan's risk if set, otherwise the company's
 - More web UI, with each screen's look agreed first
 - Daily snapshots
-- MCP server and audit log
+- MCP server and audit log: agents writing company analysis builds on the instrument fields
 - Bonds, rules
 - Backfill, export/import, git backup, passkeys
 - Risk & scenarios view, rule checks with explanations

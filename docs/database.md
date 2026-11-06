@@ -12,15 +12,15 @@ users               id, username, password_hash, base_currency, cost_fx_rule, cr
 accounts            id, user_id, name, description, currency, balance, balance_set_on, cost_method, created_at
                     planned: tax_rate, archived_at
 
-instrument_profiles user_id, instrument_id, sector, risk, scenarios (jsonb), thesis, note, updated_at
-                    PK (user_id, instrument_id)
-
 transactions        id, user_id, account_id, instrument_id, type, date, quantity, price, fee, amount,
                     withheld_tax, cash_effect, affects_balance, created_at
                     planned: revisions, soft delete, sequence, created_by, validated_at
 
-instruments         id, user_id, ticker, name, listed, quote_symbol, quote_isin, quote_currency, quote_checked_at, created_at
+instruments         id, user_id, ticker, name, sector, risk, thesis, analysis, listed, quote_symbol, quote_isin, quote_currency, quote_checked_at, created_at
                     UNIQUE (user_id, ticker)
+
+position_plans      account_id, instrument_id, user_id, plan, risk, target_price, stop_price
+                    PK (account_id, instrument_id)
 
 rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
 

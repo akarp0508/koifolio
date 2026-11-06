@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Position } from '../api/client'
 import { formatAmount, formatGain, formatQuoteTime } from '../format'
+import { SIGNAL_LABELS, signalClass } from '../plans'
 
 const ALL = ''
 const detailHash = (position: Position) => `#positions/${position.accountId}/${encodeURIComponent(position.ticker)}`
@@ -96,6 +97,8 @@ export function Positions() {
               <tr>
                 <th>Ticker</th>
                 <th>Account</th>
+                <th>Sector</th>
+                <th className="number">Risk</th>
                 <th className="number">Quantity</th>
                 <th className="number">Avg cost</th>
                 <th className="number">Price</th>
@@ -118,10 +121,15 @@ export function Positions() {
                     )}
                   </td>
                   <td>{accountName(position.accountId)}</td>
+                  <td className="muted">{position.sector}</td>
+                  <td className="number">{position.risk ?? '—'}</td>
                   <td className="number">{formatAmount(position.quantity)}</td>
                   <td className="number">{position.averageCost ? formatAmount(position.averageCost) : '—'}</td>
                   <td className="number">
                     {position.price ? `${formatAmount(position.price)} ${position.priceCurrency}` : '—'}
+                    {position.signal && (
+                      <span className={signalClass(position.signal)}>{SIGNAL_LABELS[position.signal]}</span>
+                    )}
                   </td>
                   <td className="number">
                     {position.value ? `${formatAmount(position.value)} ${position.currency}` : '—'}

@@ -110,18 +110,22 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 
 ## Instruments
 
-Implemented. Each user has their own private list of tickers.
+Implemented. Each user has their own private list. An instrument holds what's true of the company, whichever account holds it; see plans under Positions.
 
 | Request | Purpose |
 |---|---|
 | `GET /instruments` | List yours, by ticker |
-| `POST /instruments` | `{"ticker", "name"}`; `name` is optional, a repeat gives `409 instrument_exists` |
-| `PATCH /instruments/{id}` | `{"name"}`; the ticker can't change |
-| `DELETE /instruments/{id}` | Remove from the list; transactions keep their ticker |
+| `POST /instruments` | `{"ticker", "name", "sector", "risk", "thesis", "analysis"}`; only `ticker` is required, a repeat gives `409 instrument_exists` |
+| `GET /instruments/{id}` | One, including ones removed from the list that you still hold |
+| `PUT /instruments/{id}` | Replace everything except the ticker; what's left out is cleared |
+| `DELETE /instruments/{id}` | Remove from the list; transactions are kept |
+
+- `risk` is 1 (very low) to 5 (very high), and left out if not set.
+- `analysis` is Markdown. The UI doesn't render raw HTML in it.
 
 A transaction using a new ticker adds it to the list. Removing one hides it from the list and keeps its transactions; using it again, or adding it again, brings it back.
 
-Planned: `GET /instruments/search`, `PUT /instruments/{id}/profile`, `GET /bond-presets`.
+Planned: `GET /instruments/search`, `GET /bond-presets`.
 
 ## Positions
 
@@ -158,6 +162,19 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
 - Price fields are left out when there's no price, or nothing is held. A price in another currency than the account sets `currencyMismatch` and leaves out `value` and the gains.
+
+| `GET /positions/{accountId}/{ticker}/details` | The company and your plan together |
+| `PUT /positions/{accountId}/{ticker}/plan` | Replace your plan |
+
+A plan belongs to an account and instrument, and stays if you sell out and buy back:
+
+```json
+{"plan": "Trade around earnings", "risk": 4, "targetPrice": "180", "stopPrice": "120"}
+```
+
+- `risk` overrides the company's risk for this position. `GET /positions` shows the plan's risk if set, otherwise the company's.
+- `targetPrice` and `stopPrice` are in the price's currency.
+- `signal` on a position is `NEAR_TARGET`, `TARGET_REACHED`, `NEAR_STOP` or `STOP_HIT`. Near means within 5%, and the stop wins if both apply. `details` also gives `targetDistance` and `stopDistance` in percent.
 
 History response:
 

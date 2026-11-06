@@ -78,7 +78,8 @@ h2 {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -170,6 +171,7 @@ button.icon {
 
 .field input,
 .field select,
+.field textarea,
 .filter select {
   width: 100%;
   padding: 0.45rem 0.6rem;
@@ -183,7 +185,8 @@ button.icon {
 }
 
 .field input[aria-invalid='true'],
-.field select[aria-invalid='true'] {
+.field select[aria-invalid='true'],
+.field textarea[aria-invalid='true'] {
   border-color: var(--danger);
 }
 
@@ -332,7 +335,7 @@ td {
 /* Modal */
 
 .modal {
-  width: min(28rem, calc(100vw - 2rem));
+  width: min(34rem, calc(100vw - 2rem));
   padding: 1.5rem;
   background: var(--bg);
   color: var(--text);
@@ -568,4 +571,86 @@ tr.clickable a {
   margin-top: 0.5rem;
   color: var(--muted);
   font-size: 0.87rem;
+}
+
+/* Plan and company */
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.panel {
+  min-width: 0;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.panel > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.panel h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.panel p {
+  margin: 0.35rem 0;
+}
+
+.section-title {
+  margin: 1.5rem 0 0.5rem;
+  font-size: 1rem;
+}
+
+.signal {
+  display: block;
+  font-size: 0.8rem;
+}
+
+.signal.gain {
+  color: var(--gain);
+}
+
+.signal.loss {
+  color: var(--loss);
+}
+
+.field textarea {
+  resize: vertical;
+  font-family: inherit;
+}
+
+.modal {
+  max-height: calc(100vh - 2rem);
+}
+
+.markdown {
+  overflow-wrap: anywhere;
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3 {
+  margin: 0.9rem 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.35rem 0;
+  padding-left: 1.25rem;
+}
+
+.markdown a {
+  color: var(--accent);
 }

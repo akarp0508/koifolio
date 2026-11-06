@@ -8,7 +8,12 @@ export type User = Required<Schemas['UserResponse']>
 export type Token = Required<Schemas['Token']>
 export type NewAccount = Schemas['CreateAccountRequest']
 export type AccountChanges = Schemas['UpdateAccountRequest']
-export type Instrument = Required<Schemas['InstrumentResponse']>
+// risk is left out when it isn't set
+export type Instrument = Schemas['InstrumentResponse'] & Required<Pick<Schemas['InstrumentResponse'],
+  'id' | 'ticker' | 'name' | 'sector' | 'thesis' | 'analysis'>>
+export type InstrumentInput = Schemas['UpdateInstrumentRequest']
+export type PositionDetails = Schemas['DetailsResponse']
+export type PlanInput = Schemas['PlanRequest']
 export type CostMethod = NonNullable<Schemas['AccountResponse']['costMethod']>
 // averageCost and the price fields are left out when they don't apply
 export type Position = Schemas['PositionResponse'] & Required<Pick<Schemas['PositionResponse'],
@@ -104,8 +109,13 @@ export const api = {
   updateAccount: (id: string, changes: AccountChanges) => request<Account>('PATCH', `/accounts/${id}`, changes),
   deleteAccount: (id: string) => request<void>('DELETE', `/accounts/${id}`),
   listInstruments: () => request<Instrument[]>('GET', '/instruments'),
-  createInstrument: (ticker: string, name: string) => request<Instrument>('POST', '/instruments', { ticker, name }),
-  renameInstrument: (id: string, name: string) => request<Instrument>('PATCH', `/instruments/${id}`, { name }),
+  getInstrument: (id: string) => request<Instrument>('GET', `/instruments/${id}`),
+  createInstrument: (input: InstrumentInput & { ticker: string }) => request<Instrument>('POST', '/instruments', input),
+  updateInstrument: (id: string, input: InstrumentInput) => request<Instrument>('PUT', `/instruments/${id}`, input),
+  positionDetails: (accountId: string, ticker: string) =>
+    request<PositionDetails>('GET', `/positions/${accountId}/${encodeURIComponent(ticker)}/details`),
+  savePlan: (accountId: string, ticker: string, input: PlanInput) =>
+    request<PositionDetails>('PUT', `/positions/${accountId}/${encodeURIComponent(ticker)}/plan`, input),
   deleteInstrument: (id: string) => request<void>('DELETE', `/instruments/${id}`),
   listPositions: () => request<Position[]>('GET', '/positions?closed=true'),
   positionHistory: (accountId: string, ticker: string) =>

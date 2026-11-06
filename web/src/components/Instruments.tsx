@@ -51,15 +51,23 @@ export function Instruments() {
               <tr>
                 <th>Ticker</th>
                 <th>Name</th>
+                <th>Sector</th>
+                <th className="number">Risk</th>
                 <th><span className="visually-hidden">Actions</span></th>
               </tr>
             </thead>
             <tbody>
               {instruments.map((instrument) => (
-                <tr key={instrument.id}>
-                  <td>{instrument.ticker}</td>
+                <tr
+                  key={instrument.id}
+                  className="clickable"
+                  onClick={() => { window.location.hash = `#instruments/${instrument.id}` }}
+                >
+                  <td><a href={`#instruments/${instrument.id}`} onClick={(e) => e.stopPropagation()}>{instrument.ticker}</a></td>
                   <td className="muted">{instrument.name}</td>
-                  <td className="actions">
+                  <td className="muted">{instrument.sector}</td>
+                  <td className="number">{instrument.risk ?? '—'}</td>
+                  <td className="actions" onClick={(e) => e.stopPropagation()}>
                     <button className="icon" aria-label={`Edit ${instrument.ticker}`} title="Edit"
                             onClick={() => setDialog({ kind: 'edit', instrument })}>✎</button>
                     <button className="icon" aria-label={`Remove ${instrument.ticker}`} title="Remove"

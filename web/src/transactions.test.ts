@@ -4,6 +4,10 @@ import { defaultAffectsBalance, details, instrumentLabel, signedAmount, tickerOp
 
 const THIN = ' '
 
+function instrument(ticker: string, name: string) {
+  return { id: ticker, ticker, name, sector: '', thesis: '', analysis: '' }
+}
+
 const base = {
   id: '1',
   accountId: 'a',
@@ -46,13 +50,13 @@ describe('details', () => {
 
 describe('instrumentLabel', () => {
   it('adds the name when there is one', () => {
-    expect(instrumentLabel({ id: '1', ticker: 'PAS', name: 'Passus' })).toBe('PAS — Passus')
-    expect(instrumentLabel({ id: '1', ticker: 'PAS', name: '' })).toBe('PAS')
+    expect(instrumentLabel(instrument('PAS', 'Passus'))).toBe('PAS — Passus')
+    expect(instrumentLabel(instrument('PAS', ''))).toBe('PAS')
   })
 })
 
 describe('tickerOptions', () => {
-  const instruments = [{ id: '1', ticker: 'PAS', name: 'Passus' }, { id: '2', ticker: 'XTB', name: '' }]
+  const instruments = [instrument('PAS', 'Passus'), instrument('XTB', '')]
 
   it('lists the instruments', () => {
     expect(tickerOptions(instruments, '').map((option) => option.value)).toEqual(['PAS', 'XTB'])
