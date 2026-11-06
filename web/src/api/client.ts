@@ -191,6 +191,7 @@ export const api = {
   approveTransaction: (id: string) => request<Transaction>('POST', `/transactions/${id}/approve`),
   rejectTransaction: (id: string) => request<void>('POST', `/transactions/${id}/reject`),
   auditLog: () => request<AuditEntry[]>('GET', '/audit-log'),
+  reviewCount: () => request<{ waiting?: number }>('GET', '/review/count'),
   pendingChanges: () => request<PendingChange[]>('GET', '/review/changes'),
   approveChange: (id: string) => request<void>('POST', `/review/changes/${id}/approve`),
   rejectChange: (id: string) => request<void>('POST', `/review/changes/${id}/reject`),

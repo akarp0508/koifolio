@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, AuditEntry, PendingChange, Transaction } from '../api/client'
 import { fieldChanges } from '../auditChanges'
+import { reviewChanged } from '../reviewCount'
 import { TYPE_LABELS, details, transactionAmount } from '../transactions'
 import { ConfirmDialog } from './ConfirmDialog'
 
@@ -119,6 +120,7 @@ export function Review() {
         setAccounts(accountList)
         setLog(entries)
         setError(null)
+        reviewChanged()
       })
       .catch((e: ApiError) => setError(e)), [])
 

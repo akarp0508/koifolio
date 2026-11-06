@@ -282,6 +282,16 @@ button.icon {
   font-weight: 600;
 }
 
+.nav-count {
+  margin-left: 0.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
 .nav-group {
   display: flex;
   flex-direction: column;

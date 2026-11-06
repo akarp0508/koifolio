@@ -551,6 +551,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/review/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * How much is waiting for you
+         * @description Agent transactions and changes together.
+         */
+        get: operations["count"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/review/changes": {
         parameters: {
             query?: never;
@@ -1112,6 +1132,10 @@ export interface components {
             breaches?: components["schemas"]["BreachResponse"][];
             /** Format: int32 */
             unpriced?: number;
+        };
+        WaitingResponse: {
+            /** Format: int32 */
+            waiting?: number;
         };
         PendingChangeResponse: {
             /** Format: uuid */
@@ -2182,6 +2206,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleCheckResponse"][];
+                };
+            };
+        };
+    };
+    count: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["WaitingResponse"];
                 };
             };
         };

@@ -9,6 +9,7 @@ import { Review } from './components/Review'
 import { Rules } from './components/Rules'
 import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
+import { useReviewCount } from './reviewCount'
 import { useTheme } from './theme'
 
 // Holds the chart library, which most pages don't need
@@ -43,7 +44,13 @@ function useHash() {
   return hash
 }
 
-function NavItem({ href, current, label, main = false }: { href: string; current: boolean; label: string; main?: boolean }) {
+function NavItem({ href, current, label, main = false, count = 0 }: {
+  href: string
+  current: boolean
+  label: string
+  main?: boolean
+  count?: number
+}) {
   return (
     <a
       className={['nav-item', main && 'nav-main', current && 'active'].filter(Boolean).join(' ')}
@@ -51,6 +58,7 @@ function NavItem({ href, current, label, main = false }: { href: string; current
       href={href}
     >
       {label}
+      {count > 0 && <span className="nav-count" aria-label={`${count} waiting`}>{count}</span>}
     </a>
   )
 }
@@ -64,6 +72,7 @@ function App() {
   const parent = company ? '#portfolio' : hash
   const profile = hash === '#profile'
   const current = profile ? null : PAGES.find((page) => page.hash === parent) ?? PAGES[0]
+  const toReview = useReviewCount(user !== null, hash)
 
   const logOut = useCallback(() => {
     clearToken()
@@ -106,7 +115,13 @@ function App() {
         ))}
         <div className="nav-group">
           {OTHER_PAGES.map((page) => (
-            <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} />
+            <NavItem
+              key={page.hash}
+              href={page.hash}
+              current={page === current}
+              label={page.label}
+              count={page.hash === '#review' ? toReview : 0}
+            />
           ))}
         </div>
         <div className="sidebar-footer">
