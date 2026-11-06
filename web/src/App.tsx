@@ -43,9 +43,13 @@ function useHash() {
   return hash
 }
 
-function NavItem({ href, current, label }: { href: string; current: boolean; label: string }) {
+function NavItem({ href, current, label, main = false }: { href: string; current: boolean; label: string; main?: boolean }) {
   return (
-    <a className={current ? 'nav-item active' : 'nav-item'} aria-current={current ? 'page' : undefined} href={href}>
+    <a
+      className={['nav-item', main && 'nav-main', current && 'active'].filter(Boolean).join(' ')}
+      aria-current={current ? 'page' : undefined}
+      href={href}
+    >
       {label}
     </a>
   )
@@ -98,7 +102,7 @@ function App() {
       <nav className="sidebar">
         <strong className="brand">koifolio</strong>
         {MAIN_PAGES.map((page) => (
-          <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} />
+          <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} main />
         ))}
         <div className="nav-group">
           {OTHER_PAGES.map((page) => (

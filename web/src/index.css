@@ -269,15 +269,35 @@ button.icon {
   border-radius: 6px;
 }
 
-.nav-item.active {
+.nav-item:hover {
   background: var(--border);
 }
 
+.nav-item.active {
+  background: var(--border);
+  color: var(--text);
+}
+
+.nav-main {
+  font-weight: 600;
+}
+
 .nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
   margin-top: 0.75rem;
   padding-top: 0.75rem;
   border-top: 1px solid var(--border);
   font-size: 0.87rem;
+}
+
+.nav-group .nav-item {
+  color: var(--muted);
+}
+
+.nav-group .nav-item.active {
+  color: var(--text);
 }
 
 .sidebar-footer {
@@ -392,8 +412,7 @@ td {
   }
 
   .nav-group {
-    display: flex;
-    gap: 0.25rem;
+    flex-direction: row;
     margin: 0;
     padding: 0;
     border-top: none;
