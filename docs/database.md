@@ -33,7 +33,9 @@ price_overrides     user_id, instrument_id, price, currency, set_at
                     PK (user_id, instrument_id)
 
 audit_log           id, user_id, actor_type (user | agent), actor_name, entity_type, entity_id,
-                    action, summary, before (jsonb), after (jsonb), created_at
+                    action, summary, before (jsonb), after (jsonb), created_at, reverted_at
+
+pending_changes     id, user_id, agent_name, kind, ticker, rule_id, changes (jsonb), summary, created_at
 
 agent_tokens        id, user_id, name, token_hash, scopes, expires_on, last_used_at, created_at
                     UNIQUE (user_id, name)

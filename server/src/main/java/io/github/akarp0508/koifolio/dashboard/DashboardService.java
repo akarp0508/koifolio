@@ -14,6 +14,7 @@ import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.price.FxService;
 import io.github.akarp0508.koifolio.price.PriceHistoryService;
+import io.github.akarp0508.koifolio.review.ReviewService;
 import io.github.akarp0508.koifolio.transaction.TransactionService;
 import java.math.BigDecimal;
 import java.math.MathContext;
@@ -40,9 +41,11 @@ class DashboardService {
     private final AccountRepository accounts;
     private final FxService fx;
     private final TransactionService transactions;
+    private final ReviewService review;
 
     DashboardService(AuthService authService, PositionService positions, AccountRepository accounts, FxService fx,
-                     TransactionService transactions) {
+                     TransactionService transactions, ReviewService review) {
+        this.review = review;
         this.transactions = transactions;
         this.authService = authService;
         this.positions = positions;
@@ -96,12 +99,13 @@ class DashboardService {
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings the matching positions per company, biggest first
      * @param unvalidated agent transactions waiting for review, across all accounts
+     * @param pendingChanges agent company and rule changes waiting for review
      */
     record Dashboard(String currency, BigDecimal value, BigDecimal positionsValue, BigDecimal unrealizedGain,
                      BigDecimal currencyGain, Optional<BigDecimal> gainPercent, BigDecimal realizedGain, BigDecimal dividends,
                      BigDecimal dividendsWithheld, Optional<BigDecimal> cash,
                      List<Breakdown.Slice> bySector, List<Breakdown.Slice> byRisk, List<Attention> attention,
-                     int unpriced, List<Holding> holdings, int unvalidated) {
+                     int unpriced, List<Holding> holdings, int unvalidated, int pendingChanges) {
     }
 
     @Transactional(readOnly = true)
@@ -153,7 +157,7 @@ class DashboardService {
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));
         return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized,
                 Dividend.total(dividends, Dividend::net), Dividend.total(dividends, Dividend::withheld), cash, Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced, holdings(matching, weights, filter),
-                transactions.countUnvalidated(userId));
+                transactions.countUnvalidated(userId), review.count(userId));
     }
 
     /** One account in view weighs against that account, otherwise against the whole portfolio. */

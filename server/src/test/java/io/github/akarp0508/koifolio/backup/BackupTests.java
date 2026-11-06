@@ -318,6 +318,18 @@ class BackupTests {
     }
 
     @Test
+    void aRestoreDropsChangesWaitingForReview() throws Exception {
+        jdbc.sql("""
+                INSERT INTO pending_changes (id, user_id, agent_name, kind, rule_id, changes, summary, created_at)
+                SELECT gen_random_uuid(), id, 'Claude', 'RULE_DELETE', gen_random_uuid(), '{}', 'Remove rule', now()
+                FROM users WHERE username = 'anna'""").update();
+
+        restore(anna, export(anna)).andExpect(status().isOk());
+
+        as(anna, get("/api/v1/review/changes")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void marksSurviveARestoreAndDeletedTransactionsDont() throws Exception {
         var transactions = jdbc.sql("SELECT id FROM transactions WHERE user_id = (SELECT id FROM users WHERE username = 'anna') ORDER BY created_at")
                 .query(java.util.UUID.class).list();

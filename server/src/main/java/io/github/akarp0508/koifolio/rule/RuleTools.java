@@ -7,7 +7,7 @@ import io.github.akarp0508.koifolio.agent.ToolArguments;
 import io.github.akarp0508.koifolio.domain.RuleType;
 import io.github.akarp0508.koifolio.rule.RuleController.RuleCheckResponse;
 import io.github.akarp0508.koifolio.rule.RuleController.RuleRequest;
-import io.github.akarp0508.koifolio.rule.RuleController.RuleResponse;
+import io.github.akarp0508.koifolio.review.ReviewService;
 import io.modelcontextprotocol.common.McpTransportContext;
 import java.util.List;
 import java.util.UUID;
@@ -21,16 +21,18 @@ class RuleTools {
     private final RuleService rules;
 
     private final RequestChecker checker;
+    private final ReviewService review;
 
-    RuleTools(RuleService rules, RequestChecker checker) {
+    RuleTools(RuleService rules, RequestChecker checker, ReviewService review) {
         this.rules = rules;
         this.checker = checker;
+        this.review = review;
     }
 
     @McpTool(name = "save_rule", description = """
-            Adds a rule, or replaces one when given its id from check_rules. It applies at once and goes in the change log.""",
+            Proposes a new rule, or replacing one when given its id from check_rules. Nothing changes until the user approves it.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
-    RuleResponse saveRule(McpTransportContext context,
+    ReviewService.Proposed saveRule(McpTransportContext context,
                           @McpToolParam(description = "max_position_weight or min_low_risk_weight") String type,
                           @McpToolParam(description = "The limit in percent, as text like \"20\"") String limitPercent,
                           @McpToolParam(required = false, description = "The rule to replace") UUID id,
@@ -40,16 +42,14 @@ class RuleTools {
         RuleRequest request = new RuleRequest(ToolArguments.choice(RuleType.class, "type", type), account,
                 ToolArguments.decimal("limitPercent", limitPercent), maxRisk);
         checker.check(request);
-        return RuleResponse.of(id == null ? rules.create(caller.userId(), request.input(), caller.actor())
-                : rules.update(caller.userId(), id, request.input(), caller.actor()));
+        return review.proposeRule(caller.userId(), caller.name(), id, request.input());
     }
 
-    @McpTool(name = "delete_rule", description = "Removes a rule, by its id from check_rules. It goes in the change log.",
-            annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = true))
-    String deleteRule(McpTransportContext context, @McpToolParam(description = "The rule to remove") UUID id) {
+    @McpTool(name = "delete_rule", description = "Proposes removing a rule, by its id from check_rules. Nothing changes until the user approves it.",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
+    ReviewService.Proposed deleteRule(McpTransportContext context, @McpToolParam(description = "The rule to remove") UUID id) {
         AgentCaller caller = AgentCaller.of(context).require(AgentScope.RULES_WRITE);
-        rules.delete(caller.userId(), id, caller.actor());
-        return "Removed";
+        return review.proposeRuleDelete(caller.userId(), caller.name(), id);
     }
 
     @McpTool(name = "check_rules", description = "The user's rules, each with whether it passes now and what's over the limit. They're indicators and aren't enforced.",

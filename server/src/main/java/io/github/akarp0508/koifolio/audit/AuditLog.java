@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
@@ -32,9 +34,24 @@ public class AuditLog {
     public record Change(String entityType, UUID entityId, String action, String summary, Object before, Object after) {
     }
 
-    record Entry(UUID id, Actor actor, String entityType, UUID entityId, String action, String summary, Object before,
-                 Object after, Instant createdAt) {
+    /** @param changedSince the same thing changed again later */
+    public record Entry(UUID id, Actor actor, String entityType, UUID entityId, String action, String summary, Object before,
+                        Object after, Instant createdAt, boolean reverted, boolean changedSince) {
+
+        /** An agent's change to a company or a rule that still stands. Its transactions have their own reject and delete. */
+        public boolean revertible() {
+            return actor.isAgent() && !reverted && Set.of("company", "rule").contains(entityType)
+                    && Set.of("create", "update", "delete").contains(action);
+        }
     }
+
+    private static final String SELECT = """
+            SELECT a.*, EXISTS (SELECT 1 FROM audit_log later
+                                WHERE later.user_id = a.user_id AND later.entity_type = a.entity_type
+                                  AND later.entity_id = a.entity_id AND later.created_at > a.created_at
+                                  AND later.action IN ('create', 'update', 'delete')) AS changed_since
+            FROM audit_log a
+            """;
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(UUID userId, Actor actor, Change change) {
@@ -50,10 +67,20 @@ public class AuditLog {
 
     @Transactional(readOnly = true)
     List<Entry> recent(UUID userId, int limit) {
-        return jdbc.sql("SELECT * FROM audit_log WHERE user_id = ? ORDER BY created_at DESC, id LIMIT ?")
+        return jdbc.sql(SELECT + "WHERE a.user_id = ? ORDER BY a.created_at DESC, a.id LIMIT ?")
                 .params(userId, limit)
                 .query(this::entry)
                 .list();
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<Entry> find(UUID userId, UUID id) {
+        return jdbc.sql(SELECT + "WHERE a.user_id = ? AND a.id = ?").params(userId, id).query(this::entry).optional();
+    }
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void markReverted(UUID id) {
+        jdbc.sql("UPDATE audit_log SET reverted_at = now() WHERE id = ?").param(id).update();
     }
 
     private Entry entry(ResultSet row, int number) throws SQLException {
@@ -61,7 +88,7 @@ public class AuditLog {
                 new Actor(Actor.Type.valueOf(row.getString("actor_type")), row.getString("actor_name")),
                 row.getString("entity_type"), row.getObject("entity_id", UUID.class), row.getString("action"),
                 row.getString("summary"), read(row.getString("before")), read(row.getString("after")),
-                row.getTimestamp("created_at").toInstant());
+                row.getTimestamp("created_at").toInstant(), row.getTimestamp("reverted_at") != null, row.getBoolean("changed_since"));
     }
 
     private String write(Object value) {

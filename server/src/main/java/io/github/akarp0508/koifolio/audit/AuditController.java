@@ -35,14 +35,20 @@ class AuditController {
         return log.recent(UUID.fromString(jwt.getSubject()), limit).stream().map(AuditEntryResponse::of).toList();
     }
 
-    /** @param actorName the agent's name, left out for you */
+    /**
+     * @param actorName the agent's name, left out for you
+     * @param revertible an agent's company or rule change that can still be undone
+     * @param changedSince the same thing changed again later, so reverting would lose that too
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record AuditEntryResponse(UUID id, Actor.Type actorType, String actorName, String entityType, UUID entityId, String action,
-                              String summary, Object before, Object after, Instant createdAt) {
+                              String summary, Object before, Object after, Instant createdAt, boolean revertible,
+                              boolean changedSince) {
 
         static AuditEntryResponse of(AuditLog.Entry entry) {
             return new AuditEntryResponse(entry.id(), entry.actor().type(), entry.actor().name(), entry.entityType(),
-                    entry.entityId(), entry.action(), entry.summary(), entry.before(), entry.after(), entry.createdAt());
+                    entry.entityId(), entry.action(), entry.summary(), entry.before(), entry.after(), entry.createdAt(),
+                    entry.revertible(), entry.changedSince());
         }
     }
 }

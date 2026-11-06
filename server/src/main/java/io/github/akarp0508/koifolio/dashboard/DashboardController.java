@@ -93,13 +93,14 @@ class DashboardController {
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings per company, biggest first, with sold ones marked by held being false
      * @param unvalidated agent transactions waiting for review, across all accounts
+     * @param pendingChanges agent company and rule changes waiting for review
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record DashboardResponse(String currency, String value, String positionsValue, String unrealizedGain,
                              String currencyGain, String unrealizedPercent, String realizedGain, String dividends,
                              String dividendsWithheld, String cash, List<SliceResponse> bySector,
                              List<SliceResponse> byRisk, List<AttentionResponse> attention, int unpriced,
-                             List<HoldingResponse> holdings, int unvalidated) {
+                             List<HoldingResponse> holdings, int unvalidated, int pendingChanges) {
 
         static DashboardResponse of(DashboardService.Dashboard d) {
             String currency = d.currency();
@@ -108,7 +109,7 @@ class DashboardController {
                     money(d.realizedGain(), currency), money(d.dividends(), currency), money(d.dividendsWithheld(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
                     slices(d.bySector(), currency), slices(d.byRisk(), currency),
                     d.attention().stream().map(AttentionResponse::of).toList(), d.unpriced(),
-                    d.holdings().stream().map(holding -> HoldingResponse.of(holding, currency)).toList(), d.unvalidated());
+                    d.holdings().stream().map(holding -> HoldingResponse.of(holding, currency)).toList(), d.unvalidated(), d.pendingChanges());
         }
 
         private static List<SliceResponse> slices(List<Breakdown.Slice> slices, String currency) {

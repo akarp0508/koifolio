@@ -108,7 +108,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
 - Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect`, `oversold` and `unvalidated`, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
-- `GET /transactions?unvalidated=true` lists what agents added and you haven't reviewed. `POST /transactions/{id}/approve` and `POST /transactions/approve-all` clear the mark. `POST /transactions/{id}/reject` removes one and undoes its effect on the balance. Either returns `409` if it isn't waiting.
+- `GET /transactions?unvalidated=true` lists what agents added and you haven't reviewed. `POST /transactions/{id}/approve` clears the mark. `POST /transactions/{id}/reject` removes one and undoes its effect on the balance. Either returns `409` if it isn't waiting.
 - `DELETE /transactions/{id}` removes it from every number and undoes its effect on the balance, but keeps it in the database.
 - Cash effects are rounded to the currency's decimals.
 - `oversold` marks a sale of more than was held at that point, per account and ticker. It's a warning, and it clears once the history adds up.
@@ -294,9 +294,22 @@ Implemented. Tokens for the [MCP server](mcp.md), which work there and nowhere e
 | `POST /agent-tokens` | Create from `name`, optional `expiresOn`, the last day it works, and optional `scopes`. The `secret` is only returned here |
 | `DELETE /agent-tokens/{id}` | Revoke at once |
 
+## Review
+
+Implemented. Agent company and rule changes wait here, and apply only when approved.
+
+| Request | Purpose |
+|---|---|
+| `GET /review/changes` | What's waiting, with `current` and `proposed` values |
+| `POST /review/changes/{id}/approve` | Apply one |
+| `POST /review/changes/{id}/reject` | Drop one |
+| `POST /review/approve-all` | Approve transactions and changes, for `?agent=` or everyone. If any can't apply, none are |
+| `POST /review/reject-all` | Reject transactions and changes, for `?agent=` or everyone |
+| `POST /review/log/{id}/revert` | Undo an agent's company or rule change from the change log. `409 changed_since` if it has changed since, unless `force=true` |
+
 ## Change log
 
-Implemented. `GET /audit-log` gives recent changes to transactions, companies, rules, accounts and plans, newest first, with `limit` up to 500. Each has `actorType`, `actorName` for an agent, `entityType`, `entityId`, `action`, `summary`, `before` and `after`. For a plan, `entityId` is the company, and `before` and `after` name the account. Deleting an account keeps what went with it in `before`.
+Implemented. `GET /audit-log` gives recent changes to transactions, companies, rules, accounts and plans, newest first, with `limit` up to 500. Each has `actorType`, `actorName` for an agent, `entityType`, `entityId`, `action`, `summary`, `before`, `after`, `revertible` and `changedSince`. For a plan, `entityId` is the company, and `before` and `after` name the account. Deleting an account keeps what went with it in `before`.
 
 ## Split suggestions
 

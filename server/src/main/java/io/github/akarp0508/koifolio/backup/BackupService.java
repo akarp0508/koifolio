@@ -114,6 +114,7 @@ class BackupService {
         requireKnown(backup);
         jdbc.sql("DELETE FROM accounts WHERE user_id = ?").param(userId).update();
         jdbc.sql("DELETE FROM rules WHERE user_id = ?").param(userId).update();
+        jdbc.sql("DELETE FROM pending_changes WHERE user_id = ?").param(userId).update();
         jdbc.sql("DELETE FROM instruments WHERE user_id = ?").param(userId).update();
         entityManager.clear();
 

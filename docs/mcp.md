@@ -24,9 +24,9 @@ Set per token when it's created. Every token can read, and tokens created before
 
 | Scope | Allows | Default |
 |---|---|---|
-| `analysis:write` | Company details and analysis | on |
+| `analysis:write` | Proposing company changes | on |
 | `transactions:write` | Adding transactions, marked unvalidated | on |
-| `rules:write` | Changing rules | off |
+| `rules:write` | Proposing rule changes | off |
 
 A token without the scope gets a tool error. Every tool still shows in the list.
 
@@ -43,22 +43,34 @@ A token without the scope gets a tool error. Every tool still shows in the list.
 | `list_transactions` | `account?`, `from?`, `to?` | read |
 | `check_rules` | | read |
 | `get_tax` | `year?` | read |
+| `list_pending_changes` | | read |
 | `update_company` | `ticker`, `name?`, `sector?`, `risk?`, `thesis?`, `analysis?`, `tags?` | analysis:write |
 | `add_transaction` | `account`, `type`, `date`, `affectsBalance`, then the fields of `POST /transactions` | transactions:write |
 | `save_rule` | `type`, `limitPercent`, `id?`, `account?`, `maxRisk?` | rules:write |
 | `delete_rule` | `id` | rules:write |
 
-Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company` changes only the fields it's given, and adds the company if it's new. Agents can't edit or delete transactions: a wrong one is rejected and entered again. They can't change plans or accounts.
+Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company` proposes only the fields it's given, and adds the company if it's new. Agents can't edit or delete transactions: a wrong one is rejected and entered again. They can't change plans or accounts.
 
 Account descriptions are included in `list_accounts`, so agents can use the notes you keep there.
 
-## Unvalidated transactions
+## Review
 
-Transactions added by an agent are marked unvalidated and listed on the Review page, with a line in Needs attention. They count in all numbers straight away, and Activity marks them. You approve them, which clears the mark, or reject them, which soft-deletes them and undoes their effect on the balance. Agent edits to companies and rules apply immediately.
+Agents can't change anything you can't see and undo.
+
+| What the agent does | When it applies | How you undo it |
+|---|---|---|
+| `add_transaction` | At once, marked unvalidated | Reject it, or delete it from Activity once approved |
+| `update_company`, `save_rule`, `delete_rule` | Only when you approve it | Reject it, or Revert it from the change log once approved |
+
+**Approve all** and **Reject all** cover both, for one agent or everyone. Approving a company change applies its fields over whatever the company holds by then, so edits made in the meantime survive. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too.
+
+### Unvalidated transactions
+
+Transactions added by an agent are marked unvalidated and listed on the Review page, with a line in Needs attention. They count in all numbers straight away, and Activity marks them. You approve them, which clears the mark, or reject them, which soft-deletes them and undoes their effect on the balance.
 
 ## Change log
 
-Changes to transactions, companies, rules, accounts and plans are logged with who made them, you or the agent by name, and the values before and after. They show on the Review page and at `GET /audit-log`. An entry is written in the same database transaction as the change, so a refused change leaves none, and an edit that changes nothing leaves none either. Settings, tokens and restores aren't logged.
+Changes to transactions, companies, rules, accounts and plans are logged with who made them, you or the agent by name, and the values before and after. They show on the Review page and at `GET /audit-log`. An entry is written in the same database transaction as the change, so a refused change leaves none, and an edit that changes nothing leaves none either. Proposals and your decisions are logged too. Settings, tokens and restores aren't.
 
 ## Build order
 

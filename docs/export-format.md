@@ -54,7 +54,7 @@ A file in another format is refused.
 - Amounts are in the account's currency.
 - `createdAt` is optional and orders trades on the same day. Without it, lines keep their order in the file.
 - `createdBy` names the agent that added a line, and `unvalidated` is `true` while it waits for review. Both are optional, and restore keeps them.
-- Deleted and rejected transactions aren't exported. Neither are agent tokens or the change log.
+- Deleted and rejected transactions aren't exported. Neither are agent tokens, the change log or changes waiting for review, and a restore drops those waiting.
 - Each line is checked like a new transaction, and an error names the file and line.
 - `affectsBalance` doesn't move the balance on restore, because `accounts.yaml` already has it.
 

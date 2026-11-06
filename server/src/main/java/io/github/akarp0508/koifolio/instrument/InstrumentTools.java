@@ -6,6 +6,7 @@ import io.github.akarp0508.koifolio.agent.AgentCaller;
 import io.github.akarp0508.koifolio.agent.AgentScope;
 import io.github.akarp0508.koifolio.instrument.InstrumentController.InstrumentResponse;
 import io.github.akarp0508.koifolio.instrument.InstrumentController.UpdateInstrumentRequest;
+import io.github.akarp0508.koifolio.review.ReviewService;
 import io.modelcontextprotocol.common.McpTransportContext;
 import java.util.List;
 import java.util.Optional;
@@ -21,10 +22,12 @@ class InstrumentTools {
     private final InstrumentService instruments;
 
     private final RequestChecker checker;
+    private final ReviewService review;
 
-    InstrumentTools(InstrumentService instruments, RequestChecker checker) {
+    InstrumentTools(InstrumentService instruments, RequestChecker checker, ReviewService review) {
         this.instruments = instruments;
         this.checker = checker;
+        this.review = review;
     }
 
     private Optional<InstrumentService.InstrumentView> find(UUID userId, String ticker) {
@@ -42,10 +45,11 @@ class InstrumentTools {
     }
 
     @McpTool(name = "update_company", description = """
-            Updates what the user keeps on a company, adding it if it's new. Only the fields you send change. The analysis \
-            and tags are replaced as a whole, so read them with get_company first. It applies at once and goes in the change log.""",
+            Proposes changes to what the user keeps on a company, adding it if it's new. Nothing changes until the user \
+            approves it, so get_company keeps showing the old values until then. Only the fields you send change. The \
+            analysis and tags are replaced as a whole, so read them with get_company first.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
-    InstrumentResponse updateCompany(McpTransportContext context,
+    ReviewService.Proposed updateCompany(McpTransportContext context,
                                      @McpToolParam(description = "Ticker") String ticker,
                                      @McpToolParam(required = false, description = "Company name") String name,
                                      @McpToolParam(required = false, description = "Sector") String sector,
@@ -54,17 +58,11 @@ class InstrumentTools {
                                      @McpToolParam(required = false, description = "Markdown analysis") String analysis,
                                      @McpToolParam(required = false, description = "Tags") List<String> tags) {
         AgentCaller caller = AgentCaller.of(context).require(AgentScope.ANALYSIS_WRITE);
-        UUID userId = caller.userId();
-        Optional<InstrumentService.InstrumentView> existing = find(userId, ticker);
-        InstrumentDetails now = existing.map(InstrumentService.InstrumentView::details)
-                .orElse(new InstrumentDetails(null, null, null, null, null, null));
-        UpdateInstrumentRequest request = new UpdateInstrumentRequest(name == null ? now.name() : name,
-                sector == null ? now.sector() : sector, risk == null ? now.risk() : risk,
-                thesis == null ? now.thesis() : thesis, analysis == null ? now.analysis() : analysis,
-                tags == null ? List.copyOf(now.tags()) : tags);
-        checker.check(request);
-        return InstrumentResponse.of(existing
-                .map(view -> instruments.update(userId, view.id(), request.details(), caller.actor()))
-                .orElseGet(() -> instruments.create(userId, ticker, request.details(), caller.actor())));
+        checker.check(new UpdateInstrumentRequest(name, sector, risk, thesis, analysis, tags));
+        if (name == null && sector == null && risk == null && thesis == null && analysis == null && tags == null) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "nothing_to_change", "Send at least one field to change");
+        }
+        return review.proposeCompany(caller.userId(), caller.name(), ticker, new InstrumentService.Edit(name, sector, risk, thesis,
+                analysis, tags == null ? null : Tags.clean(tags)));
     }
 }

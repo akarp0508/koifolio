@@ -175,13 +175,34 @@ public class TransactionService {
         return approve(userId, requireUnvalidated(find(userId, id)));
     }
 
-    /** @return how many were approved */
+    /**
+     * @param agent limits it to one agent's, or null for everyone's
+     * @return how many were approved
+     */
     @Transactional
-    int approveAll(UUID userId) {
+    public int approveAll(UUID userId, String agent) {
         authService.currentUser(userId);
-        List<Transaction> waiting = transactions.findByUserIdAndValidatedAtIsNull(userId);
+        List<Transaction> waiting = waiting(userId, agent);
         waiting.forEach(transaction -> approve(userId, transaction));
         return waiting.size();
+    }
+
+    /**
+     * @param agent limits it to one agent's, or null for everyone's
+     * @return how many were rejected
+     */
+    @Transactional
+    public int rejectAll(UUID userId, String agent) {
+        authService.currentUser(userId);
+        List<Transaction> waiting = waiting(userId, agent);
+        waiting.forEach(transaction -> remove(userId, transaction, Actor.USER, "reject", "Rejected"));
+        return waiting.size();
+    }
+
+    private List<Transaction> waiting(UUID userId, String agent) {
+        return transactions.findByUserIdAndValidatedAtIsNull(userId).stream()
+                .filter(transaction -> agent == null || agent.equals(transaction.getCreatedBy()))
+                .toList();
     }
 
     /** Takes it out of every number and undoes its effect on the balance, but keeps it in the database. */

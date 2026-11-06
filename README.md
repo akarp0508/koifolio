@@ -13,7 +13,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 ## Core ideas
 
 - **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
-- **Agents as first-class users.** A built-in MCP server exposes the same calculations the UI shows, and agents can enter data for you to review.
+- **Agents as first-class users.** A built-in MCP server exposes the same calculations the UI shows, and agents can enter data and propose changes for you to review.
 - **Your data is never locked in.** Plain-text export and restore in a documented format.
 - **Multiple accounts.** Any kind of account, each with its own tax settings (e.g. a regular brokerage account, or a tax-free one like Polish IKE) — viewed separately or together.
 - **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
@@ -36,7 +36,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
-- **Review** — transactions added by agents count straight away, marked unvalidated, and wait on a page for you to approve or reject, next to a log of what changed.
+- **Review** — agent transactions count straight away, marked unvalidated, and agent company and rule changes wait until approved. You approve, reject or revert them on one page, next to a log of what changed.
 - **Login** — local user accounts with open registration, password, JWT access tokens.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 

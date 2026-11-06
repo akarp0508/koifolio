@@ -35,7 +35,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 class McpTests {
 
     private static final List<String> READ_TOOLS = List.of("list_accounts", "get_portfolio", "get_history", "get_positions",
-            "get_plan", "get_company", "list_transactions", "check_rules", "get_tax");
+            "get_plan", "get_company", "list_transactions", "check_rules", "get_tax", "list_pending_changes");
     private static final List<String> WRITE_TOOLS = List.of("add_transaction", "update_company", "save_rule", "delete_rule");
 
     @Autowired
@@ -305,7 +305,7 @@ class McpTests {
         buy(token, "ABC");
         buy(token, "DEF");
 
-        as(anna, post("/api/v1/transactions/approve-all")).andExpect(jsonPath("$.approved").value(2));
+        as(anna, post("/api/v1/review/approve-all")).andExpect(jsonPath("$.transactions").value(2));
 
         as(anna, get("/api/v1/transactions").param("unvalidated", "true")).andExpect(jsonPath("$.length()").value(0));
     }
@@ -389,40 +389,8 @@ class McpTests {
     }
 
     @Test
-    void updateCompanyOnlyChangesWhatItsGiven() throws Exception {
-        String token = createToken(anna, "Claude");
-        call(token, "update_company", "{\"ticker\":\"PAS\",\"sector\":\"Tech\",\"thesis\":\"Cheap\",\"tags\":[\"core\"]}");
-
-        String company = call(token, "update_company", "{\"ticker\":\"pas\",\"risk\":2}");
-
-        assertThat(JsonPath.<String>read(company, "$.sector")).isEqualTo("Tech");
-        assertThat(JsonPath.<String>read(company, "$.thesis")).isEqualTo("Cheap");
-        assertThat(JsonPath.<Integer>read(company, "$.risk")).isEqualTo(2);
-        assertThat(JsonPath.<List<String>>read(company, "$.tags")).containsExactly("core");
-    }
-
-    @Test
-    void updateCompanyAddsANewOne() throws Exception {
-        String company = call(createToken(anna, "Claude"), "update_company", "{\"ticker\":\"new\",\"name\":\"New Co\"}");
-
-        assertThat(JsonPath.<String>read(company, "$.ticker")).isEqualTo("NEW");
-    }
-
-    @Test
     void updateCompanyChecksItsFields() throws Exception {
         assertThat(toolError(createToken(anna, "Claude"), "update_company", "{\"ticker\":\"PAS\",\"risk\":9}")).contains("risk");
-    }
-
-    @Test
-    void rulesCanBeAddedReplacedAndRemoved() throws Exception {
-        String token = tokenWith("Rules", "[\"rules:write\"]");
-
-        String id = JsonPath.read(call(token, "save_rule", "{\"type\":\"max_position_weight\",\"limitPercent\":\"20\"}"), "$.id");
-        call(token, "save_rule", "{\"id\":\"%s\",\"type\":\"max_position_weight\",\"limitPercent\":\"25\"}".formatted(id));
-        as(anna, get("/api/v1/rules")).andExpect(jsonPath("$[0].limitPercent").value("25"));
-
-        call(token, "delete_rule", "{\"id\":\"%s\"}".formatted(id));
-        as(anna, get("/api/v1/rules")).andExpect(jsonPath("$.length()").value(0));
     }
 
     @Test

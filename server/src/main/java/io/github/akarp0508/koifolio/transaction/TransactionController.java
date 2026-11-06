@@ -80,12 +80,6 @@ class TransactionController {
         return TransactionResponse.of(transactions.approve(userId(jwt), id));
     }
 
-    @PostMapping("/approve-all")
-    @Operation(summary = "Approve everything waiting for review")
-    ApprovedResponse approveAll(@AuthenticationPrincipal Jwt jwt) {
-        return new ApprovedResponse(transactions.approveAll(userId(jwt)));
-    }
-
     @PostMapping("/{id}/reject")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Reject a transaction an agent added", description = """
@@ -94,8 +88,6 @@ class TransactionController {
         transactions.reject(userId(jwt), id);
     }
 
-    record ApprovedResponse(int approved) {
-    }
 
     private static UUID userId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());

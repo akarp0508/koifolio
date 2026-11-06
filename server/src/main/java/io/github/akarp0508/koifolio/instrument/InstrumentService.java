@@ -1,5 +1,6 @@
 package io.github.akarp0508.koifolio.instrument;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -72,6 +74,33 @@ public class InstrumentService {
         instrument.describe(exported.details());
         instrument.setListed(exported.listed());
         instruments.save(instrument);
+    }
+
+    /** Fields an agent wants to change. Null leaves a field alone. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Edit(String name, String sector, Integer risk, String thesis, String analysis, Set<String> tags) {
+
+        private InstrumentDetails over(InstrumentDetails now) {
+            return new InstrumentDetails(name == null ? now.name() : name, sector == null ? now.sector() : sector,
+                    risk == null ? now.risk() : risk, thesis == null ? now.thesis() : thesis,
+                    analysis == null ? now.analysis() : analysis, tags == null ? now.tags() : tags);
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<InstrumentDetails> details(UUID userId, String ticker) {
+        return instruments.findByUserIdAndTicker(userId, normalizeTicker(ticker)).map(Instrument::details);
+    }
+
+    /** Applies over whatever the company holds by now, so it keeps what was edited in the meantime. */
+    @Transactional
+    public void applyEdit(UUID userId, String ticker, Edit edit, Actor actor) {
+        Optional<Instrument> existing = instruments.findByUserIdAndTicker(userId, normalizeTicker(ticker));
+        if (existing.isPresent()) {
+            update(userId, existing.get().getId(), edit.over(existing.get().details()), actor);
+        } else {
+            create(userId, ticker, edit.over(new InstrumentDetails(null, null, null, null, null, null)), actor);
+        }
     }
 
     public record InstrumentView(UUID id, String ticker, InstrumentDetails details) {
@@ -140,7 +169,7 @@ public class InstrumentService {
     }
 
     @Transactional
-    Instrument update(UUID userId, UUID id, InstrumentDetails details, Actor actor) {
+    public Instrument update(UUID userId, UUID id, InstrumentDetails details, Actor actor) {
         authService.currentUser(userId);
         Instrument instrument = instruments.findByIdAndUserId(id, userId).orElseThrow(InstrumentService::notFound);
         InstrumentDetails before = instrument.details();
@@ -156,7 +185,7 @@ public class InstrumentService {
     }
 
     @Transactional
-    void delete(UUID userId, UUID id) {
+    public void delete(UUID userId, UUID id) {
         authService.currentUser(userId);
         Instrument instrument = find(userId, id);
         instrument.setListed(false);

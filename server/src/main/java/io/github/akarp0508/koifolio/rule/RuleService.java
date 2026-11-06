@@ -69,8 +69,20 @@ public class RuleService {
         return rules.findByUserIdOrderByCreatedAtAscIdAsc(userId);
     }
 
+    /** The rule's values, for checking what would replace them. */
+    @Transactional(readOnly = true)
+    public Input get(UUID userId, UUID id) {
+        return input(find(userId, id));
+    }
+
+    /** Empty once the rule is gone, which a change waiting for review has to cope with. */
+    @Transactional(readOnly = true)
+    public Optional<Input> lookUp(UUID userId, UUID id) {
+        return rules.findByIdAndUserId(id, userId).map(RuleService::input);
+    }
+
     @Transactional
-    Rule create(UUID userId, Input input, Actor actor) {
+    public Rule create(UUID userId, Input input, Actor actor) {
         authService.currentUser(userId);
         Rule rule = save(userId, new Rule(userId), input);
         log(userId, actor, rule, "create", "Added", null, input);
@@ -78,7 +90,7 @@ public class RuleService {
     }
 
     @Transactional
-    Rule update(UUID userId, UUID id, Input input, Actor actor) {
+    public Rule update(UUID userId, UUID id, Input input, Actor actor) {
         authService.currentUser(userId);
         Rule rule = find(userId, id);
         Input before = input(rule);
@@ -88,7 +100,7 @@ public class RuleService {
     }
 
     @Transactional
-    void delete(UUID userId, UUID id, Actor actor) {
+    public void delete(UUID userId, UUID id, Actor actor) {
         authService.currentUser(userId);
         Rule rule = find(userId, id);
         log(userId, actor, rule, "delete", "Removed", input(rule), null);
@@ -96,10 +108,13 @@ public class RuleService {
     }
 
     private void log(UUID userId, Actor actor, Rule rule, String action, String verb, Input before, Input after) {
-        Input values = after == null ? before : after;
-        String summary = "%s rule %s %s%%".formatted(verb, values.type().name().toLowerCase(Locale.ROOT).replace('_', ' '),
-                values.limitPercent().stripTrailingZeros().toPlainString());
+        String summary = "%s rule %s".formatted(verb, describe(after == null ? before : after));
         auditLog.record(userId, actor, new AuditLog.Change("rule", rule.getId(), action, summary, before, after));
+    }
+
+    public static String describe(Input input) {
+        return "%s %s%%".formatted(input.type().name().toLowerCase(Locale.ROOT).replace('_', ' '),
+                input.limitPercent().stripTrailingZeros().toPlainString());
     }
 
     private static Input input(Rule rule) {
@@ -107,6 +122,12 @@ public class RuleService {
     }
 
     private Rule save(UUID userId, Rule rule, Input input) {
+        check(userId, input);
+        rule.update(input.accountId(), input.type(), input.limitPercent(), input.maxRisk());
+        return rules.save(rule);
+    }
+
+    public void check(UUID userId, Input input) {
         boolean lowRisk = input.type() == RuleType.MIN_LOW_RISK_WEIGHT;
         if (lowRisk && input.maxRisk() == null) {
             throw new FieldValidationException(Map.of("maxRisk", "must not be null for this type"));
@@ -117,8 +138,6 @@ public class RuleService {
         if (input.accountId() != null) {
             accounts.findByIdAndUserId(input.accountId(), userId).orElseThrow(RuleService::accountNotFound);
         }
-        rule.update(input.accountId(), input.type(), input.limitPercent(), input.maxRisk());
-        return rules.save(rule);
     }
 
     /** One account uses its own currency, so it needs no rates. Everything together uses the base currency. */
