@@ -30,7 +30,8 @@
 - **Bonds:** one generic model, with Polish retail series as presets.
 - **Base currency:** configurable, default PLN.
 - **Transactions are edited in place and soft-deleted.** Each edit keeps its old values in the change log, and deleted ones stay in the database, out of every number and out of exports. A restore erases them for good, along with everything else it replaces.
-- **The change log covers transactions, companies and rules,** the things an agent can touch, from either you or an agent. Accounts, plans and settings aren't logged yet. It isn't part of an export, and a restore leaves it alone.
+- **The change log covers transactions, companies, rules, accounts and plans,** from either you or an agent. Settings, tokens and restores aren't logged. It isn't part of an export, and a restore leaves it alone.
+- **Deleting an account erases its transactions, plans and rules,** because of the database cascade. Its change log entry keeps a copy of them under `before`, so they can be read and entered again by hand.
 - **Prices:** free APIs and scraping only, no headless browser.
 - **No Nix dev shell.** Local tools come from the system; Docker covers full builds.
 - **No CLI.** MCP covers what it was for.

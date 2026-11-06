@@ -58,7 +58,7 @@ Transactions added by an agent are marked unvalidated and listed on the Review p
 
 ## Change log
 
-Changes to transactions, companies and rules are logged with who made them, you or the agent by name, and the values before and after. They show on the Review page and at `GET /audit-log`. An entry is written in the same database transaction as the change, so a refused change leaves none. Accounts, plans and settings aren't logged, and neither is what a restore replaces.
+Changes to transactions, companies, rules, accounts and plans are logged with who made them, you or the agent by name, and the values before and after. They show on the Review page and at `GET /audit-log`. An entry is written in the same database transaction as the change, so a refused change leaves none, and an edit that changes nothing leaves none either. Settings, tokens and restores aren't logged.
 
 ## Build order
 

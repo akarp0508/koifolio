@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /** What changed, who changed it, and the values on both sides. It's written with the change, so a failed change leaves no entry. */
@@ -67,7 +68,9 @@ public class AuditLog {
         return value == null ? null : json.writeValueAsString(value);
     }
 
+    /** As BigDecimal, so money comes back exactly as it was stored. */
     private Object read(String value) {
-        return value == null ? null : json.readValue(value, Object.class);
+        return value == null ? null
+                : json.readerFor(Object.class).with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).readValue(value);
     }
 }

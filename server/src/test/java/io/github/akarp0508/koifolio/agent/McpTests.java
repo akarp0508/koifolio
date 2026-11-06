@@ -3,7 +3,9 @@ package io.github.akarp0508.koifolio.agent;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -469,5 +471,84 @@ class McpTests {
     @Test
     void theChangeLogIsPrivate() throws Exception {
         as(bob, get("/api/v1/audit-log")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    private void plan(String json) throws Exception {
+        as(anna, put("/api/v1/positions/" + account + "/PAS/plan").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void accountChangesAreLogged() throws Exception {
+        as(anna, patch("/api/v1/accounts/" + account).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Renamed\",\"balance\":\"600\"}")).andExpect(status().isOk());
+
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[0].entityType").value("account"))
+                .andExpect(jsonPath("$[0].action").value("update"))
+                .andExpect(jsonPath("$[0].summary").value("Changed account Renamed"))
+                .andExpect(jsonPath("$[0].before.name").value("Main"))
+                .andExpect(jsonPath("$[0].before.balance").value(500))
+                .andExpect(jsonPath("$[0].after.balance").value(600));
+    }
+
+    @Test
+    void anEditThatChangesNothingIsntLogged() throws Exception {
+        as(anna, patch("/api/v1/accounts/" + account).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"balance\":\"500.00\"}")).andExpect(status().isOk());
+
+        as(anna, get("/api/v1/audit-log")).andExpect(jsonPath("$[0].entityType").value("transaction"));
+    }
+
+    @Test
+    void deletingAnAccountKeepsEverythingThatWentWithIt() throws Exception {
+        plan("{\"plan\":\"Hold\",\"targetPrice\":\"30\"}");
+        as(anna, post("/api/v1/rules").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"max_position_weight\",\"accountId\":\"%s\",\"limitPercent\":\"20\"}".formatted(account)))
+                .andExpect(status().isCreated());
+
+        as(anna, delete("/api/v1/accounts/" + account)).andExpect(status().isNoContent());
+
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[0].summary").value("Deleted account Main with 1 transactions"))
+                .andExpect(jsonPath("$[0].after").doesNotExist())
+                .andExpect(jsonPath("$[0].before.transactions[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$[0].before.plans[0].plan").value("Hold"))
+                .andExpect(jsonPath("$[0].before.rules[0].type").exists());
+    }
+
+    @Test
+    void planChangesAreLogged() throws Exception {
+        plan("{\"plan\":\"Hold\",\"targetPrice\":\"30\",\"tags\":[\"core\"]}");
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[0].entityType").value("plan"))
+                .andExpect(jsonPath("$[0].action").value("create"))
+                .andExpect(jsonPath("$[0].summary").value("Added plan for PAS in Main"))
+                .andExpect(jsonPath("$[0].before").doesNotExist())
+                .andExpect(jsonPath("$[0].after.plan").value("Hold"));
+
+        plan("{\"plan\":\"Sell\",\"targetPrice\":\"30\",\"tags\":[\"core\"]}");
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[0].action").value("update"))
+                .andExpect(jsonPath("$[0].before.plan").value("Hold"))
+                .andExpect(jsonPath("$[0].after.plan").value("Sell"));
+    }
+
+    @Test
+    void savingAPlanUnchangedIsntLoggedAgain() throws Exception {
+        plan("{\"plan\":\"Hold\",\"targetPrice\":\"30.50\"}");
+        plan("{\"plan\":\"Hold\",\"targetPrice\":\"30.5\"}");
+
+        String body = as(anna, get("/api/v1/audit-log")).andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<List<String>>read(body, "$[?(@.entityType == 'plan')].action")).containsExactly("create");
+    }
+
+    @Test
+    void theLogKeepsMoneyExact() throws Exception {
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content("""
+                {"accountId":"%s","type":"split","date":"2026-02-02","ticker":"PAS","splitFrom":"1234567890.12345678","splitTo":"1","affectsBalance":false}"""
+                .formatted(account))).andExpect(status().isCreated());
+
+        assertThat(as(anna, get("/api/v1/audit-log")).andReturn().getResponse().getContentAsString()).contains("1234567890.12345678");
     }
 }

@@ -27,8 +27,9 @@ class AuditController {
     }
 
     @GetMapping
-    @Operation(summary = "Recent changes to transactions, companies and rules, newest first", description = """
-            From you or an agent. before and after hold the values on each side of the change.""")
+    @Operation(summary = "Recent changes to transactions, companies, rules, accounts and plans, newest first", description = """
+            From you or an agent. before and after hold the values on each side of the change. Deleting an account \
+            keeps the transactions, plans and rules that went with it under before.""")
     List<AuditEntryResponse> recent(@AuthenticationPrincipal Jwt jwt,
                                     @RequestParam(defaultValue = "100") @Min(1) @Max(500) int limit) {
         return log.recent(UUID.fromString(jwt.getSubject()), limit).stream().map(AuditEntryResponse::of).toList();

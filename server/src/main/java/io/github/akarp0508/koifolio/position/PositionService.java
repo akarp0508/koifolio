@@ -3,6 +3,8 @@ package io.github.akarp0508.koifolio.position;
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
+import io.github.akarp0508.koifolio.audit.Actor;
+import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.auth.User;
 import io.github.akarp0508.koifolio.domain.DailyClose;
@@ -35,8 +37,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -56,10 +60,12 @@ public class PositionService {
     private final PriceHistoryService priceHistory;
     private final PositionPlanRepository plans;
     private final FxService fx;
+    private final AuditLog auditLog;
 
     PositionService(AuthService authService, AccountRepository accounts, TransactionService transactions,
                     InstrumentService instruments, PriceService prices, PriceHistoryService priceHistory,
-                    PositionPlanRepository plans, FxService fx) {
+                    PositionPlanRepository plans, FxService fx, AuditLog auditLog) {
+        this.auditLog = auditLog;
         this.authService = authService;
         this.accounts = accounts;
         this.transactions = transactions;
@@ -85,12 +91,33 @@ public class PositionService {
                       BigDecimal stop, Set<String> tags) {
         Position position = one(userId, accountId, ticker);
         UUID instrumentId = position.instrument().id();
-        PositionPlan plan = plans.findById(new PositionPlan.Key(accountId, instrumentId))
-                .orElseGet(() -> new PositionPlan(accountId, instrumentId, userId));
+        Optional<PositionPlan> existing = plans.findById(new PositionPlan.Key(accountId, instrumentId));
+        Map<String, Object> before = existing.map(found -> snapshot(position, found)).orElse(null);
+        PositionPlan plan = existing.orElseGet(() -> new PositionPlan(accountId, instrumentId, userId));
         plan.update(text, risk, target, stop, tags);
+        Map<String, Object> after = snapshot(position, plan);
+        if (!after.equals(before)) {
+            auditLog.record(userId, Actor.USER, new AuditLog.Change("plan", instrumentId, before == null ? "create" : "update",
+                    "%s plan for %s in %s".formatted(before == null ? "Added" : "Changed", position.ticker(), position.account().getName()),
+                    before, after));
+        }
         return new Position(position.account(), position.instrument(), position.result(), position.price(),
                 position.accountPrice(), Optional.of(plans.save(plan)), position.baseCurrency(), position.inBase(),
                 position.rateToBase(), position.dividends(), position.dividendsInBase());
+    }
+
+    /** Trailing zeros are dropped, so saving a plan unchanged compares as equal. */
+    private static Map<String, Object> snapshot(Position position, PositionPlan plan) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("accountId", position.account().getId());
+        values.put("ticker", position.ticker());
+        values.put("plan", plan.getPlan());
+        values.put("risk", plan.getRisk());
+        values.put("targetPrice", plan.getTargetPrice() == null ? null : plan.getTargetPrice().stripTrailingZeros());
+        values.put("stopPrice", plan.getStopPrice() == null ? null : plan.getStopPrice().stripTrailingZeros());
+        values.put("tags", new TreeSet<>(plan.getTags()));
+        values.values().removeIf(Objects::isNull);
+        return values;
     }
 
     public record ExportedPlan(UUID accountId, String ticker, String plan, Integer risk, BigDecimal targetPrice,

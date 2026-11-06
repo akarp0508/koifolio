@@ -296,7 +296,7 @@ Implemented. Tokens for the [MCP server](mcp.md), which work there and nowhere e
 
 ## Change log
 
-Implemented. `GET /audit-log` gives recent changes to transactions, companies and rules, newest first, with `limit` up to 500. Each has `actorType`, `actorName` for an agent, `entityType`, `entityId`, `action`, `summary`, `before` and `after`.
+Implemented. `GET /audit-log` gives recent changes to transactions, companies, rules, accounts and plans, newest first, with `limit` up to 500. Each has `actorType`, `actorName` for an agent, `entityType`, `entityId`, `action`, `summary`, `before` and `after`. For a plan, `entityId` is the company, and `before` and `after` name the account. Deleting an account keeps what went with it in `before`.
 
 ## Split suggestions
 
