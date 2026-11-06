@@ -1,10 +1,13 @@
 package io.github.akarp0508.koifolio.price;
 
+import io.github.akarp0508.koifolio.domain.DailyClose;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -56,14 +59,17 @@ class BankierQuoteProvider implements QuoteProvider {
             }
         }
 
-        Set<String> matches = new LinkedHashSet<>();
+        Map<String, JsonNode> matches = new HashMap<>();
         for (JsonNode header : headers(candidates)) {
             if (ticker.equalsIgnoreCase(header.path("ticker").asString(""))) {
-                matches.add(header.path("symbol").asString());
+                matches.put(header.path("symbol").asString(), header);
             }
         }
-        return candidates.stream().filter(matches::contains).findFirst()
-                .flatMap(symbol -> currency(symbol).map(currency -> new ResolvedSymbol(symbol, currency)));
+        return candidates.stream().filter(matches::containsKey).findFirst()
+                .flatMap(symbol -> {
+                    String isin = matches.get(symbol).path("isin").asString(null);
+                    return currency(symbol).map(currency -> new ResolvedSymbol(symbol, isin, currency));
+                });
     }
 
     @Override
@@ -79,6 +85,38 @@ class BankierQuoteProvider implements QuoteProvider {
             }
         }
         return quotes;
+    }
+
+    /** History is split-adjusted, and today's row changes until the close, so {@code to} should be today at most. */
+    @Override
+    public List<DailyClose> dailyCloses(String symbol, String isin, LocalDate from, LocalDate to) {
+        UriComponentsBuilder uri = isin == null
+                ? uri("/foreign-company-section-chart/")
+                : uri("/company-profile-chart/" + isin + "/");
+        JsonNode chart = get(uri.queryParam("symbols", symbol)
+                .queryParam("date_from", startOfDay(from))
+                .queryParam("date_to", startOfDay(to)));
+
+        JsonNode entry = chart.path("data").path(0);
+        JsonNode rows = chart.path("main").isArray() ? chart.path("main")
+                : entry.path("main").isArray() ? entry.path("main") : entry.path("data");
+
+        List<DailyClose> closes = new ArrayList<>();
+        for (JsonNode row : rows) {
+            JsonNode close = row.path(4);
+            if (!close.isNumber()) {
+                continue;
+            }
+            LocalDate date = Instant.ofEpochMilli(row.path(0).longValue()).atZone(ZoneOffset.UTC).toLocalDate();
+            if (!date.isBefore(from) && date.isBefore(to)) {
+                closes.add(new DailyClose(date, BigDecimal.valueOf(close.doubleValue())));
+            }
+        }
+        return closes;
+    }
+
+    private static long startOfDay(LocalDate date) {
+        return date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
     }
 
     private List<JsonNode> headers(Collection<String> symbols) {

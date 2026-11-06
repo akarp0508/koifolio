@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.position;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.Valuation;
 import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
@@ -9,6 +10,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +18,7 @@ import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,6 +46,41 @@ class PositionController {
                 .filter(position -> closed || !position.result().isClosed() || position.result().incomplete())
                 .map(PositionResponse::of)
                 .toList();
+    }
+
+    @GetMapping("/{accountId}/{ticker}/history")
+    @Operation(summary = "A position's value on each trading day since its first trade", description = """
+            Closes are stored daily and missing days are filled in automatically, so a new or backfilled \
+            position can take a few minutes to appear. Prices are adjusted for splits.""")
+    HistoryResponse history(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID accountId, @PathVariable String ticker) {
+        return HistoryResponse.of(positions.history(UUID.fromString(jwt.getSubject()), accountId, ticker));
+    }
+
+    /**
+     * @param covered whether the price source has this ticker at all
+     * @param currencyMismatch prices are in another currency than the account, so points have no value
+     */
+    record HistoryResponse(UUID accountId, String ticker, String currency, boolean covered, boolean currencyMismatch,
+                           List<HistoryPoint> points) {
+
+        static HistoryResponse of(PositionService.History history) {
+            String currency = history.account().getCurrency();
+            boolean mismatch = history.currencyMismatch();
+            return new HistoryResponse(history.account().getId(), history.ticker(), currency, history.covered(), mismatch,
+                    history.points().stream().map(point -> HistoryPoint.of(point, currency, mismatch)).toList());
+        }
+    }
+
+    /** @param traded a buy or sell happened since the previous point */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record HistoryPoint(LocalDate date, String quantity, String close, String value, String cost, boolean traded) {
+
+        static HistoryPoint of(PositionHistory.Point point, String currency, boolean mismatch) {
+            return new HistoryPoint(point.date(), point.quantity().stripTrailingZeros().toPlainString(),
+                    point.close().stripTrailingZeros().toPlainString(),
+                    mismatch ? null : PositionResponse.money(point.value(), currency),
+                    PositionResponse.money(point.cost(), currency), point.traded());
+        }
     }
 
     /**
@@ -82,7 +120,7 @@ class PositionController {
                     mismatch);
         }
 
-        private static String money(BigDecimal value, String currency) {
+        static String money(BigDecimal value, String currency) {
             int digits = Currency.getInstance(currency).getDefaultFractionDigits();
             return value.setScale(digits, RoundingMode.HALF_UP).toPlainString();
         }

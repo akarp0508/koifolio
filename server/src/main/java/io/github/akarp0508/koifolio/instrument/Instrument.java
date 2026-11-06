@@ -10,7 +10,7 @@ import java.util.UUID;
 /** A ticker a user holds or follows. Removing one from their list only clears {@code listed}, for its transactions. */
 @Entity
 @Table(name = "instruments")
-class Instrument {
+public class Instrument {
 
     @Id
     private UUID id;
@@ -33,6 +33,9 @@ class Instrument {
 
     @Column(name = "quote_currency")
     private String quoteCurrency;
+
+    @Column(name = "quote_isin")
+    private String quoteIsin;
 
     /** When the source was last asked about this ticker. */
     @Column(name = "quote_checked_at")

@@ -4,12 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sun.net.httpserver.HttpServer;
+import io.github.akarp0508.koifolio.domain.DailyClose;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -62,12 +65,49 @@ class BankierQuoteProviderTest {
     }
 
     @Test
+    void keepsTheIsinItNeedsForHistory() {
+        search("PAS", "{\"companies\":[{\"symbol\":\"PASSUS\"}]}");
+        header("PASSUS", "[{\"symbol\":\"PASSUS\",\"isin\":\"PLPSSUS00018\",\"ticker\":\"PAS\",\"price\":1.0,\"date_time\":1}]");
+        currency("PASSUS", "PLN");
+
+        assertThat(provider.resolve("PAS")).contains(new QuoteProvider.ResolvedSymbol("PASSUS", "PLPSSUS00018", "PLN"));
+    }
+
+    @Test
+    void readsCompanyClosesWithoutTheUnfinishedDay() {
+        LocalDate from = LocalDate.of(2026, 11, 2);
+        LocalDate to = LocalDate.of(2026, 11, 6);
+        long start = from.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+        long end = to.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+        responses.put("/company-profile-chart/PLPKO0000016/?symbols=PKOBP&date_from=%d&date_to=%d".formatted(start, end), """
+                {"main":[[1793577600000.0,112.02,113.3,110.3,112.3],[1793664000000.0,111.0,114.48,110.6,113.62],
+                         [1793923200000.0,114.54,116.12,113.98,115.36]]}""");
+
+        assertThat(provider.dailyCloses("PKOBP", "PLPKO0000016", from, to)).containsExactly(
+                new DailyClose(LocalDate.of(2026, 11, 2), new BigDecimal("112.3")),
+                new DailyClose(LocalDate.of(2026, 11, 3), new BigDecimal("113.62")));
+    }
+
+    @Test
+    void readsForeignClosesFromTheirOwnEndpoint() {
+        LocalDate from = LocalDate.of(2026, 11, 2);
+        LocalDate to = LocalDate.of(2026, 11, 6);
+        long start = from.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+        long end = to.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli();
+        responses.put("/foreign-company-section-chart/?symbols=APPLE&date_from=%d&date_to=%d".formatted(start, end), """
+                {"parameters":{},"data":[{"symbol":"APPLE","main":[[1793577600000,343.92,347.09,341.03,343.91]]}]}""");
+
+        assertThat(provider.dailyCloses("APPLE", null, from, to)).containsExactly(
+                new DailyClose(LocalDate.of(2026, 11, 2), new BigDecimal("343.91")));
+    }
+
+    @Test
     void resolvesAPolishCompanyByMatchingTheTickerInItsQuote() {
         search("XTB", "{\"companies\":[{\"isin\":\"a\",\"symbol\":\"NEXTBIKE\"},{\"isin\":\"b\",\"symbol\":\"XTB\"}],\"funds_tfi\":[{}]}");
         header("NEXTBIKE,XTB", "[{\"symbol\":\"NEXTBIKE\",\"ticker\":\"NXB\",\"price\":1.0,\"date_time\":1},{\"symbol\":\"XTB\",\"ticker\":\"XTB\",\"price\":2.0,\"date_time\":1}]");
         currency("XTB", "PLN");
 
-        assertThat(provider.resolve("XTB")).contains(new QuoteProvider.ResolvedSymbol("XTB", "PLN"));
+        assertThat(provider.resolve("XTB")).contains(new QuoteProvider.ResolvedSymbol("XTB", null, "PLN"));
     }
 
     @Test
@@ -76,7 +116,7 @@ class BankierQuoteProviderTest {
         header("PKOBP,PKOBP-PP", "[{\"symbol\":\"PKOBP\",\"ticker\":\"PKO\",\"price\":1.0,\"date_time\":1}]");
         currency("PKOBP", "PLN");
 
-        assertThat(provider.resolve("PKO")).contains(new QuoteProvider.ResolvedSymbol("PKOBP", "PLN"));
+        assertThat(provider.resolve("PKO")).contains(new QuoteProvider.ResolvedSymbol("PKOBP", null, "PLN"));
     }
 
     @Test
@@ -85,7 +125,7 @@ class BankierQuoteProviderTest {
         header("SIEMENS", "[{\"symbol\":\"SIEMENS\",\"ticker\":\"SIEGn\",\"price\":273.25,\"date_time\":1793896440000.0}]");
         currency("SIEMENS", "EUR");
 
-        assertThat(provider.resolve("SIEGN")).contains(new QuoteProvider.ResolvedSymbol("SIEMENS", "EUR"));
+        assertThat(provider.resolve("SIEGN")).contains(new QuoteProvider.ResolvedSymbol("SIEMENS", null, "EUR"));
     }
 
     @Test
@@ -94,7 +134,7 @@ class BankierQuoteProviderTest {
         header("ETFBW20TR", "[{\"symbol\":\"ETFBW20TR\",\"ticker\":\"ETFBW20TR\",\"price\":86.91,\"date_time\":1,\"type\":null}]");
         currency("ETFBW20TR", "PLN");
 
-        assertThat(provider.resolve("ETFBW20TR")).contains(new QuoteProvider.ResolvedSymbol("ETFBW20TR", "PLN"));
+        assertThat(provider.resolve("ETFBW20TR")).contains(new QuoteProvider.ResolvedSymbol("ETFBW20TR", null, "PLN"));
     }
 
     @Test
@@ -103,7 +143,7 @@ class BankierQuoteProviderTest {
         header("KOPOLSKA,COCACOLA", "[{\"symbol\":\"COCACOLA\",\"ticker\":\"KO\",\"price\":1.0,\"date_time\":1},{\"symbol\":\"KOPOLSKA\",\"ticker\":\"KO\",\"price\":2.0,\"date_time\":1}]");
         currency("KOPOLSKA", "PLN");
 
-        assertThat(provider.resolve("KO")).contains(new QuoteProvider.ResolvedSymbol("KOPOLSKA", "PLN"));
+        assertThat(provider.resolve("KO")).contains(new QuoteProvider.ResolvedSymbol("KOPOLSKA", null, "PLN"));
     }
 
     @Test

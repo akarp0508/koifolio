@@ -28,9 +28,10 @@ interface InstrumentRepository extends JpaRepository<Instrument, UUID> {
     /** The result applies to everyone using the ticker. */
     @Modifying
     @Query("""
-            update Instrument i set i.quoteSymbol = :symbol, i.quoteCurrency = :currency, i.quoteCheckedAt = :checkedAt
+            update Instrument i set i.quoteSymbol = :symbol, i.quoteIsin = :isin, i.quoteCurrency = :currency,
+                i.quoteCheckedAt = :checkedAt
             where i.ticker = :ticker""")
-    void saveResolution(String ticker, String symbol, String currency, Instant checkedAt);
+    void saveResolution(String ticker, String symbol, String isin, String currency, Instant checkedAt);
 
     @Query("select distinct i.quoteSymbol from Instrument i where i.quoteSymbol is not null")
     List<String> findQuoteSymbols();

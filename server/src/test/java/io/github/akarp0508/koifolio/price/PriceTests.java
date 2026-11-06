@@ -8,13 +8,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.JsonPath;
 import io.github.akarp0508.koifolio.TestDatabase;
 import io.github.akarp0508.koifolio.auth.UserRepository;
+import io.github.akarp0508.koifolio.domain.DailyClose;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +58,8 @@ class PriceTests {
 
         final Map<String, ResolvedSymbol> symbols = new ConcurrentHashMap<>();
         final Map<String, Quote> quotes = new ConcurrentHashMap<>();
+        final Map<String, List<DailyClose>> closes = new ConcurrentHashMap<>();
+        final List<String> historyCalls = new CopyOnWriteArrayList<>();
         volatile boolean failing;
         volatile int resolveCalls;
 
@@ -64,6 +70,17 @@ class PriceTests {
                 throw new IllegalStateException("source is down");
             }
             return Optional.ofNullable(symbols.get(ticker));
+        }
+
+        @Override
+        public List<DailyClose> dailyCloses(String symbol, String isin, LocalDate from, LocalDate to) {
+            if (failing) {
+                throw new IllegalStateException("source is down");
+            }
+            historyCalls.add(symbol + " " + from + " " + to);
+            return closes.getOrDefault(symbol, List.of()).stream()
+                    .filter(close -> !close.date().isBefore(from) && close.date().isBefore(to))
+                    .toList();
         }
 
         @Override
@@ -96,12 +113,16 @@ class PriceTests {
     void setUp() throws Exception {
         users.deleteAll();
         jdbc.sql("DELETE FROM quotes").update();
+        jdbc.sql("DELETE FROM daily_closes").update();
+        jdbc.sql("DELETE FROM price_history").update();
         source.failing = false;
         source.resolveCalls = 0;
         source.symbols.clear();
+        source.closes.clear();
+        source.historyCalls.clear();
         source.quotes.clear();
-        source.symbols.put("PAS", new QuoteProvider.ResolvedSymbol("PASSUS", "PLN"));
-        source.symbols.put("AAPL", new QuoteProvider.ResolvedSymbol("APPLE", "USD"));
+        source.symbols.put("PAS", new QuoteProvider.ResolvedSymbol("PASSUS", "PLISIN", "PLN"));
+        source.symbols.put("AAPL", new QuoteProvider.ResolvedSymbol("APPLE", null, "USD"));
         source.quotes.put("PASSUS", new QuoteProvider.Quote(new BigDecimal("151"), QUOTED));
         source.quotes.put("APPLE", new QuoteProvider.Quote(new BigDecimal("344.17"), QUOTED));
         anna = tokenFor("anna");

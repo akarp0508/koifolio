@@ -64,8 +64,8 @@ public class InstrumentService {
 
     /** @param symbol null if the source doesn't cover the ticker */
     @Transactional
-    public void saveResolution(String ticker, String symbol, String currency, Instant checkedAt) {
-        instruments.saveResolution(ticker, symbol, currency, checkedAt);
+    public void saveResolution(String ticker, String symbol, String isin, String currency, Instant checkedAt) {
+        instruments.saveResolution(ticker, symbol, isin, currency, checkedAt);
     }
 
     @Transactional(readOnly = true)

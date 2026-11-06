@@ -116,7 +116,7 @@ public class TransactionService {
                 .filter(transaction -> transaction.getType() == TransactionType.BUY
                         || transaction.getType() == TransactionType.SELL)
                 .sorted(HISTORY_ORDER)
-                .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(),
+                .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(), transaction.getDate(),
                         new Trade(transaction.getType() == TransactionType.BUY ? Trade.Side.BUY : Trade.Side.SELL,
                                 transaction.getQuantity(), transaction.getPrice(), transaction.getFee())))
                 .toList();

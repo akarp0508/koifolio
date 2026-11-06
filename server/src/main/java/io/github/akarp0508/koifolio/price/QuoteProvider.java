@@ -1,8 +1,11 @@
 package io.github.akarp0508.koifolio.price;
 
+import io.github.akarp0508.koifolio.domain.DailyClose;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -15,7 +18,11 @@ interface QuoteProvider {
     /** Prices by symbol. Symbols the source doesn't know are left out. */
     Map<String, Quote> quotes(Collection<String> symbols);
 
-    record ResolvedSymbol(String symbol, String currency) {
+    /** Closing prices oldest first, for {@code from} up to but not including {@code to}. */
+    List<DailyClose> dailyCloses(String symbol, String isin, LocalDate from, LocalDate to);
+
+    /** @param isin null for foreign stocks */
+    record ResolvedSymbol(String symbol, String isin, String currency) {
     }
 
     record Quote(BigDecimal price, Instant quotedAt) {
