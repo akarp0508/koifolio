@@ -285,12 +285,13 @@ public class PositionService {
         return years;
     }
 
-    /** Dividends in the base currency, per calendar year and account. */
+    /** Dividends and interest in the base currency, per calendar year and account. */
     @Transactional(readOnly = true)
     public Map<Integer, Map<UUID, List<Dividend>>> dividendsByYear(UUID userId) {
         User user = authService.currentUser(userId);
         FxService.History rates = fx.history();
-        List<AccountDividend> paid = transactions.dividendsOldestFirst(userId);
+        List<AccountDividend> paid = new ArrayList<>(transactions.dividendsOldestFirst(userId));
+        paid.addAll(transactions.interestOldestFirst(userId));
 
         Map<Integer, Map<UUID, List<Dividend>>> years = new HashMap<>();
         for (Account account : accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId)) {
@@ -301,6 +302,23 @@ public class PositionService {
                             .computeIfAbsent(account.getId(), unused -> new ArrayList<>()).add(dividend));
         }
         return years;
+    }
+
+    /**
+     * Interest in the base currency, each at its own date's rate.
+     *
+     * @param accountId limits it to one account, or null for all
+     */
+    @Transactional(readOnly = true)
+    public List<Dividend> interestInBase(UUID userId, UUID accountId) {
+        User user = authService.currentUser(userId);
+        FxService.History rates = fx.history();
+        List<AccountDividend> paid = transactions.interestOldestFirst(userId);
+        return accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId).stream()
+                .filter(account -> accountId == null || account.getId().equals(accountId))
+                .flatMap(account -> dividendsInBase(paid.stream().filter(interest -> interest.accountId().equals(account.getId()))
+                        .map(AccountDividend::dividend).toList(), account.getCurrency(), user, rates).stream())
+                .toList();
     }
 
     /**

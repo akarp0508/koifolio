@@ -107,7 +107,7 @@ export function Tax() {
           {estimate.dividendGroups?.map((group) => (
             <section className="panel tax-group" key={group.ratePercent}>
               <header>
-                <h2>{group.ratePercent === '0' ? t('Dividends {year} — tax free (0%)', { year: estimate.year ?? '' }) : t('Dividends {year} — taxed at {rate}%', { year: estimate.year ?? '', rate: group.ratePercent ?? '' })}</h2>
+                <h2>{group.ratePercent === '0' ? t('Dividends and interest {year} — tax free (0%)', { year: estimate.year ?? '' }) : t('Dividends and interest {year} — taxed at {rate}%', { year: estimate.year ?? '', rate: group.ratePercent ?? '' })}</h2>
               </header>
               <div className="table-scroll">
                 <table>

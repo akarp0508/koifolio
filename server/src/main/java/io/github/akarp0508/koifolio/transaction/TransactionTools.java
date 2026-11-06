@@ -34,11 +34,12 @@ class TransactionTools {
             Adds a transaction. It counts in every number straight away, but stays marked unvalidated until the user \
             approves or rejects it. Check list_transactions first so nothing is entered twice. Amounts are in the account's \
             currency. Numbers are sent as text, like "12.50". buy and sell need ticker, quantity and price. dividend needs ticker and gross amount, and should have \
-            withheldTax. deposit, withdrawal and fee need amount. split needs ticker, splitFrom and splitTo.""",
+            withheldTax. interest is what a broker or bank pays on cash, so not a deposit: it needs the gross amount, and \
+            should have withheldTax. deposit, withdrawal and fee need amount. split needs ticker, splitFrom and splitTo.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
     TransactionResponse addTransaction(McpTransportContext context,
                                        @McpToolParam(description = "Account id from list_accounts") UUID account,
-                                       @McpToolParam(description = "One of deposit, withdrawal, buy, sell, dividend, fee, split") String type,
+                                       @McpToolParam(description = "One of deposit, withdrawal, buy, sell, dividend, interest, fee, split") String type,
                                        @McpToolParam(description = "As YYYY-MM-DD") LocalDate date,
                                        @McpToolParam(description = """
                                                Whether this moves the account's cash balance. Use false for history from \
@@ -47,8 +48,8 @@ class TransactionTools {
                                        @McpToolParam(required = false, description = "Shares") String quantity,
                                        @McpToolParam(required = false, description = "Per share") String price,
                                        @McpToolParam(required = false, description = "Broker fee") String fee,
-                                       @McpToolParam(required = false, description = "Cash amount, gross for a dividend") String amount,
-                                       @McpToolParam(required = false, description = "Tax withheld from a dividend") String withheldTax,
+                                       @McpToolParam(required = false, description = "Cash amount, gross for a dividend or interest") String amount,
+                                       @McpToolParam(required = false, description = "Tax withheld from a dividend or interest") String withheldTax,
                                        @McpToolParam(required = false, description = "Old shares in a split") String splitFrom,
                                        @McpToolParam(required = false, description = "New shares for that many old ones") String splitTo,
                                        @McpToolParam(required = false, description = "Why, in the user's words, if they gave a reason") String note,
@@ -119,14 +120,14 @@ class TransactionTools {
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
     ReviewService.Proposed updateTransaction(McpTransportContext context,
                                              @McpToolParam(description = "Transaction id from list_transactions") UUID id,
-                                             @McpToolParam(required = false, description = "One of deposit, withdrawal, buy, sell, dividend, fee, split") String type,
+                                             @McpToolParam(required = false, description = "One of deposit, withdrawal, buy, sell, dividend, interest, fee, split") String type,
                                              @McpToolParam(required = false, description = "As YYYY-MM-DD") LocalDate date,
                                              @McpToolParam(required = false, description = "Ticker") String ticker,
                                              @McpToolParam(required = false, description = "Shares") String quantity,
                                              @McpToolParam(required = false, description = "Per share") String price,
                                              @McpToolParam(required = false, description = "Broker fee") String fee,
-                                             @McpToolParam(required = false, description = "Cash amount, gross for a dividend") String amount,
-                                             @McpToolParam(required = false, description = "Tax withheld from a dividend") String withheldTax,
+                                             @McpToolParam(required = false, description = "Cash amount, gross for a dividend or interest") String amount,
+                                             @McpToolParam(required = false, description = "Tax withheld from a dividend or interest") String withheldTax,
                                              @McpToolParam(required = false, description = "Old shares in a split") String splitFrom,
                                              @McpToolParam(required = false, description = "New shares for that many old ones") String splitTo,
                                              @McpToolParam(required = false, description = "Why, in the user's words. Empty text removes it") String note,

@@ -8,6 +8,7 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   buy: t('Buy'),
   sell: t('Sell'),
   dividend: t('Dividend'),
+  interest: t('Interest'),
   fee: t('Fee'),
   split: t('Split'),
 }

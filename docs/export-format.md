@@ -51,7 +51,7 @@ A file in another format is refused.
 ```
 
 - Bonds are in `bonds.yaml`, per purchase. It's optional, so older exports still restore.
-- Types are `deposit`, `withdrawal`, `buy`, `sell`, `dividend`, `fee` and `split`.
+- Types are `deposit`, `withdrawal`, `buy`, `sell`, `dividend`, `interest`, `fee` and `split`.
 - Amounts are in the account's currency.
 - `note` is optional and holds the reason for a transaction.
 - `createdAt` is optional and orders trades on the same day. Without it, lines keep their order in the file.

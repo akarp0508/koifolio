@@ -438,6 +438,17 @@ public class TransactionService {
                 .toList();
     }
 
+    /** Interest on each account's cash, oldest first, shaped like a dividend. No company earned it, so it has no instrument. */
+    @Transactional(readOnly = true)
+    public List<AccountDividend> interestOldestFirst(UUID userId) {
+        return transactions.findByUserId(userId).stream()
+                .filter(transaction -> transaction.getType() == TransactionType.INTEREST)
+                .sorted(HISTORY_ORDER)
+                .map(transaction -> new AccountDividend(transaction.getAccountId(), null,
+                        new Dividend(transaction.getDate(), transaction.getAmount(), transaction.getWithheldTax())))
+                .toList();
+    }
+
     private static Trade trade(Transaction transaction) {
         return switch (transaction.getType()) {
             case BUY -> new Trade(Trade.Side.BUY, transaction.getQuantity(), transaction.getPrice(), transaction.getFee());
@@ -523,6 +534,7 @@ public class TransactionService {
         TransactionValues values = switch (request.type()) {
             case BUY, SELL -> trade(request, currency, errors);
             case DIVIDEND -> dividend(request, currency, errors);
+            case INTEREST -> interest(request, currency, errors);
             case DEPOSIT, WITHDRAWAL, FEE -> cash(request, currency, errors);
             case SPLIT -> split(request, errors);
         };
@@ -565,6 +577,20 @@ public class TransactionService {
             return null;
         }
         return new TransactionValues(request.type(), request.date(), ticker, null, null, null, amount, withheldTax,
+                amount.subtract(withheldTax), request.affectsBalance(), null, null);
+    }
+
+    /** Income like a dividend, but on the account's cash, so no company earned it. */
+    private static TransactionValues interest(TransactionRequest request, String currency, Map<String, String> errors) {
+        BigDecimal amount = requireAmount(request, currency, errors);
+        BigDecimal withheldTax = optionalAmount("withheldTax", request.withheldTax(), currency, errors);
+        if (amount != null && withheldTax.compareTo(amount) > 0) {
+            errors.put("withheldTax", "must not be more than the amount");
+        }
+        if (!errors.isEmpty()) {
+            return null;
+        }
+        return new TransactionValues(request.type(), request.date(), null, null, null, null, amount, withheldTax,
                 amount.subtract(withheldTax), request.affectsBalance(), null, null);
     }
 

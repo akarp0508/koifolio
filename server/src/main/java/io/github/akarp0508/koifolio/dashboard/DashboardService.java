@@ -99,7 +99,7 @@ class DashboardService {
      * @param unrealizedGain value now against cost at each purchase's rate
      * @param currencyGain the part of it from exchange rates moving, for accounts in another currency
      * @param gainPercent gain against the cost of priced positions, empty without any
-     * @param dividends received, net of tax withheld
+     * @param dividends dividends and interest received, net of tax withheld. Interest is left out while a company or tags filter the view
      * @param dividendsWithheld tax withheld from them
      * @param bondsValue bonds at today's accrued value, part of value, zero while a company or tags filter the view
      * @param bondsGain the interest accrued on them
@@ -161,6 +161,7 @@ class DashboardService {
         BigDecimal bondsValue = BigDecimal.ZERO;
         BigDecimal bondsGain = BigDecimal.ZERO;
         if (!filter.excludesCash()) {
+            dividends.addAll(positions.interestInBase(userId, filter.account()));
             for (BondService.Valued bond : bonds.list(userId)) {
                 if (filter.account() == null || bond.account().getId().equals(filter.account())) {
                     Optional<BigDecimal> inBase = rates.convert(bond.value(), BondService.CURRENCY, base);
@@ -233,7 +234,10 @@ class DashboardService {
                         .map(point -> new PortfolioHistory.Point(point.date(), point.value(), point.cost(), point.realized()))
                         .toList())
                 .toList();
-        List<Dividend> dividends = matching.stream().flatMap(position -> position.dividendsInBase().stream()).toList();
+        List<Dividend> dividends = new ArrayList<>(matching.stream().flatMap(position -> position.dividendsInBase().stream()).toList());
+        if (!filter.excludesCash()) {
+            dividends.addAll(positions.interestInBase(userId, filter.account()));
+        }
         LocalDate today = LocalDate.now(PriceHistoryService.MARKET_ZONE);
         List<List<PortfolioHistory.Point>> all = new ArrayList<>(series);
         if (!filter.excludesCash()) {

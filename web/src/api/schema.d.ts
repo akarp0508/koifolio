@@ -840,7 +840,7 @@ export interface components {
              */
             accountId?: string;
             /** @enum {string} */
-            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split";
+            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split" | "interest";
             /**
              * Format: date
              * @example 2026-03-12
@@ -867,12 +867,12 @@ export interface components {
              */
             fee?: string;
             /**
-             * @description deposit, withdrawal, fee, and gross dividend
+             * @description deposit, withdrawal, fee, and gross dividend or interest
              * @example 5000.00
              */
             amount?: string;
             /**
-             * @description dividend. Defaults to 0
+             * @description dividend, interest. Defaults to 0
              * @example 0
              */
             withheldTax?: string;
@@ -902,7 +902,7 @@ export interface components {
             /** Format: uuid */
             accountId?: string;
             /** @enum {string} */
-            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split";
+            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split" | "interest";
             /** Format: date */
             date?: string;
             currency?: string;

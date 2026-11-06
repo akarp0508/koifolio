@@ -105,6 +105,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `buy` | `ticker`, `quantity`, `price`, `fee` (optional) | −(quantity × price + fee) |
 | `sell` | `ticker`, `quantity`, `price`, `fee` (optional) | quantity × price − fee |
 | `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
+| `interest` | `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
 | `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
 - Every type also needs `date` and `affectsBalance`, and can have a `note` of up to 2000 characters. Responses add `id`, `currency`, `cashEffect`, `oversold`, `unvalidated` and `createdAt`, `importId` for what an agent added in one call, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
@@ -169,6 +170,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - One position per account and ticker, using the account's `costMethod`.
 - `cost` and `realizedGain` include fees. Dividends aren't part of realized gain: `dividends` is what was received net of tax, and `dividendsWithheld` the tax taken.
 - A dividend on a ticker with no trades makes a closed position.
+- Interest belongs to an account, not a company, so it isn't on any position. The dashboard's `dividends` include it, unless a company or tags filter the view.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
 - `weight` and `portfolioWeight` are percentages of the account and of all accounts, with cash in the total, at the latest rates. They don't change with filters, and are left out without a value. Unpriced positions aren't in the total, so weights rise until they get a price.
@@ -282,7 +284,7 @@ Implemented. An estimate of tax on sales and dividends, in the base currency. No
 
 - Accounts with the same `taxRate` add up per calendar year, so losses offset gains between them. Losses aren't carried between years.
 - `totalTax` is tax on that year's sales. `totalIfSoldToday` is the extra tax if everything open were sold now, after this year's realized gains, and it can be negative. It's left out for past years.
-- `dividendGroups` has that year's dividends per rate and account, with `gross`, `withheld` and `taxLeft`. `totalDividendTax` adds up what's left to pay. Each dividend owes its gross at the account's rate less what was withheld, never below zero, and sale losses don't offset it.
+- `dividendGroups` has that year's dividends and interest per rate and account, with `gross`, `withheld` and `taxLeft`. `totalDividendTax` adds up what's left to pay. Each dividend owes its gross at the account's rate less what was withheld, never below zero, and sale losses don't offset it.
 - `unsetAccounts` names accounts with something to tax but no rate, which aren't counted.
 - Cost, proceeds and dividends use each one's own rate, per `costFxRule`.
 

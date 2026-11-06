@@ -30,10 +30,10 @@ record TransactionRequest(
         @Schema(type = "string", description = "buy, sell. Defaults to 0", example = "0")
         @Digits(integer = 15, fraction = 4, message = "must have at most 15 digits and 4 decimal places")
         BigDecimal fee,
-        @Schema(type = "string", description = "deposit, withdrawal, fee, and gross dividend", example = "5000.00")
+        @Schema(type = "string", description = "deposit, withdrawal, fee, and gross dividend or interest", example = "5000.00")
         @Digits(integer = 15, fraction = 4, message = "must have at most 15 digits and 4 decimal places")
         BigDecimal amount,
-        @Schema(type = "string", description = "dividend. Defaults to 0", example = "0")
+        @Schema(type = "string", description = "dividend, interest. Defaults to 0", example = "0")
         @Digits(integer = 15, fraction = 4, message = "must have at most 15 digits and 4 decimal places")
         BigDecimal withheldTax,
         @Schema(type = "string", description = "split. Old shares", example = "1")

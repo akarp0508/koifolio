@@ -215,7 +215,7 @@ export function Portfolio() {
             </Tile>
             <Tile label={t('Realized')} tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>
             <Tile
-              label={t('Dividends')}
+              label={t('Dividends and interest')}
               tone={gainClass(dashboard.dividends)}
               note={gainClass(dashboard.dividendsWithheld) ? t('withheld {amount}', { amount: formatAmount(dashboard.dividendsWithheld) }) : undefined}
             >

@@ -51,6 +51,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
   const suggested = defaultAffectsBalance(date, balanceSetOn)
   const affectsBalance = chosenAffectsBalance ?? suggested
   const dividend = type === 'dividend'
+  const income = dividend || type === 'interest'
   const trade = isTrade(type)
   const split = type === 'split'
 
@@ -67,7 +68,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
       price: trade ? normalizeAmount(price) : undefined,
       fee: trade ? optionalAmount(fee) : undefined,
       amount: trade || split ? undefined : normalizeAmount(amount),
-      withheldTax: dividend ? optionalAmount(withheldTax) : undefined,
+      withheldTax: income ? optionalAmount(withheldTax) : undefined,
       splitFrom: split ? normalizeAmount(splitFrom) : undefined,
       splitTo: split ? normalizeAmount(splitTo) : undefined,
       note,
@@ -222,7 +223,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
         )}
         {!trade && !split && (
           <Field
-            label={`${dividend ? t('Gross amount') : t('Amount')} (${currency})`}
+            label={`${income ? t('Gross amount') : t('Amount')} (${currency})`}
             inputMode="decimal"
             required
             value={amount}
@@ -230,7 +231,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
             onChange={(e) => setAmount(e.target.value)}
           />
         )}
-        {dividend && (
+        {income && (
           <Field
             label={`${t('Tax withheld')} (${currency})`}
             inputMode="decimal"

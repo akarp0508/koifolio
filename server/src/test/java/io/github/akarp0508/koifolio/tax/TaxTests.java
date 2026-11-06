@@ -208,6 +208,24 @@ class TaxTests {
     }
 
     @Test
+    void interestCountsLikeADividend() throws Exception {
+        String ike = account("IKE", ",\"taxRate\":\"19\"");
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content("""
+                {"accountId":"%s","type":"interest","date":"%d-03-01","amount":"100","withheldTax":"15","affectsBalance":true}"""
+                .formatted(ike, LocalDate.now().getYear()))).andExpect(status().isCreated());
+
+        tax().andExpect(jsonPath("$.dividendGroups[0].gross").value("100.00"))
+                .andExpect(jsonPath("$.dividendGroups[0].withheld").value("15.00"))
+                .andExpect(jsonPath("$.dividendGroups[0].taxLeft").value("4.00"));
+        as(anna, get("/api/v1/dashboard"))
+                .andExpect(jsonPath("$.dividends").value("85.00"))
+                .andExpect(jsonPath("$.dividendsWithheld").value("15.00"))
+                .andExpect(jsonPath("$.cash").value("85.00"));
+        as(anna, get("/api/v1/dashboard").param("instrumentTag", "core")).andExpect(jsonPath("$.dividends").value("0.00"));
+        as(anna, get("/api/v1/positions")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void aYearWithOnlyDividendsIsListed() throws Exception {
         int lastYear = THIS_YEAR - 1;
         dividend(account("XTB", ",\"taxRate\":\"19\""), lastYear + "-03-02", "100", "19");
