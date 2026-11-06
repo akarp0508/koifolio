@@ -282,6 +282,16 @@ Implemented. An estimate of tax on sales and dividends, in the base currency. No
 - `unsetAccounts` names accounts with something to tax but no rate, which aren't counted.
 - Cost, proceeds and dividends use each one's own rate, per `costFxRule`.
 
+## Agent tokens
+
+Implemented. Tokens for the [MCP server](mcp.md), which work there and nowhere else.
+
+| Request | Purpose |
+|---|---|
+| `GET /agent-tokens` | List, without secrets |
+| `POST /agent-tokens` | Create from `name` and optional `expiresOn`, the last day it works. The `secret` is only returned here |
+| `DELETE /agent-tokens/{id}` | Revoke at once |
+
 ## Split suggestions
 
 Implemented. When past closes change by one ratio, the app suggests a split. Nothing changes until you add it.

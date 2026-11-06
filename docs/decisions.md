@@ -2,7 +2,7 @@
 
 ## Settled
 
-- **Website first.** Deployment and MCP are deferred on purpose, and the focus is extending the site. See [roadmap.md](roadmap.md) and [expectations.md](expectations.md).
+- **Website first.** Deployment is deferred on purpose. MCP was too, and it's now being built so an agent can enter real data. See [roadmap.md](roadmap.md) and [expectations.md](expectations.md).
 - **Three places, not one page per feature.** Portfolio holds totals and holdings, each company gets one page, and Activity holds transactions. Accounts and Tax stay as smaller links. A company's All tab is in the base currency, and an account's tab in that account's. Weight is one number: of the chosen account, or of the portfolio with none chosen.
 
 - **MVP first, one feature at a time:** login, then balance info, then transactions. See [roadmap.md](roadmap.md). Decisions below that go beyond the MVP are direction, not current scope.
@@ -22,7 +22,8 @@
 - **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
 - **Deployment, when it comes:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
 - **Storage:** Postgres is the source of truth. Plain text is export and restore plus an optional one-way git backup. Restore replaces everything rather than merging, because a merge has to guess which trades are repeats, and a wrong guess silently doubles a position. Balances are restored as they stood, not rebuilt from transactions, because backfilled history doesn't affect them.
-- **Agents, when they come:** through MCP only.
+- **Agents:** through MCP only.
+- **Agent login:** personal tokens first, each with a name, shown once and stored as a hash. They work only at `/mcp`. OAuth comes later for cloud clients, as a second way in that the tools don't see. This replaces OAuth-only.
 - **Accounts own lots and cash.** An account has a name, a free-form description, a currency and a cost method. There are no fixed account types.
 - **Cost basis:** `average` or `fifo`, set per account, average by default. Changing it recalculates positions.
 - **Positions are calculated on each request,** in the `domain` package, not stored. One per account and ticker. A sale past the shares on record counts only the shares with a known cost, and the position is marked `incomplete`.

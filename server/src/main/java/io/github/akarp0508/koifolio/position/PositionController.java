@@ -57,7 +57,10 @@ class PositionController {
     List<PositionResponse> list(@AuthenticationPrincipal Jwt jwt,
                                 @RequestParam(required = false) UUID account,
                                 @RequestParam(defaultValue = "false") boolean closed) {
-        UUID userId = UUID.fromString(jwt.getSubject());
+        return responses(positions, UUID.fromString(jwt.getSubject()), account, closed);
+    }
+
+    static List<PositionResponse> responses(PositionService positions, UUID userId, UUID account, boolean closed) {
         List<PositionService.Position> all = positions.list(userId);
         Map<PositionService.Position, PositionService.Weight> weights = positions.weights(userId, all);
         return all.stream()

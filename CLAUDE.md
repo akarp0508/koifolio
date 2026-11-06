@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-The focus is extending the website, one feature at a time (`docs/roadmap.md`). Deployment and MCP are deferred on purpose, and `docs/expectations.md` records the original promises and where each stands, so update it as things change. Don't build ahead of the current step; plans outside it are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
+The focus is extending the website and the MCP server, one feature at a time (`docs/roadmap.md`). Deployment is deferred on purpose, and `docs/expectations.md` records the original promises and where each stands, so update it as things change. Don't build ahead of the current step; plans outside it are direction only. After each batch: commit it, make sure it's in Swagger, start the app, and wait for the user to test it by hand before starting the next batch. `docs/` holds the plans (see `docs/README.md`): domain model, database, REST API, MCP, export format, price sources, roadmap, and `docs/decisions.md` for settled and open decisions. Read the relevant file before implementing, don't treat **OPEN** items as decided, and keep them in sync when decisions change.
 
 ## Commands
 

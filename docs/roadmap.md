@@ -29,6 +29,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 18. **Rules** (done): a maximum per company and a minimum in low risk, per account or overall, with failures in Needs attention.
 19. **Export and restore** (done): all your data as plain text, and a restore that replaces it, with all of it or none of it applied.
 20. **Dividend income** (done): dividends in returns and the chart, net of tax withheld, and what's left to pay on the Tax page.
+21. **MCP read tools** (done): agent tokens on the profile page, and read tools at `/mcp`. Next are agent writes with the audit log, unvalidated marks and a review tab, then company and rule edits.
 
 ## Current focus: extending the site
 
@@ -56,7 +57,7 @@ Rough priorities, to be picked one batch at a time:
 Not being worked on. Pick these up when the site is where it should be.
 
 - **Deployment:** private remote and CI, the Pi over Tailscale, scheduled backups with a restore test
-- **MCP server and audit log.** Agents writing company analysis builds on the instrument fields. Revisions and soft delete for transactions come with the audit log
+- **OAuth for MCP,** for cloud clients such as claude.ai, along with public access
 - **Hosting for others:** rate limiting on login and registration (required before exposing the app publicly), signup controls, passkeys, GDPR
 
 ## Ideas for later

@@ -9,7 +9,7 @@ Last reviewed: 2026-11-06.
 | Promise | Status |
 |---|---|
 | **Analysis lives next to the numbers.** Each company has notes plus structured fields, in one place with its figures | ✅ Delivered: company details, per-account plans |
-| **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | ⏸ Deferred on purpose: the site comes first. See [mcp.md](mcp.md) |
+| **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | 🟡 Read tools are built. Writes, checks and the audit log are next. See [mcp.md](mcp.md) |
 | **Your data is never locked in.** Plain-text export/import, optional git backup | ✅ Export and restore done, on the profile page. The git backup is deferred. See [export-format.md](export-format.md) |
 | **Multiple accounts,** viewed separately or together | ✅ Delivered |
 | **Your rules, checked automatically,** like "max 20% in one company" or "~50% in low-risk" | ✅ Done |

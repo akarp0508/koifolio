@@ -16,6 +16,11 @@ spring:
     multipart:
       max-file-size: 20MB
       max-request-size: 21MB
+  ai:
+    mcp:
+      server:
+        name: koifolio
+        protocol: STATELESS
 
 management:
   endpoints:
