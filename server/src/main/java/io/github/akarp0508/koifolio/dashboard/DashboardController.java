@@ -81,17 +81,18 @@ class DashboardController {
 
     /**
      * @param cash left out while tags filter the view
+     * @param currencyGain the part of unrealizedGain from exchange rates, for accounts in another currency
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record DashboardResponse(String currency, String value, String positionsValue, String unrealizedGain,
-                             String unrealizedPercent, String realizedGain, String cash, List<SliceResponse> bySector,
+                             String currencyGain, String unrealizedPercent, String realizedGain, String cash, List<SliceResponse> bySector,
                              List<SliceResponse> byRisk, List<AttentionResponse> attention, int unpriced) {
 
         static DashboardResponse of(DashboardService.Dashboard d) {
             String currency = d.currency();
             return new DashboardResponse(currency, money(d.value(), currency), money(d.positionsValue(), currency),
-                    money(d.unrealizedGain(), currency), d.gainPercent().map(DashboardResponse::percent).orElse(null),
+                    money(d.unrealizedGain(), currency), money(d.currencyGain(), currency), d.gainPercent().map(DashboardResponse::percent).orElse(null),
                     money(d.realizedGain(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
                     slices(d.bySector(), currency), slices(d.byRisk(), currency),
                     d.attention().stream().map(AttentionResponse::of).toList(), d.unpriced());

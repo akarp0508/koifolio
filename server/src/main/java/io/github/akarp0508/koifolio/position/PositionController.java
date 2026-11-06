@@ -123,6 +123,31 @@ class PositionController {
         }
     }
 
+    /**
+     * @param cost at each purchase's rate
+     * @param gain value now against that cost
+     * @param currencyGain the part of the gain from exchange rates moving
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record InBase(String currency, String cost, String realizedGain, String value, String gain, String currencyGain) {
+
+        static InBase of(PositionService.Position position, Optional<Valuation> valuation) {
+            String base = position.baseCurrency();
+            if (position.account().getCurrency().equals(base) || position.inBase().isEmpty()) {
+                return null;
+            }
+            PositionResult result = position.inBase().get();
+            Optional<BigDecimal> value = valuation.flatMap(v -> position.convertToBase(v.value()));
+            Optional<BigDecimal> costToday = position.convertToBase(position.result().cost());
+            return new InBase(base, PositionResponse.money(result.cost(), base),
+                    PositionResponse.money(result.realizedGain(), base),
+                    value.map(v -> PositionResponse.money(v, base)).orElse(null),
+                    value.map(v -> PositionResponse.money(v.subtract(result.cost()), base)).orElse(null),
+                    value.flatMap(v -> costToday).map(today -> PositionResponse.money(today.subtract(result.cost()), base))
+                            .orElse(null));
+        }
+    }
+
     private static String plain(BigDecimal value) {
         return value.stripTrailingZeros().toPlainString();
     }
@@ -165,6 +190,7 @@ class PositionController {
      * @param priceCurrency can differ from {@code currency}; value and gain are converted at the latest rate
      * @param currencyMismatch the price is in another currency and there's no rate, so value and gain are left out
      * @param risk the plan's risk if set, otherwise the company's; left out if neither is
+     * @param inBase the same in the base currency, left out when the account already uses it
      * @param signal the price is at or near the plan's target or stop
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
@@ -173,7 +199,7 @@ class PositionController {
                             String price, String priceCurrency, Instant quotedAt, String value,
                             String unrealizedGain, String unrealizedPercent, boolean currencyMismatch,
                             UUID instrumentId, String sector, Integer risk, PlanCheck.Signal signal,
-                            Set<String> instrumentTags, Set<String> positionTags) {
+                            Set<String> instrumentTags, Set<String> positionTags, InBase inBase) {
 
         static PositionResponse of(PositionService.Position position) {
             PositionResult result = position.result();
@@ -199,7 +225,7 @@ class PositionController {
                     mismatch,
                     position.instrument().id(), position.instrument().details().sector(), position.risk(),
                     position.planCheck().flatMap(PlanCheck::signal).orElse(null),
-                    position.instrument().details().tags(), position.tags());
+                    position.instrument().details().tags(), position.tags(), InBase.of(position, valuation));
         }
 
         static String money(BigDecimal value, String currency) {

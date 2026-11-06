@@ -1,12 +1,12 @@
 package io.github.akarp0508.koifolio.auth;
 
 import io.github.akarp0508.koifolio.ApiException;
+import io.github.akarp0508.koifolio.domain.CostFxRule;
 import io.github.akarp0508.koifolio.price.FxService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -35,28 +35,39 @@ class SettingsController {
     @GetMapping
     @Operation(summary = "Your settings, with the currencies that can be used as a base")
     SettingsResponse get(@AuthenticationPrincipal Jwt jwt) {
-        return new SettingsResponse(authService.currentUser(userId(jwt)).getBaseCurrency(), fx.rates().currencies());
+        return SettingsResponse.of(authService.currentUser(userId(jwt)), fx.rates().currencies());
     }
 
     @PatchMapping
     @Transactional
-    @Operation(summary = "Change your base currency")
+    @Operation(summary = "Change your settings", description = "Send only what changes.")
     SettingsResponse update(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody SettingsRequest request) {
         List<String> currencies = fx.rates().currencies();
-        if (!currencies.contains(request.baseCurrency())) {
-            throw new ApiException(HttpStatus.BAD_REQUEST, "unknown_currency", "No rate for " + request.baseCurrency());
+        User user = authService.currentUser(userId(jwt));
+        if (request.baseCurrency() != null) {
+            if (!currencies.contains(request.baseCurrency())) {
+                throw new ApiException(HttpStatus.BAD_REQUEST, "unknown_currency", "No rate for " + request.baseCurrency());
+            }
+            user.setBaseCurrency(request.baseCurrency());
         }
-        authService.currentUser(userId(jwt)).setBaseCurrency(request.baseCurrency());
-        return new SettingsResponse(request.baseCurrency(), currencies);
+        if (request.costFxRule() != null) {
+            user.setCostFxRule(request.costFxRule());
+        }
+        return SettingsResponse.of(user, currencies);
     }
 
     private static UUID userId(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }
 
-    record SettingsRequest(@NotNull @Schema(example = "PLN") String baseCurrency) {
+    record SettingsRequest(@Schema(example = "PLN") String baseCurrency, CostFxRule costFxRule) {
     }
 
-    record SettingsResponse(String baseCurrency, List<String> currencies) {
+    /** @param costFxRule which day's rate converts a trade to the base currency */
+    record SettingsResponse(String baseCurrency, CostFxRule costFxRule, List<String> currencies) {
+
+        static SettingsResponse of(User user, List<String> currencies) {
+            return new SettingsResponse(user.getBaseCurrency(), user.getCostFxRule(), currencies);
+        }
     }
 }

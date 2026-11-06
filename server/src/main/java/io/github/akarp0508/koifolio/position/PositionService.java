@@ -4,6 +4,7 @@ import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.auth.User;
 import io.github.akarp0508.koifolio.domain.DailyClose;
 import io.github.akarp0508.koifolio.domain.DatedTrade;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
@@ -21,6 +22,7 @@ import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
 import io.github.akarp0508.koifolio.transaction.AccountTrade;
 import io.github.akarp0508.koifolio.transaction.TransactionService;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -81,16 +83,26 @@ public class PositionService {
                 .orElseGet(() -> new PositionPlan(accountId, instrumentId, userId));
         plan.update(text, risk, target, stop, tags);
         return new Position(position.account(), position.instrument(), position.result(), position.price(),
-                position.accountPrice(), Optional.of(plans.save(plan)));
+                position.accountPrice(), Optional.of(plans.save(plan)), position.baseCurrency(), position.inBase(),
+                position.rateToBase());
     }
 
     private static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "position_not_found", "Position not found");
     }
 
-    /** @param accountPrice the price in the account's currency, empty if there's none or no FX rate */
+    /**
+     * @param accountPrice the price in the account's currency, empty if there's none or no FX rate
+     * @param inBase cost and realized gain in the base currency, each trade at its own date's rate
+     */
     public record Position(Account account, InstrumentView instrument, PositionResult result, Optional<CurrentPrice> price,
-                           Optional<BigDecimal> accountPrice, Optional<PositionPlan> plan) {
+                           Optional<BigDecimal> accountPrice, Optional<PositionPlan> plan, String baseCurrency,
+                           Optional<PositionResult> inBase, BigDecimal rateToBase) {
+
+        /** An amount in the account's currency at today's rate. */
+        Optional<BigDecimal> convertToBase(BigDecimal amount) {
+            return Optional.ofNullable(rateToBase).map(rate -> amount.multiply(rate, MathContext.DECIMAL128));
+        }
 
         public String ticker() {
             return instrument.ticker();
@@ -135,15 +147,20 @@ public class PositionService {
         }
         List<DatedTrade> trades = tradesOf(userId, accountId, instrumentId);
         List<DailyClose> closes = closes(ref, prices.currentPrices(userId).get(instrumentId));
-        Optional<List<DailyClose>> converted = inAccountCurrency(closes, ref.currency(), position.account(), fx.history());
+        Optional<List<DailyClose>> inAccountCurrency = converted(closes, ref.currency(), position.account().getCurrency(),
+                fx.history());
         return new History(position.account(), normalized,
-                PositionHistory.calculate(trades, converted.orElse(closes), position.account().getCostMethod()),
-                ref.currency(), true, converted.isEmpty());
+                PositionHistory.calculate(trades, inAccountCurrency.orElse(closes), position.account().getCostMethod()),
+                ref.currency(), true, inAccountCurrency.isEmpty());
     }
 
-    /** Each position's daily points, in its account's currency. Positions with no prices are left out. */
+    /**
+     * Each position's daily points in the base currency: trades at their own date's rate, closes at
+     * each day's. Positions with no prices or no rates are left out.
+     */
     @Transactional(readOnly = true)
     public List<PointsOf> points(UUID userId, List<Position> positions, FxService.History rates) {
+        User user = authService.currentUser(userId);
         Map<UUID, QuoteRef> refs = instruments.quoteRefs(userId);
         Map<UUID, CurrentPrice> current = prices.currentPrices(userId);
         List<AccountTrade> allTrades = transactions.tradesOldestFirst(userId);
@@ -155,14 +172,17 @@ public class PositionService {
             if (ref == null) {
                 continue;
             }
-            List<DatedTrade> trades = allTrades.stream()
+            List<AccountTrade> trades = allTrades.stream()
                     .filter(trade -> trade.accountId().equals(position.account().getId())
                             && trade.instrumentId().equals(instrumentId))
-                    .map(trade -> new DatedTrade(trade.date(), trade.trade()))
                     .toList();
-            inAccountCurrency(closes(ref, current.get(instrumentId)), ref.currency(), position.account(), rates)
-                    .map(closes -> PositionHistory.calculate(trades, closes, position.account().getCostMethod()))
-                    .ifPresent(points -> series.add(new PointsOf(position, points)));
+            Optional<List<DatedTrade>> tradesInBase = inBase(trades, position.account().getCurrency(), user, rates);
+            Optional<List<DailyClose>> closes = converted(closes(ref, current.get(instrumentId)), ref.currency(),
+                    user.getBaseCurrency(), rates);
+            if (tradesInBase.isPresent() && closes.isPresent()) {
+                series.add(new PointsOf(position, PositionHistory.calculate(tradesInBase.get(), closes.get(),
+                        position.account().getCostMethod())));
+            }
         }
         return series;
     }
@@ -188,12 +208,33 @@ public class PositionService {
         return closes;
     }
 
+    /** Each trade's money in the base currency, at the rate of the day the user's rule picks. Empty without a rate. */
+    private static Optional<List<DatedTrade>> inBase(List<AccountTrade> trades, String currency, User user,
+                                                     FxService.History rates) {
+        String base = user.getBaseCurrency();
+        List<DatedTrade> converted = new ArrayList<>();
+        for (AccountTrade trade : trades) {
+            if (trade.trade().side() == Trade.Side.SPLIT) {
+                converted.add(new DatedTrade(trade.date(), trade.trade()));
+                continue;
+            }
+            LocalDate rateDate = user.getCostFxRule().rateDate(trade.date());
+            Optional<BigDecimal> price = rates.convert(trade.trade().price(), currency, base, rateDate);
+            Optional<BigDecimal> fee = rates.convert(trade.trade().fee(), currency, base, rateDate);
+            if (price.isEmpty() || fee.isEmpty()) {
+                return Optional.empty();
+            }
+            converted.add(new DatedTrade(trade.date(), trade.trade().withAmounts(price.get(), fee.get())));
+        }
+        return Optional.of(converted);
+    }
+
     /** Each day at that day's rate. Empty if the currency has no rate at all. */
-    private static Optional<List<DailyClose>> inAccountCurrency(List<DailyClose> closes, String priceCurrency,
-                                                                Account account, FxService.History rates) {
+    private static Optional<List<DailyClose>> converted(List<DailyClose> closes, String priceCurrency, String currency,
+                                                        FxService.History rates) {
         List<DailyClose> converted = new ArrayList<>();
         for (DailyClose close : closes) {
-            Optional<BigDecimal> price = rates.convert(close.close(), priceCurrency, account.getCurrency(), close.date());
+            Optional<BigDecimal> price = rates.convert(close.close(), priceCurrency, currency, close.date());
             if (price.isEmpty()) {
                 return Optional.empty();
             }
@@ -210,15 +251,17 @@ public class PositionService {
         Map<UUID, InstrumentView> views = instruments.views(userId);
         Map<UUID, CurrentPrice> currentPrices = prices.currentPrices(userId);
         FxService.Rates rates = fx.rates();
+        FxService.History history = fx.history();
+        User user = authService.currentUser(userId);
         Map<PositionPlan.Key, PositionPlan> plansByKey = plans.findByUserId(userId).stream().collect(Collectors.toMap(
                 plan -> new PositionPlan.Key(plan.getAccountId(), plan.getInstrumentId()), Function.identity()));
 
         record Holding(UUID accountId, UUID instrumentId) {
         }
-        Map<Holding, List<Trade>> trades = new LinkedHashMap<>();
+        Map<Holding, List<AccountTrade>> trades = new LinkedHashMap<>();
         for (AccountTrade trade : transactions.tradesOldestFirst(userId)) {
             trades.computeIfAbsent(new Holding(trade.accountId(), trade.instrumentId()), key -> new ArrayList<>())
-                    .add(trade.trade());
+                    .add(trade);
         }
 
         return trades.entrySet().stream()
@@ -227,9 +270,15 @@ public class PositionService {
                     UUID instrumentId = entry.getKey().instrumentId();
                     Optional<CurrentPrice> price = Optional.ofNullable(currentPrices.get(instrumentId));
                     return new Position(account, views.get(instrumentId),
-                            PositionCalculator.calculate(entry.getValue(), account.getCostMethod()), price,
+                            PositionCalculator.calculate(entry.getValue().stream().map(AccountTrade::trade).toList(),
+                                    account.getCostMethod()), price,
                             price.flatMap(current -> rates.convert(current.price(), current.currency(), account.getCurrency())),
-                            Optional.ofNullable(plansByKey.get(new PositionPlan.Key(account.getId(), instrumentId))));
+                            Optional.ofNullable(plansByKey.get(new PositionPlan.Key(account.getId(), instrumentId))),
+                            user.getBaseCurrency(),
+                            inBase(entry.getValue(), account.getCurrency(), user, history)
+                                    .map(converted -> PositionCalculator.calculate(
+                                            converted.stream().map(DatedTrade::trade).toList(), account.getCostMethod())),
+                            rates.convert(BigDecimal.ONE, account.getCurrency(), user.getBaseCurrency()).orElse(null));
                 })
                 .sorted(Comparator.comparing(Position::ticker).thenComparing(position -> position.account().getName()))
                 .toList();

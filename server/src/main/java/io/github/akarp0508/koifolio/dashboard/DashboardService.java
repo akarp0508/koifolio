@@ -3,7 +3,7 @@ package io.github.akarp0508.koifolio.dashboard;
 import io.github.akarp0508.koifolio.domain.Breakdown;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PortfolioHistory;
-import io.github.akarp0508.koifolio.domain.PositionHistory;
+import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.Valuation;
 import io.github.akarp0508.koifolio.position.PositionService;
 import io.github.akarp0508.koifolio.position.PositionService.Position;
@@ -65,11 +65,13 @@ class DashboardService {
     /**
      * @param value positions plus cash, without cash while tags filter the view
      * @param cash empty while tags filter the view, because cash has no tags
+     * @param unrealizedGain value now against cost at each purchase's rate
+     * @param currencyGain the part of it from exchange rates moving, for accounts in another currency
      * @param gainPercent gain against the cost of priced positions, empty without any
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      */
     record Dashboard(String currency, BigDecimal value, BigDecimal positionsValue, BigDecimal unrealizedGain,
-                     Optional<BigDecimal> gainPercent, BigDecimal realizedGain, Optional<BigDecimal> cash,
+                     BigDecimal currencyGain, Optional<BigDecimal> gainPercent, BigDecimal realizedGain, Optional<BigDecimal> cash,
                      List<Breakdown.Slice> bySector, List<Breakdown.Slice> byRisk, List<Attention> attention,
                      int unpriced) {
     }
@@ -81,7 +83,7 @@ class DashboardService {
 
         BigDecimal value = BigDecimal.ZERO;
         BigDecimal cost = BigDecimal.ZERO;
-        BigDecimal gain = BigDecimal.ZERO;
+        BigDecimal currencyGain = BigDecimal.ZERO;
         BigDecimal realized = BigDecimal.ZERO;
         int unpriced = 0;
         List<Breakdown.Part> sectors = new ArrayList<>();
@@ -93,7 +95,7 @@ class DashboardService {
                 continue;
             }
             String currency = position.account().getCurrency();
-            realized = add(realized, rates.convert(position.result().realizedGain(), currency, base).orElse(BigDecimal.ZERO));
+            realized = add(realized, position.inBase().map(PositionResult::realizedGain).orElse(BigDecimal.ZERO));
             position.planCheck().filter(check -> check.signal().isPresent())
                     .ifPresent(check -> attention.add(new Attention(position, check)));
             if (position.result().isClosed()) {
@@ -102,21 +104,24 @@ class DashboardService {
 
             Optional<Valuation> valuation = position.accountPrice().map(price -> Valuation.of(position.result(), price));
             Optional<BigDecimal> valueInBase = valuation.flatMap(v -> rates.convert(v.value(), currency, base));
-            if (valueInBase.isEmpty()) {
+            Optional<BigDecimal> costToday = rates.convert(position.result().cost(), currency, base);
+            if (valueInBase.isEmpty() || costToday.isEmpty() || position.inBase().isEmpty()) {
                 unpriced++;
                 continue;
             }
+            BigDecimal costInBase = position.inBase().get().cost();
             value = add(value, valueInBase.get());
-            gain = add(gain, rates.convert(valuation.get().gain(), currency, base).orElseThrow());
-            cost = add(cost, rates.convert(position.result().cost(), currency, base).orElseThrow());
+            cost = add(cost, costInBase);
+            currencyGain = add(currencyGain, costToday.get().subtract(costInBase, MathContext.DECIMAL128));
             sectors.add(new Breakdown.Part(sectorOf(position), valueInBase.get()));
             risks.add(new Breakdown.Part(riskGroup(position.risk()), valueInBase.get()));
         }
 
         Optional<BigDecimal> cash = filter.hasTags() ? Optional.empty() : Optional.of(cash(userId, filter, rates, base));
+        BigDecimal gain = value.subtract(cost, MathContext.DECIMAL128);
         Optional<BigDecimal> percent = cost.signum() == 0 ? Optional.empty()
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));
-        return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, percent, realized, cash,
+        return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized, cash,
                 Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced);
     }
 
@@ -130,21 +135,11 @@ class DashboardService {
         FxService.History rates = fx.history();
         List<Position> matching = positions.list(userId).stream().filter(filter::matches).toList();
 
-        List<List<PortfolioHistory.Point>> series = new ArrayList<>();
-        for (PositionService.PointsOf position : positions.points(userId, matching, rates)) {
-            String currency = position.position().account().getCurrency();
-            List<PortfolioHistory.Point> points = new ArrayList<>();
-            for (PositionHistory.Point point : position.points()) {
-                LocalDate date = point.date();
-                Optional<BigDecimal> value = rates.convert(point.value(), currency, base, date);
-                Optional<BigDecimal> cost = rates.convert(point.cost(), currency, base, date);
-                Optional<BigDecimal> realized = rates.convert(point.realized(), currency, base, date);
-                if (value.isPresent() && cost.isPresent() && realized.isPresent()) {
-                    points.add(new PortfolioHistory.Point(date, value.get(), cost.get(), realized.get()));
-                }
-            }
-            series.add(points);
-        }
+        List<List<PortfolioHistory.Point>> series = positions.points(userId, matching, rates).stream()
+                .map(position -> position.points().stream()
+                        .map(point -> new PortfolioHistory.Point(point.date(), point.value(), point.cost(), point.realized()))
+                        .toList())
+                .toList();
         List<PortfolioHistory.Point> totals = PortfolioHistory.total(series);
         LocalDate today = LocalDate.now(PriceHistoryService.MARKET_ZONE);
         return new History(base, totals, PortfolioHistory.changes(totals, today));

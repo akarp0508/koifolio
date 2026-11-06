@@ -23,6 +23,11 @@ public record Trade(Side side, BigDecimal quantity, BigDecimal price, BigDecimal
         return new Trade(Side.SPLIT, null, null, null, from, to);
     }
 
+    /** This trade with its money in another currency. A split has none. */
+    public Trade withAmounts(BigDecimal newPrice, BigDecimal newFee) {
+        return new Trade(side, quantity, newPrice, newFee, splitFrom, splitTo);
+    }
+
     /** What a quantity becomes after this split. */
     BigDecimal applySplit(BigDecimal shares) {
         return shares.multiply(splitTo, PositionCalculator.PRECISION).divide(splitFrom, PositionCalculator.PRECISION);

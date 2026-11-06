@@ -1,7 +1,10 @@
 package io.github.akarp0508.koifolio.auth;
 
+import io.github.akarp0508.koifolio.domain.CostFxRule;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
@@ -23,6 +26,10 @@ public class User {
     @Column(name = "base_currency", nullable = false)
     private String baseCurrency;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "cost_fx_rule", nullable = false)
+    private CostFxRule costFxRule;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -34,6 +41,7 @@ public class User {
         this.username = username;
         this.passwordHash = passwordHash;
         this.baseCurrency = "PLN";
+        this.costFxRule = CostFxRule.PREVIOUS_PUBLICATION;
         this.createdAt = Instant.now();
     }
 
@@ -51,6 +59,14 @@ public class User {
 
     public String getBaseCurrency() {
         return baseCurrency;
+    }
+
+    public CostFxRule getCostFxRule() {
+        return costFxRule;
+    }
+
+    void setCostFxRule(CostFxRule costFxRule) {
+        this.costFxRule = costFxRule;
     }
 
     void setBaseCurrency(String baseCurrency) {
