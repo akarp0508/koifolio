@@ -1,6 +1,8 @@
 /** Polish for every English text in the app, plus the server's fixed messages. i18n.test.ts checks that none is missing. */
 export const pl: Record<string, string> = {
   '+ Account': '+ Konto',
+  'Older prices are still loading for {count}, so those holdings show at their trade prices for now. It takes up to 15 minutes.':
+    'Pozycje, dla których wciąż wczytują się starsze ceny: {count}. Do tego czasu pokazują się po cenach transakcji. Może to potrwać do 15 minut.',
   '+ Bonds': '+ Obligacje',
   '+ Company': '+ Spółka',
   '+ Rule': '+ Reguła',

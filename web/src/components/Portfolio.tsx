@@ -264,6 +264,12 @@ export function Portfolio() {
             <div>
               {history && history.points.length > 0 && (
                 <section className="panel chart-panel">
+                  {history.pricesLoading > 0 && (
+                    <p className="notice">
+                      {t('Older prices are still loading for {count}, so those holdings show at their trade prices for now. It takes up to 15 minutes.',
+                        { count: history.pricesLoading })}
+                    </p>
+                  )}
                   <header>
                     <h2>{t('Value over time')}</h2>
                     <div className="ranges">

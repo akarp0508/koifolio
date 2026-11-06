@@ -741,7 +741,7 @@ export interface paths {
         };
         /**
          * Portfolio value over time, and changes over 1D to 1Y
-         * @description Same filters as the dashboard, positions and bonds. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax withheld.
+         * @description Same filters as the dashboard, with positions, bonds and cash, and no cash while a company or tags filter the view. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax withheld. Past cash is worked back from today's balance. Days without a close use the position's trade prices, and pricesLoading counts positions still waiting for closes.
          */
         get: operations["history_1"];
         put?: never;
@@ -1407,6 +1407,8 @@ export interface components {
             currency?: string;
             points?: components["schemas"]["PortfolioHistoryPoint"][];
             changes?: components["schemas"]["PortfolioChangeResponse"][];
+            /** Format: int32 */
+            pricesLoading?: number;
         };
         AuditEntryResponse: {
             /** Format: uuid */
