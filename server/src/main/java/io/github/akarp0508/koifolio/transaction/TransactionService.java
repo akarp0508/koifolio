@@ -17,6 +17,7 @@ import java.math.MathContext;
 import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Currency;
 import java.util.HashMap;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 /**
  * Every lookup is scoped to the user. Writes lock the account row, so concurrent transactions
@@ -39,6 +41,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class TransactionService {
+
+    static final int MAX_IMPORT = 1000;
 
     private static final Comparator<Transaction> HISTORY_ORDER =
             Comparator.comparing(Transaction::getDate).thenComparing(Transaction::getCreatedAt);
@@ -61,6 +65,14 @@ public class TransactionService {
     }
 
     record Listed(Transaction transaction, String currency, String ticker, boolean oversold) {
+    }
+
+    /** One row of an import. @param added empty if this row was refused, or none were added */
+    record ImportRow(int row, Listed added, String error) {
+    }
+
+    /** @param importId empty if any row was refused, in which case none were added */
+    record Imported(UUID importId, List<ImportRow> rows) {
     }
 
     /** A transaction for backup, with no ids of its own. */
@@ -133,6 +145,33 @@ public class TransactionService {
 
     @Transactional
     Listed create(UUID userId, TransactionRequest request, Actor actor) {
+        return create(userId, request, actor, null);
+    }
+
+    /** Adds all the rows or none of them, and reports on every row either way. Rows run in order, so each sees the balance the last left. */
+    @Transactional
+    Imported createAll(UUID userId, List<TransactionRequest> requests, Actor actor) {
+        if (requests.isEmpty() || requests.size() > MAX_IMPORT) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "invalid_import", "Send between 1 and %d transactions".formatted(MAX_IMPORT));
+        }
+        UUID importId = UUID.randomUUID();
+        List<ImportRow> rows = new ArrayList<>();
+        for (int i = 0; i < requests.size(); i++) {
+            try {
+                checker.check(requests.get(i));
+                rows.add(new ImportRow(i + 1, create(userId, requests.get(i), actor, importId), null));
+            } catch (ApiException | FieldValidationException e) {
+                rows.add(new ImportRow(i + 1, null, e.getMessage()));
+            }
+        }
+        if (rows.stream().allMatch(row -> row.error() == null)) {
+            return new Imported(importId, rows);
+        }
+        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        return new Imported(null, rows.stream().map(row -> new ImportRow(row.row(), null, row.error())).toList());
+    }
+
+    private Listed create(UUID userId, TransactionRequest request, Actor actor, UUID importId) {
         authService.currentUser(userId);
         if (request.accountId() == null) {
             throw new FieldValidationException(Map.of("accountId", "must not be null"));
@@ -147,6 +186,7 @@ public class TransactionService {
         if (actor.isAgent()) {
             transaction.addedBy(actor.name(), true);
         }
+        transaction.setImportId(importId);
         Listed saved = listed(userId, transactions.save(transaction));
         log(userId, actor, transaction, "create", "Added", null, snapshot(saved));
         return saved;
@@ -246,31 +286,34 @@ public class TransactionService {
 
     /**
      * @param agent limits it to one agent's, or null for everyone's
+     * @param importId limits it to one import, or null for all of them
      * @return how many were approved
      */
     @Transactional
-    public int approveAll(UUID userId, String agent) {
+    public int approveAll(UUID userId, String agent, UUID importId) {
         authService.currentUser(userId);
-        List<Transaction> waiting = waiting(userId, agent);
+        List<Transaction> waiting = waiting(userId, agent, importId);
         waiting.forEach(transaction -> approve(userId, transaction));
         return waiting.size();
     }
 
     /**
      * @param agent limits it to one agent's, or null for everyone's
+     * @param importId limits it to one import, or null for all of them
      * @return how many were rejected
      */
     @Transactional
-    public int rejectAll(UUID userId, String agent) {
+    public int rejectAll(UUID userId, String agent, UUID importId) {
         authService.currentUser(userId);
-        List<Transaction> waiting = waiting(userId, agent);
+        List<Transaction> waiting = waiting(userId, agent, importId);
         waiting.forEach(transaction -> remove(userId, transaction, Actor.USER, "reject", "Rejected"));
         return waiting.size();
     }
 
-    private List<Transaction> waiting(UUID userId, String agent) {
+    private List<Transaction> waiting(UUID userId, String agent, UUID importId) {
         return transactions.findByUserIdAndValidatedAtIsNull(userId).stream()
                 .filter(transaction -> agent == null || agent.equals(transaction.getCreatedBy()))
+                .filter(transaction -> importId == null || importId.equals(transaction.getImportId()))
                 .toList();
     }
 

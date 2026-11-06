@@ -71,6 +71,10 @@ public class Transaction {
     @Column(name = "created_by")
     private String createdBy;
 
+    /** Shared by what an agent added in one call. */
+    @Column(name = "import_id")
+    private UUID importId;
+
     /** Empty while it waits for review. */
     @Column(name = "validated_at")
     private Instant validatedAt;
@@ -93,6 +97,14 @@ public class Transaction {
     void addedBy(String agent, boolean unvalidated) {
         createdBy = agent;
         validatedAt = unvalidated ? null : validatedAt;
+    }
+
+    void setImportId(UUID importId) {
+        this.importId = importId;
+    }
+
+    UUID getImportId() {
+        return importId;
     }
 
     void approve() {

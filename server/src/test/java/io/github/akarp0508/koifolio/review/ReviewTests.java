@@ -684,4 +684,76 @@ class ReviewTests {
         assertThat(JsonPath.<Boolean>read(body, "$.result.isError")).as(body).isTrue();
         return JsonPath.read(body, "$.result.content[0].text");
     }
+
+    private static String depositRow(String account, String amount) {
+        return "{\"account\":\"%s\",\"type\":\"deposit\",\"date\":\"2026-03-12\",\"affectsBalance\":true,\"amount\":\"%s\"}"
+                .formatted(account, amount);
+    }
+
+    private String imported(String... rows) throws Exception {
+        return call(claude, "add_transactions", "{\"transactions\":[%s]}".formatted(String.join(",", rows)));
+    }
+
+    @Test
+    void anImportAddsEveryRowAndGroupsThem() throws Exception {
+        String account = account();
+
+        String result = imported(depositRow(account, "10"), depositRow(account, "20"));
+
+        assertThat(JsonPath.<Boolean>read(result, "$.added")).isTrue();
+        assertThat(JsonPath.<List<String>>read(result, "$.rows[*].status")).containsExactly("added", "added");
+        assertThat(balanceOf(account)).isEqualTo("130.00");
+        String importId = JsonPath.read(result, "$.importId");
+        as(anna, get("/api/v1/transactions").param("unvalidated", "true"))
+                .andExpect(jsonPath("$[0].importId").value(importId))
+                .andExpect(jsonPath("$[1].importId").value(importId));
+    }
+
+    @Test
+    void anImportWithABadRowAddsNothingAndSaysWhich() throws Exception {
+        String account = account();
+
+        String result = imported(depositRow(account, "10"), depositRow(account, "-5"),
+                "{\"account\":\"%s\",\"type\":\"buy\",\"date\":\"2026-03-12\",\"affectsBalance\":true}".formatted(account));
+
+        assertThat(JsonPath.<Boolean>read(result, "$.added")).isFalse();
+        assertThat(JsonPath.<List<String>>read(result, "$.rows[*].status")).containsExactly("valid", "refused", "refused");
+        assertThat(JsonPath.<String>read(result, "$.rows[1].error")).contains("amount");
+        assertThat(JsonPath.<String>read(result, "$.rows[2].error")).contains("ticker");
+        assertThat(balanceOf(account)).isEqualTo("100.00");
+        as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(0));
+        assertThat(JsonPath.<List<?>>read(body(get("/api/v1/audit-log")), "$[?(@.entityType == 'transaction')]")).isEmpty();
+    }
+
+    @Test
+    void aRowCantTakeTheBalanceBelowZeroWithoutSayingSo() throws Exception {
+        String account = account();
+        String withdrawal = "{\"account\":\"%s\",\"type\":\"withdrawal\",\"date\":\"2026-03-12\",\"affectsBalance\":true,\"amount\":\"80\"%s}";
+
+        String refused = imported(withdrawal.formatted(account, ""), withdrawal.formatted(account, ""));
+        assertThat(JsonPath.<List<String>>read(refused, "$.rows[*].status")).containsExactly("valid", "refused");
+
+        String added = imported(withdrawal.formatted(account, ""), withdrawal.formatted(account, ",\"allowNegativeBalance\":true"));
+        assertThat(JsonPath.<Boolean>read(added, "$.added")).isTrue();
+        assertThat(balanceOf(account)).isEqualTo("-60.00");
+    }
+
+    @Test
+    void anImportCanBeDecidedOnItsOwn() throws Exception {
+        String account = account();
+        String first = JsonPath.read(imported(depositRow(account, "10"), depositRow(account, "20")), "$.importId");
+        String second = JsonPath.read(imported(depositRow(account, "30")), "$.importId");
+        agentDeposit(account, "40");
+        call(claude, "update_account", "{\"id\":\"%s\",\"description\":\"Long term\"}".formatted(account));
+
+        as(anna, post("/api/v1/review/approve-all").param("importId", first))
+                .andExpect(jsonPath("$.transactions").value(2))
+                .andExpect(jsonPath("$.changes").value(0));
+        as(anna, post("/api/v1/review/reject-all").param("importId", second))
+                .andExpect(jsonPath("$.transactions").value(1))
+                .andExpect(jsonPath("$.changes").value(0));
+
+        assertThat(balanceOf(account)).isEqualTo("170.00");
+        as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(2));
+    }
 }

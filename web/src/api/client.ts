@@ -49,6 +49,17 @@ export type Transaction = Schemas['TransactionResponse'] & Required<Pick<Schemas
 
 const TOKEN_KEY = 'koifolio.token'
 
+function reviewScope(agent?: string, importId?: string) {
+  const params = new URLSearchParams()
+  if (agent) {
+    params.set('agent', agent)
+  }
+  if (importId) {
+    params.set('importId', importId)
+  }
+  return params.size > 0 ? `?${params}` : ''
+}
+
 export class ApiError extends Error {
   readonly status: number
   readonly code?: string
@@ -200,10 +211,8 @@ export const api = {
   pendingChanges: () => request<PendingChange[]>('GET', '/review/changes'),
   approveChange: (id: string) => request<void>('POST', `/review/changes/${id}/approve`),
   rejectChange: (id: string) => request<void>('POST', `/review/changes/${id}/reject`),
-  approveAll: (agent?: string) =>
-    request<void>('POST', `/review/approve-all${agent ? `?agent=${encodeURIComponent(agent)}` : ''}`),
-  rejectAll: (agent?: string) =>
-    request<void>('POST', `/review/reject-all${agent ? `?agent=${encodeURIComponent(agent)}` : ''}`),
+  approveAll: (agent?: string, importId?: string) => request<void>('POST', `/review/approve-all${reviewScope(agent, importId)}`),
+  rejectAll: (agent?: string, importId?: string) => request<void>('POST', `/review/reject-all${reviewScope(agent, importId)}`),
   revertChange: (id: string, force: boolean) => request<void>('POST', `/review/log/${id}/revert?force=${force}`),
   createTransaction: (input: TransactionInput) => request<Transaction>('POST', '/transactions', input),
   updateTransaction: (id: string, input: TransactionInput) =>

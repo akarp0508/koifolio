@@ -49,7 +49,6 @@ Rough priorities, to be picked one batch at a time:
 
 **Broader coverage**
 
-- **Broker import,** which backfill really needs
 - **More bonds:** COI, ROR, DOR and OTS, redemption, and rates fetched automatically
 - **Manual prices,** for what the source doesn't cover
 - Mobile polish
@@ -64,4 +63,4 @@ Not being worked on. Pick these up when the site is where it should be.
 
 ## Ideas for later
 
-Risk and scenarios view, rule checks with explanations, agent skills, an earnings calendar.
+Risk and scenarios view, rule checks with explanations, agent skills, an earnings calendar, a broker import that reads an export such as XTB's and groups split orders.

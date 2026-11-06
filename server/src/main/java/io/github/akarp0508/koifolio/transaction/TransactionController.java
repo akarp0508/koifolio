@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
@@ -100,12 +101,14 @@ class TransactionController {
      * @param oversold a sale of more than was held at that point
      * @param createdBy the agent that added it, left out for you
      * @param unvalidated added by an agent and waiting for your review; it counts in the meantime
+     * @param importId shared by what an agent added in one call
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record TransactionResponse(UUID id, UUID accountId, TransactionType type, LocalDate date, String currency,
                                String ticker, String quantity, String price, String fee, String amount,
                                String withheldTax, String splitFrom, String splitTo, String cashEffect,
-                               boolean affectsBalance, boolean oversold, String createdBy, boolean unvalidated) {
+                               boolean affectsBalance, boolean oversold, String createdBy, boolean unvalidated,
+                               UUID importId, Instant createdAt) {
 
         static TransactionResponse of(TransactionService.Listed listed) {
             Transaction t = listed.transaction();
@@ -114,7 +117,7 @@ class TransactionController {
                     plain(t.getQuantity()), plain(t.getPrice()), money(t.getFee(), currency), money(t.getAmount(), currency),
                     money(t.getWithheldTax(), currency), plain(t.getSplitFrom()), plain(t.getSplitTo()),
                     money(t.getCashEffect(), currency),
-                    t.isAffectsBalance(), listed.oversold(), t.getCreatedBy(), t.isUnvalidated());
+                    t.isAffectsBalance(), listed.oversold(), t.getCreatedBy(), t.isUnvalidated(), t.getImportId(), t.getCreatedAt());
         }
 
         private static String plain(BigDecimal value) {

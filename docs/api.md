@@ -107,7 +107,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
 | `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
-- Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect`, `oversold` and `unvalidated`, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
+- Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect`, `oversold`, `unvalidated` and `createdAt`, `importId` for what an agent added in one call, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
 - `GET /transactions?unvalidated=true` lists what agents added and you haven't reviewed. `POST /transactions/{id}/approve` clears the mark. `POST /transactions/{id}/reject` removes one and undoes its effect on the balance. Either returns `409` if it isn't waiting.
 - `DELETE /transactions/{id}` removes it from every number and undoes its effect on the balance, but keeps it in the database.
 - Cash effects are rounded to the currency's decimals.
@@ -322,8 +322,8 @@ Implemented. Agent company, rule, account and transaction changes wait here, and
 | `GET /review/changes` | What's waiting, with `current` and `proposed` values |
 | `POST /review/changes/{id}/approve` | Apply one |
 | `POST /review/changes/{id}/reject` | Drop one |
-| `POST /review/approve-all` | Approve transactions and changes, for `?agent=` or everyone. If any can't apply, none are |
-| `POST /review/reject-all` | Reject transactions and changes, for `?agent=` or everyone |
+| `POST /review/approve-all` | Approve transactions and changes, for `?agent=` or everyone, or `?importId=` for one import's transactions. If any can't apply, none are |
+| `POST /review/reject-all` | Reject transactions and changes, for `?agent=` or everyone, or `?importId=` for one import's transactions |
 | `POST /review/log/{id}/revert` | Undo an agent's approved change from the change log. `409 changed_since` if it has changed since, unless `force=true`. `409 account_in_use` if an account has transactions |
 
 ## Change log

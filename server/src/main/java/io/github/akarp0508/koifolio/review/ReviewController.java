@@ -59,16 +59,19 @@ class ReviewController {
 
     @PostMapping("/approve-all")
     @Operation(summary = "Approve everything waiting, transactions and changes", description = """
-            With agent, only that agent's. If any can't apply, none are.""")
-    DecidedResponse approveAll(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String agent) {
-        return DecidedResponse.of(review.approveAll(userId(jwt), agent));
+            With agent, only that agent's. With importId, only that import's transactions. If any can't apply, none are.""")
+    DecidedResponse approveAll(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String agent,
+                               @RequestParam(required = false) UUID importId) {
+        return DecidedResponse.of(review.approveAll(userId(jwt), agent, importId));
     }
 
     @PostMapping("/reject-all")
     @Operation(summary = "Reject everything waiting, transactions and changes", description = """
-            With agent, only that agent's. Rejected transactions come out of every number.""")
-    DecidedResponse rejectAll(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String agent) {
-        return DecidedResponse.of(review.rejectAll(userId(jwt), agent));
+            With agent, only that agent's. With importId, only that import's transactions. Rejected transactions come out \
+            of every number.""")
+    DecidedResponse rejectAll(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String agent,
+                              @RequestParam(required = false) UUID importId) {
+        return DecidedResponse.of(review.rejectAll(userId(jwt), agent, importId));
     }
 
     @PostMapping("/log/{id}/revert")

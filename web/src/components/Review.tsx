@@ -11,6 +11,21 @@ const ALL = ''
 
 const who = (entry: AuditEntry) => entry.actorType === 'AGENT' ? entry.actorName : t('You')
 
+/** The imports among these transactions, newest first. */
+function importsIn(transactions: Transaction[]) {
+  const counts = new Map<string, { count: number; createdAt: string }>()
+  for (const transaction of transactions) {
+    if (transaction.importId) {
+      const found = counts.get(transaction.importId)
+      counts.set(transaction.importId, { count: (found?.count ?? 0) + 1, createdAt: transaction.createdAt ?? '' })
+    }
+  }
+  return [...counts].sort(([, a], [, b]) => b.createdAt.localeCompare(a.createdAt)).map(([id, { count, createdAt }]) => ({
+    id,
+    label: t('{date}, {count} items', { date: new Date(createdAt).toLocaleDateString(), count }),
+  }))
+}
+
 function Changes({ before, after, beforeLabel, afterLabel }: {
   before: unknown
   after: unknown
@@ -106,6 +121,7 @@ export function Review() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [log, setLog] = useState<AuditEntry[]>([])
   const [agent, setAgent] = useState(ALL)
+  const [importId, setImportId] = useState(ALL)
   const [rejecting, setRejecting] = useState<Transaction | null>(null)
   const [rejectingAll, setRejectingAll] = useState(false)
   const [reverting, setReverting] = useState<AuditEntry | null>(null)
@@ -137,8 +153,11 @@ export function Review() {
     ...changes.map((change) => change.agentName ?? ''),
   ])].sort()
   const shownAgent = agents.includes(agent) ? agent : ALL
-  const shownTransactions = (waiting ?? []).filter((transaction) => !shownAgent || transaction.createdBy === shownAgent)
-  const shownChanges = changes.filter((change) => !shownAgent || change.agentName === shownAgent)
+  const agentsTransactions = (waiting ?? []).filter((transaction) => !shownAgent || transaction.createdBy === shownAgent)
+  const imports = importsIn(agentsTransactions)
+  const shownImport = imports.some((found) => found.id === importId) ? importId : ALL
+  const shownTransactions = agentsTransactions.filter((transaction) => !shownImport || transaction.importId === shownImport)
+  const shownChanges = changes.filter((change) => !shownImport && (!shownAgent || change.agentName === shownAgent))
   const total = shownTransactions.length + shownChanges.length
 
   return (
@@ -154,9 +173,18 @@ export function Review() {
             </select>
           </label>
         )}
+        {imports.length > 0 && (
+          <label className="filter-check">
+            {t('Import')}
+            <select value={shownImport} onChange={(e) => setImportId(e.target.value)}>
+              <option value={ALL}>{t('All imports')}</option>
+              {imports.map((found) => <option key={found.id} value={found.id}>{found.label}</option>)}
+            </select>
+          </label>
+        )}
         {total > 1 && (
           <>
-            <button className="primary" onClick={() => run(api.approveAll(shownAgent || undefined))}>{t('Approve all')}</button>
+            <button className="primary" onClick={() => run(api.approveAll(shownAgent || undefined, shownImport || undefined))}>{t('Approve all')}</button>
             <button onClick={() => setRejectingAll(true)}>{t('Reject all')}</button>
           </>
         )}
@@ -260,7 +288,7 @@ export function Review() {
           title={shownAgent ? t('Reject {count} from {name}?', { count: total, name: shownAgent }) : t('Reject {count}?', { count: total })}
           message={t('Rejected transactions come out of all your numbers, and other changes are dropped.')}
           action={t('Reject all')}
-          onConfirm={() => api.rejectAll(shownAgent || undefined)}
+          onConfirm={() => api.rejectAll(shownAgent || undefined, shownImport || undefined)}
           onDone={() => {
             setRejectingAll(false)
             void load()

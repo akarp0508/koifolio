@@ -242,7 +242,7 @@ export interface paths {
         put?: never;
         /**
          * Reject everything waiting, transactions and changes
-         * @description With agent, only that agent's. Rejected transactions come out of every number.
+         * @description With agent, only that agent's. With importId, only that import's transactions. Rejected transactions come out of every number.
          */
         post: operations["rejectAll"];
         delete?: never;
@@ -261,7 +261,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Undo an agent's company, rule or account change
+         * Undo an agent's approved change
          * @description Puts back the values from before it, in full. An account can only be undone while it has no transactions. If the same thing has changed since, this returns 409 changed_since unless force is on, because those later changes would be lost.
          */
         post: operations["revert"];
@@ -319,7 +319,7 @@ export interface paths {
         put?: never;
         /**
          * Approve everything waiting, transactions and changes
-         * @description With agent, only that agent's. If any can't apply, none are.
+         * @description With agent, only that agent's. With importId, only that import's transactions. If any can't apply, none are.
          */
         post: operations["approveAll"];
         delete?: never;
@@ -623,7 +623,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Company, rule and account changes from agents, waiting for you
+         * Changes from agents, waiting for you
          * @description Nothing here has applied yet. current has the values each would replace.
          */
         get: operations["changes"];
@@ -914,6 +914,10 @@ export interface components {
             oversold?: boolean;
             createdBy?: string;
             unvalidated?: boolean;
+            /** Format: uuid */
+            importId?: string;
+            /** Format: date-time */
+            createdAt?: string;
         };
         RuleRequest: {
             /** @enum {string} */
@@ -1847,6 +1851,7 @@ export interface operations {
         parameters: {
             query?: {
                 agent?: string;
+                importId?: string;
             };
             header?: never;
             path?: never;
@@ -1931,6 +1936,7 @@ export interface operations {
         parameters: {
             query?: {
                 agent?: string;
+                importId?: string;
             };
             header?: never;
             path?: never;

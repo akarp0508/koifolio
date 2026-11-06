@@ -7,6 +7,7 @@ import io.github.akarp0508.koifolio.agent.ToolArguments;
 import io.github.akarp0508.koifolio.review.ReviewService;
 import io.github.akarp0508.koifolio.transaction.TransactionController.TransactionResponse;
 import io.modelcontextprotocol.common.McpTransportContext;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -61,6 +62,52 @@ class TransactionTools {
                 ToolArguments.decimal("splitTo", splitTo), affectsBalance, allowNegativeBalance);
         checker.check(request);
         return TransactionResponse.of(transactions.create(caller.userId(), request, caller.actor()));
+    }
+
+    /** One row of add_transactions, with the same fields as add_transaction. */
+    record ImportRowArguments(UUID account, String type, LocalDate date, Boolean affectsBalance,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String ticker,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String quantity,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String price,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String fee,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String amount,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String withheldTax,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String splitFrom,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String splitTo,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) Boolean allowNegativeBalance) {
+    }
+
+    /** @param status added, valid or refused. A valid row wasn't added, because another one was refused */
+    record ImportRowResponse(int row, String status, TransactionResponse transaction, String error) {
+    }
+
+    /** @param importId names this import on the Review page, left out if nothing was added */
+    record ImportResponse(boolean added, UUID importId, List<ImportRowResponse> rows) {
+    }
+
+    @McpTool(name = "add_transactions", description = """
+            Adds up to 1000 transactions in one go, for a broker history for example. All of them are added or none are: \
+            every row is checked, and if any is refused nothing changes, and rows says what to fix. Otherwise they work like \
+            add_transaction, and the user can review them together as one import. Each row has the fields of add_transaction, \
+            and rows apply in order, so put them oldest first.""",
+            annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
+    ImportResponse addTransactions(McpTransportContext context,
+                                   @McpToolParam(description = "The transactions, oldest first") List<ImportRowArguments> transactions) {
+        AgentCaller caller = AgentCaller.of(context).require(AgentScope.TRANSACTIONS_WRITE);
+        TransactionService.Imported imported = this.transactions.createAll(caller.userId(),
+                transactions.stream().map(TransactionTools::request).toList(), caller.actor());
+        return new ImportResponse(imported.importId() != null, imported.importId(), imported.rows().stream()
+                .map(row -> new ImportRowResponse(row.row(), row.error() != null ? "refused" : row.added() != null ? "added" : "valid",
+                        row.added() == null ? null : TransactionResponse.of(row.added()), row.error()))
+                .toList());
+    }
+
+    private static TransactionRequest request(ImportRowArguments row) {
+        return new TransactionRequest(row.account(), ToolArguments.choice(TransactionType.class, "type", row.type()), row.date(),
+                row.ticker(), ToolArguments.decimal("quantity", row.quantity()), ToolArguments.decimal("price", row.price()),
+                ToolArguments.decimal("fee", row.fee()), ToolArguments.decimal("amount", row.amount()),
+                ToolArguments.decimal("withheldTax", row.withheldTax()), ToolArguments.decimal("splitFrom", row.splitFrom()),
+                ToolArguments.decimal("splitTo", row.splitTo()), row.affectsBalance(), row.allowNegativeBalance());
     }
 
     @McpTool(name = "update_transaction", description = """

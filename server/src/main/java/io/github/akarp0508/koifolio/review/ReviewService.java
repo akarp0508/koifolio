@@ -206,24 +206,32 @@ public class ReviewService {
         reject(userId, find(userId, id));
     }
 
-    /** @param agent limits it to one agent's work, or null for everyone's */
+    /**
+     * @param agent limits it to one agent's work, or null for everyone's
+     * @param importId limits it to one import's transactions, or null for everything
+     */
     @Transactional
-    Decided approveAll(UUID userId, String agent) {
-        List<Pending> waiting = waiting(userId, agent);
+    Decided approveAll(UUID userId, String agent, UUID importId) {
+        List<Pending> waiting = waiting(userId, agent, importId);
         waiting.forEach(pending -> approve(userId, pending));
-        return new Decided(transactions.approveAll(userId, agent), waiting.size());
+        return new Decided(transactions.approveAll(userId, agent, importId), waiting.size());
     }
 
-    /** @param agent limits it to one agent's work, or null for everyone's */
+    /**
+     * @param agent limits it to one agent's work, or null for everyone's
+     * @param importId limits it to one import's transactions, or null for everything
+     */
     @Transactional
-    Decided rejectAll(UUID userId, String agent) {
-        List<Pending> waiting = waiting(userId, agent);
+    Decided rejectAll(UUID userId, String agent, UUID importId) {
+        List<Pending> waiting = waiting(userId, agent, importId);
         waiting.forEach(pending -> reject(userId, pending));
-        return new Decided(transactions.rejectAll(userId, agent), waiting.size());
+        return new Decided(transactions.rejectAll(userId, agent, importId), waiting.size());
     }
 
-    private List<Pending> waiting(UUID userId, String agent) {
-        return list(userId).stream().filter(pending -> agent == null || pending.agent().equals(agent)).toList();
+    /** An import is only transactions, so no changes belong to one. */
+    private List<Pending> waiting(UUID userId, String agent, UUID importId) {
+        return importId != null ? List.of()
+                : list(userId).stream().filter(pending -> agent == null || pending.agent().equals(agent)).toList();
     }
 
     /** The change is logged under the agent, since it's the agent's work, and the approval under the user. */

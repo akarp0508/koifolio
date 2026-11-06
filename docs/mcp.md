@@ -48,6 +48,7 @@ Scopes can't be changed later, so an older token needs replacing to get a new on
 | `list_bonds` | | read |
 | `update_company` | `ticker`, `name?`, `sector?`, `risk?`, `thesis?`, `analysis?`, `tags?` | analysis:write |
 | `add_transaction` | `account`, `type`, `date`, `affectsBalance`, then the fields of `POST /transactions` | transactions:write |
+| `add_transactions` | `transactions`, a list of up to 1000 rows with the fields of `add_transaction` | transactions:write |
 | `update_transaction` | `id`, then any fields of `add_transaction` | transactions:write |
 | `delete_transaction` | `id` | transactions:write |
 | `create_account` | `name`, `currency`, `balance?`, `description?`, `costMethod?`, `taxRate?` | accounts:write |
@@ -58,6 +59,8 @@ Scopes can't be changed later, so an older token needs replacing to get a new on
 
 Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company`, `update_transaction` and `update_account` propose only the fields they're given, and `update_company` adds the company if it's new. Agents can't change plans or delete accounts.
 
+`add_transactions` adds all its rows or none. It checks every row, in order, and if any is refused nothing is added and `rows` says what's wrong with each.
+
 Account descriptions are included in `list_accounts`, so agents can use the notes you keep there.
 
 ## Review
@@ -66,10 +69,10 @@ Agents can't change anything you can't see and undo.
 
 | What the agent does | When it applies | How you undo it |
 |---|---|---|
-| `add_transaction` | At once, marked unvalidated | Reject it, or delete it from Activity once approved |
+| `add_transaction`, `add_transactions` | At once, marked unvalidated | Reject it, or delete it from Activity once approved |
 | `update_company`, `update_transaction`, `delete_transaction`, `create_account`, `update_account`, `add_bond`, `save_rule`, `delete_rule` | Only when you approve it | Reject it, or Revert it from the change log once approved |
 
-**Approve all** and **Reject all** cover both, for one agent or everyone. Approving a company, transaction or account edit applies its fields over whatever is there by then, so edits made in the meantime survive. A transaction edit can take the balance below zero once approved, and approving an account's balance sets it to that amount. Reverting a balance edit takes back only that edit, so transactions since then still count. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too. An approved account can only be reverted while it has no transactions, because deleting it erases them.
+**Approve all** and **Reject all** cover both, for one agent or everyone, or for one `add_transactions` call, which shows as an import. Approving a company, transaction or account edit applies its fields over whatever is there by then, so edits made in the meantime survive. A transaction edit can take the balance below zero once approved, and approving an account's balance sets it to that amount. Reverting a balance edit takes back only that edit, so transactions since then still count. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too. An approved account can only be reverted while it has no transactions, because deleting it erases them.
 
 ### Unvalidated transactions
 
