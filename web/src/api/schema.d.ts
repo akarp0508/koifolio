@@ -98,6 +98,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/split-suggestions/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stop suggesting this split */
+        post: operations["dismiss"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/split-suggestions/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add the split to every affected account */
+        post: operations["apply"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/prices/refresh": {
         parameters: {
             query?: never;
@@ -237,6 +271,26 @@ export interface paths {
         patch: operations["update_3"];
         trace?: never;
     };
+    "/api/v1/split-suggestions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Splits spotted in your stocks that you haven't entered
+         * @description The date is the first day seen after the split, so it can be a few days late.
+         */
+        get: operations["list_3"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/positions": {
         parameters: {
             query?: never;
@@ -248,7 +302,7 @@ export interface paths {
          * List your positions, by ticker
          * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows.
          */
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         post?: never;
         delete?: never;
@@ -563,6 +617,18 @@ export interface components {
             /** @enum {string} */
             costMethod?: "average" | "fifo";
         };
+        SuggestionResponse: {
+            /** Format: uuid */
+            id?: string;
+            ticker?: string;
+            /** Format: date */
+            date?: string;
+            /** Format: int32 */
+            splitFrom?: number;
+            /** Format: int32 */
+            splitTo?: number;
+            accounts?: string[];
+        };
         PositionResponse: {
             /** Format: uuid */
             accountId?: string;
@@ -874,6 +940,46 @@ export interface operations {
             };
         };
     };
+    dismiss: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    apply: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     refresh: {
         parameters: {
             query?: never;
@@ -1141,6 +1247,26 @@ export interface operations {
         };
     };
     list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SuggestionResponse"][];
+                };
+            };
+        };
+    };
+    list_4: {
         parameters: {
             query?: {
                 account?: string;

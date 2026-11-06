@@ -17,7 +17,8 @@ Implemented in `BankierQuoteProvider`, sent with the user agent `koifolio`.
 3. `investor-chart/?symbols=<symbol>` gives the currency, which quotes don't include.
 4. The symbol and currency are stored on the instrument, and tickers that aren't found are retried after a day.
 5. Every 15 minutes, one `instrument-header` request per 50 symbols updates the shared `quotes` table. If it fails, the last prices stay.
-6. In the same run, `PriceHistoryService` compares what's stored with each symbol's first trade across all users, and fetches anything missing, up to 20 symbols per run. Each symbol is checked once a day, re-reading the last 7 days in case of corrections, so downtime and backfilled transactions repair themselves.
+6. If re-read closes differ from stored ones, the source rewrote its history, so the whole symbol is fetched again. If they all changed by one usual ratio, that's stored as a split suggestion.
+7. In the same run, `PriceHistoryService` compares what's stored with each symbol's first trade across all users, and fetches anything missing, up to 20 symbols per run. Each symbol is checked once a day, re-reading the last 7 days in case of corrections, so downtime and backfilled transactions repair themselves.
 
 ## Current quotes
 | Source | Status |

@@ -13,6 +13,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 | `PortfolioHistory` | Adds positions up over time, and works out 1D to 1Y changes |
 | `PlanCheck` | How a price sits against a plan's target and stop |
 | `Breakdown` | Splits a total by label, for sector and risk |
+| `SplitDetector` | Spots a split from stored closes changing by one ratio |
 
 ## Calculation rules
 

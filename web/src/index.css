@@ -802,3 +802,18 @@ tr.clickable a {
 .chart-panel {
   margin-bottom: 1rem;
 }
+
+.suggestions {
+  margin-bottom: 1rem;
+  border-color: var(--warning);
+}
+
+.suggestion + .suggestion {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.suggestion .modal-actions {
+  margin-top: 0.4rem;
+}

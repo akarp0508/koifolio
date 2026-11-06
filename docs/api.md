@@ -248,6 +248,18 @@ History response:
 
 Planned: realized gains and tax per year, income per year.
 
+## Split suggestions
+
+Implemented. When past closes change by one ratio, the app suggests a split. Nothing changes until you add it.
+
+| Request | Purpose |
+|---|---|
+| `GET /split-suggestions` | Splits you haven't entered or dismissed: `{"id", "ticker", "date", "splitFrom", "splitTo", "accounts"}` |
+| `POST /split-suggestions/{id}/apply` | Add the split to every affected account, on the suggested date |
+| `POST /split-suggestions/{id}/dismiss` | Stop suggesting it, for you only |
+
+`date` is the first day seen after the split, so it can be late. A split already entered within 14 days counts as the same one, and accounts that didn't hold the stock are left out.
+
 ## Rules
 
 | Request | Purpose |

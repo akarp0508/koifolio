@@ -7,6 +7,7 @@ import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
 import { today } from '../transactions'
+import { SplitSuggestions } from './SplitSuggestions'
 import { TagFilter } from './TagFilter'
 
 // Holds the chart library, so the rest of the page opens without it
@@ -134,6 +135,8 @@ export function Dashboard() {
           </label>
         )}
       </header>
+
+      <SplitSuggestions onApplied={fetchDashboard} />
 
       <div className="filter wrap">
         <label className="filter-check">

@@ -20,7 +20,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 9. **Company details and plans** (done): sector, risk, thesis and analysis per company, and a plan with target, stop and risk per account.
 10. **Dashboard** (done): home page with totals in a base currency, sector and risk breakdowns, an attention list, and filters by account and two kinds of tags. NBP rates.
 11. **Portfolio chart** (done): value over time, 1D to 1Y changes, gain and loss colours, and FX history.
-12. **Splits** (done): split transactions, with past values corrected.
+12. **Splits** (done): split transactions, with past values corrected, and detected splits suggested on the dashboard.
 
 ## Current focus: extending the site
 
