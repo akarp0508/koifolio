@@ -53,7 +53,7 @@ class TaxController {
                     estimate.groups().stream().map(group -> TaxGroup.of(group, currency)).toList(),
                     estimate.unsetAccounts().stream().map(account -> account.getName()).toList(),
                     estimate.open().stream().map(open -> new OpenGain(open.account().getId(), open.account().getName(),
-                            open.ticker(), money(open.gain(), currency))).toList());
+                            open.instrumentId(), open.ticker(), money(open.gain(), currency))).toList());
         }
     }
 
@@ -72,7 +72,7 @@ class TaxController {
     record AccountLine(UUID accountId, String name, String realized) {
     }
 
-    record OpenGain(UUID accountId, String accountName, String ticker, String gain) {
+    record OpenGain(UUID accountId, String accountName, UUID instrumentId, String ticker, String gain) {
     }
 
     private static String money(BigDecimal value, String currency) {

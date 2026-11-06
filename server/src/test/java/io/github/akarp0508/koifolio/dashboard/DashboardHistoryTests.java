@@ -215,6 +215,7 @@ class DashboardHistoryTests {
 
         history("account", pln).andExpect(jsonPath("$.points[0].value").value("10.00"));
         history("instrumentTag", "a").andExpect(jsonPath("$.points[0].value").value("10.00"));
+        history("instrument", id).andExpect(jsonPath("$.points[0].value").value("10.00"));
         history().andExpect(jsonPath("$.points[0].value").value("50.00"));
     }
 

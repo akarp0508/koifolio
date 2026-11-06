@@ -3,7 +3,7 @@
 ## Settled
 
 - **Website first.** Deployment and MCP are deferred on purpose, and the focus is extending the site. See [roadmap.md](roadmap.md) and [expectations.md](expectations.md).
-- **Three places, not one page per feature.** Portfolio holds totals and holdings, each company gets one page, and Activity holds transactions. Accounts and Tax stay as smaller links. Weight is one number: of the chosen account, or of the portfolio with none chosen.
+- **Three places, not one page per feature.** Portfolio holds totals and holdings, each company gets one page, and Activity holds transactions. Accounts and Tax stay as smaller links. A company's All tab is in the base currency, and an account's tab in that account's. Weight is one number: of the chosen account, or of the portfolio with none chosen.
 
 - **MVP first, one feature at a time:** login, then balance info, then transactions. See [roadmap.md](roadmap.md). Decisions below that go beyond the MVP are direction, not current scope.
 - **Web UI:** clean and minimal, one koi-orange accent, light/dark following the system with a toggle. Plain CSS with theme variables, no UI framework or router yet; both can be added when there's a need. English only for now; PL/EN comes later.

@@ -36,7 +36,7 @@ class TaxService {
         this.accounts = accounts;
     }
 
-    record OpenPosition(Account account, String ticker, BigDecimal gain) {
+    record OpenPosition(Account account, UUID instrumentId, String ticker, BigDecimal gain) {
     }
 
     /**
@@ -64,7 +64,7 @@ class TaxService {
                 Optional<BigDecimal> gain = position.result().isClosed() ? Optional.empty() : position.gainInBase();
                 gain.ifPresent(amount -> {
                     unrealized.merge(position.account().getId(), amount, (a, b) -> a.add(b, MathContext.DECIMAL128));
-                    open.add(new OpenPosition(position.account(), position.ticker(), amount));
+                    open.add(new OpenPosition(position.account(), position.instrument().id(), position.ticker(), amount));
                 });
             }
         }

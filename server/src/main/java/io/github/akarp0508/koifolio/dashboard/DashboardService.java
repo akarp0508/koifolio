@@ -45,15 +45,17 @@ class DashboardService {
         this.fx = fx;
     }
 
-    /** Tags of one kind match if any applies; the kinds and the account must all match. */
-    record Filter(UUID account, Set<String> instrumentTags, Set<String> positionTags) {
+    /** Tags of one kind match if any applies; the kinds, the account and the company must all match. */
+    record Filter(UUID account, UUID instrument, Set<String> instrumentTags, Set<String> positionTags) {
 
-        boolean hasTags() {
-            return !instrumentTags.isEmpty() || !positionTags.isEmpty();
+        /** Cash belongs to accounts as a whole, so it can't be split by company or tag. */
+        boolean excludesCash() {
+            return instrument != null || !instrumentTags.isEmpty() || !positionTags.isEmpty();
         }
 
         boolean matches(Position position) {
             return (account == null || position.account().getId().equals(account))
+                    && (instrument == null || position.instrument().id().equals(instrument))
                     && matches(instrumentTags, position.instrument().details().tags())
                     && matches(positionTags, position.tags());
         }
@@ -79,8 +81,8 @@ class DashboardService {
     }
 
     /**
-     * @param value positions plus cash, without cash while tags filter the view
-     * @param cash empty while tags filter the view, because cash has no tags
+     * @param value positions plus cash, without cash while a company or tags filter the view
+     * @param cash empty while a company or tags filter the view
      * @param unrealizedGain value now against cost at each purchase's rate
      * @param currencyGain the part of it from exchange rates moving, for accounts in another currency
      * @param gainPercent gain against the cost of priced positions, empty without any
@@ -134,7 +136,7 @@ class DashboardService {
             risks.add(new Breakdown.Part(riskGroup(position.risk()), valueInBase.get()));
         }
 
-        Optional<BigDecimal> cash = filter.hasTags() ? Optional.empty() : Optional.of(cash(userId, filter, rates, base));
+        Optional<BigDecimal> cash = filter.excludesCash() ? Optional.empty() : Optional.of(cash(userId, filter, rates, base));
         BigDecimal gain = value.subtract(cost, MathContext.DECIMAL128);
         Optional<BigDecimal> percent = cost.signum() == 0 ? Optional.empty()
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));

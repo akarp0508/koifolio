@@ -36,14 +36,15 @@ class DashboardController {
     @GetMapping
     @Operation(summary = "Totals and breakdowns in your base currency", description = """
             Converted at the latest rates. A position matches if it has any of the instrument tags and any of \
-            the position tags. Cash has no tags, so it's left out while tags filter the view. Holdings group \
+            the position tags. Cash has no company or tags, so it's left out while those filter the view. Holdings group \
             matching positions by company. Their weight is of the chosen account, or of the whole portfolio \
             without one, with cash in the total; tags don't change it.""")
     DashboardResponse dashboard(@AuthenticationPrincipal Jwt jwt,
                                 @RequestParam(required = false) UUID account,
+                                @RequestParam(required = false) UUID instrument,
                                 @RequestParam(defaultValue = "") Set<String> instrumentTag,
                                 @RequestParam(defaultValue = "") Set<String> positionTag) {
-        var filter = new DashboardService.Filter(account, instrumentTag, positionTag);
+        var filter = new DashboardService.Filter(account, instrument, instrumentTag, positionTag);
         return DashboardResponse.of(dashboards.build(UUID.fromString(jwt.getSubject()), filter));
     }
 
@@ -53,9 +54,10 @@ class DashboardController {
             what the gain moved by, so deposits and buys don't count as profit.""")
     PortfolioHistoryResponse history(@AuthenticationPrincipal Jwt jwt,
                             @RequestParam(required = false) UUID account,
+                            @RequestParam(required = false) UUID instrument,
                             @RequestParam(defaultValue = "") Set<String> instrumentTag,
                             @RequestParam(defaultValue = "") Set<String> positionTag) {
-        var filter = new DashboardService.Filter(account, instrumentTag, positionTag);
+        var filter = new DashboardService.Filter(account, instrument, instrumentTag, positionTag);
         return PortfolioHistoryResponse.of(dashboards.history(UUID.fromString(jwt.getSubject()), filter));
     }
 
@@ -83,7 +85,7 @@ class DashboardController {
     }
 
     /**
-     * @param cash left out while tags filter the view
+     * @param cash left out while a company or tags filter the view
      * @param currencyGain the part of unrealizedGain from exchange rates, for accounts in another currency
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings per company, biggest first, with sold ones marked by held being false
@@ -165,7 +167,8 @@ class DashboardController {
 
     /** @param distance how far the price is from the level in question, in percent */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record AttentionResponse(UUID accountId, String accountName, String ticker, PlanCheck.Signal signal, String distance) {
+    record AttentionResponse(UUID accountId, String accountName, UUID instrumentId, String ticker, PlanCheck.Signal signal,
+                             String distance) {
 
         static AttentionResponse of(DashboardService.Attention attention) {
             PlanCheck check = attention.check();
@@ -173,7 +176,7 @@ class DashboardController {
             boolean stop = signal == PlanCheck.Signal.NEAR_STOP || signal == PlanCheck.Signal.STOP_HIT;
             Optional<BigDecimal> distance = stop ? check.stopDistance() : check.targetDistance();
             return new AttentionResponse(attention.position().account().getId(), attention.position().account().getName(),
-                    attention.position().ticker(), signal, distance.map(DashboardResponse::percent).orElse(null));
+                    attention.position().instrument().id(), attention.position().ticker(), signal, distance.map(DashboardResponse::percent).orElse(null));
         }
     }
 }

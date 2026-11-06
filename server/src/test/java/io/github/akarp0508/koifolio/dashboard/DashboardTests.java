@@ -425,6 +425,27 @@ class DashboardTests {
     }
 
     @Test
+    void aCompanyFilterKeepsItsWeightAndLeavesOutCash() throws Exception {
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        hold(ike, "ABC", "1", "100", "100", "PLN");
+
+        dashboard("instrument", instrumentId("PAS"))
+                .andExpect(jsonPath("$.holdings.length()").value(1))
+                .andExpect(jsonPath("$.holdings[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$.holdings[0].weight").value("66.7"))
+                .andExpect(jsonPath("$.value").value("3000.00"))
+                .andExpect(jsonPath("$.cash").doesNotExist());
+    }
+
+    @Test
+    void attentionLinksToTheCompany() throws Exception {
+        hold(ike, "PAS", "10", "100", "120", "PLN");
+        plan(ike, "PAS", "{\"targetPrice\":\"120\"}");
+
+        dashboard().andExpect(jsonPath("$.attention[0].instrumentId").value(instrumentId("PAS")));
+    }
+
+    @Test
     void aNewUserHasAnEmptyDashboard() throws Exception {
         as(bob, get("/api/v1/dashboard")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.value").value("0.00"))

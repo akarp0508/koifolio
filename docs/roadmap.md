@@ -25,6 +25,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 14. **Tax estimates** (done): a rate per account, a yearly estimate page and a dashboard tile.
 15. **Weights** (done): each position's share of its account and of everything, cash included.
 16. **Portfolio page** (done): Dashboard and Positions merged, holdings grouped by company with buy and sell on each, and Activity replacing Transactions.
+17. **Company page** (done): one page per company with account tabs, a combined chart, notes, plans and trades. It replaces the Instruments and position pages, and followed companies moved into Not held on Portfolio.
 
 ## Current focus: extending the site
 

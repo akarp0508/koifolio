@@ -211,7 +211,7 @@ Implemented.
 
 | Request | Purpose |
 |---|---|
-| `GET /dashboard` | Totals, breakdowns and attention list. Filters: `account`, `instrumentTag` and `positionTag`, each repeatable |
+| `GET /dashboard` | Totals, breakdowns, attention list and holdings. Filters: `account`, `instrument`, and repeatable `instrumentTag` and `positionTag` |
 | `GET /dashboard/history` | Value over time and period changes, with the same filters |
 
 ```json
@@ -226,7 +226,7 @@ Implemented.
   "cash": "1400.00",
   "bySector": [{"label": "IT", "value": "1200.00", "percent": "60.0"}, {"value": "800.00", "percent": "40.0"}],
   "byRisk": [{"label": "4-5", "value": "1800.00", "percent": "90.0"}],
-  "attention": [{"accountId": "…", "accountName": "IKE", "ticker": "PAS", "signal": "NEAR_TARGET", "distance": "2.9"}],
+  "attention": [{"accountId": "…", "accountName": "IKE", "instrumentId": "…", "ticker": "PAS", "signal": "NEAR_TARGET", "distance": "2.9"}],
   "unpriced": 0,
   "holdings": [{
     "instrumentId": "…", "ticker": "PAS", "held": true, "value": "1200.00", "unrealizedGain": "300.00",
@@ -241,8 +241,8 @@ Implemented.
 - A holding's `weight` is of the chosen account, or of the whole portfolio without one, with cash in the total. Tags narrow what's listed but don't change the weight.
 - Value and cash are at the latest rates. Cost and realized gains use each trade's own rate, per `costFxRule`.
 - `currencyGain` is the part of `unrealizedGain` from rates moving: cost at today's rate minus cost at purchase rates. It covers accounts in another currency than the base. A foreign stock in a base-currency account has its currency effect inside the stock's gain, because its cost was entered in that currency.
-- A position matches if it has any of the wanted instrument tags, and any of the wanted position tags. The two kinds and the account must all match.
-- `cash` is left out while tags filter the view, because cash has no tags.
+- A position matches if it has any of the wanted instrument tags, and any of the wanted position tags. The two kinds, the account and the instrument must all match.
+- `cash` is left out while `instrument` or tags filter the view, because cash has neither.
 - Slices with no `label` have no sector or risk set. Risk groups are `1-2`, `3` and `4-5`, using the plan's risk if set.
 - `unpriced` counts open positions left out of the numbers, lacking a price or a rate.
 
