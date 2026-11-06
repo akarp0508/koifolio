@@ -14,7 +14,7 @@ export type Instrument = Schemas['InstrumentResponse'] & Required<Pick<Schemas['
 export type InstrumentInput = Schemas['UpdateInstrumentRequest']
 export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
-  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced' | 'unvalidated'>>
+  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced' | 'unvalidated' | 'pendingChanges'>>
 export type Settings = Required<Schemas['SettingsResponse']>
 export type RestoredData = Required<Schemas['RestoredResponse']>
 export type Rule = Schemas['RuleResponse'] & Required<Pick<Schemas['RuleResponse'], 'id' | 'type' | 'limitPercent'>>
@@ -22,6 +22,7 @@ export type RuleInput = Schemas['RuleRequest']
 export type AgentToken = Schemas['AgentTokenResponse'] & Required<Pick<Schemas['AgentTokenResponse'], 'id' | 'name'>>
 export type AgentScope = NonNullable<Schemas['AgentTokenResponse']['scopes']>[number]
 export type AuditEntry = Schemas['AuditEntryResponse']
+export type PendingChange = Schemas['PendingChangeResponse']
 export type NewAgentToken = Required<Pick<Schemas['CreatedAgentTokenResponse'], 'secret'>> & { token: AgentToken }
 export type RuleResult = Omit<Required<Schemas['RuleCheckResponse']>, 'actual' | 'rule'> & { actual?: string; rule: Rule }
 export type TaxEstimate = Schemas['TaxResponse']
@@ -188,9 +189,16 @@ export const api = {
   listTransactions: () => request<Transaction[]>('GET', '/transactions'),
   listUnvalidated: () => request<Transaction[]>('GET', '/transactions?unvalidated=true'),
   approveTransaction: (id: string) => request<Transaction>('POST', `/transactions/${id}/approve`),
-  approveAllTransactions: () => request<{ approved?: number }>('POST', '/transactions/approve-all'),
   rejectTransaction: (id: string) => request<void>('POST', `/transactions/${id}/reject`),
   auditLog: () => request<AuditEntry[]>('GET', '/audit-log'),
+  pendingChanges: () => request<PendingChange[]>('GET', '/review/changes'),
+  approveChange: (id: string) => request<void>('POST', `/review/changes/${id}/approve`),
+  rejectChange: (id: string) => request<void>('POST', `/review/changes/${id}/reject`),
+  approveAll: (agent?: string) =>
+    request<void>('POST', `/review/approve-all${agent ? `?agent=${encodeURIComponent(agent)}` : ''}`),
+  rejectAll: (agent?: string) =>
+    request<void>('POST', `/review/reject-all${agent ? `?agent=${encodeURIComponent(agent)}` : ''}`),
+  revertChange: (id: string, force: boolean) => request<void>('POST', `/review/log/${id}/revert?force=${force}`),
   createTransaction: (input: TransactionInput) => request<Transaction>('POST', '/transactions', input),
   updateTransaction: (id: string, input: TransactionInput) =>
     request<Transaction>('PUT', `/transactions/${id}`, input),

@@ -156,23 +156,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/transactions/approve-all": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve everything waiting for review */
-        post: operations["approveAll"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/split-suggestions/{id}/dismiss": {
         parameters: {
             query?: never;
@@ -222,6 +205,103 @@ export interface paths {
          * @description Without an account it covers everything. A low-risk rule needs maxRisk, the highest risk that counts.
          */
         post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/reject-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject everything waiting, transactions and changes
+         * @description With agent, only that agent's. Rejected transactions come out of every number.
+         */
+        post: operations["rejectAll"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/log/{id}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo an agent's company or rule change
+         * @description Puts back the values from before it, in full. If the same thing has changed since, this returns 409 changed_since unless force is on, because those later changes would be lost.
+         */
+        post: operations["revert"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/changes/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Drop a change without applying it */
+        post: operations["reject_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/changes/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply a change
+         * @description It can still be reverted from the change log.
+         */
+        post: operations["approve_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/approve-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve everything waiting, transactions and changes
+         * @description With agent, only that agent's. If any can't apply, none are.
+         */
+        post: operations["approveAll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -335,7 +415,7 @@ export interface paths {
         put?: never;
         /**
          * Create a token for an agent
-         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without scopes it can also add transactions, which wait for your review, and edit companies, but not rules.
+         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without scopes it can also propose transactions and company changes for your review, but not rules.
          */
         post: operations["create_3"];
         delete?: never;
@@ -463,6 +543,26 @@ export interface paths {
          * @description Weights are of the value plus cash. A company in two accounts counts as one on a rule covering everything. Cash counts as low risk, and positions with no risk set don't.
          */
         get: operations["check"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/review/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Company and rule changes from agents, waiting for you
+         * @description Nothing here has applied yet. current has the values each would replace.
+         */
+        get: operations["changes"];
         put?: never;
         post?: never;
         delete?: never;
@@ -813,9 +913,11 @@ export interface components {
             analysis?: string;
             tags?: string[];
         };
-        ApprovedResponse: {
+        DecidedResponse: {
             /** Format: int32 */
-            approved?: number;
+            transactions?: number;
+            /** Format: int32 */
+            changes?: number;
         };
         CreateInstrumentRequest: {
             /** @example PAS */
@@ -1011,6 +1113,20 @@ export interface components {
             /** Format: int32 */
             unpriced?: number;
         };
+        PendingChangeResponse: {
+            /** Format: uuid */
+            id?: string;
+            agentName?: string;
+            summary?: string;
+            current?: {
+                [key: string]: unknown;
+            };
+            proposed?: {
+                [key: string]: unknown;
+            };
+            /** Format: date-time */
+            createdAt?: string;
+        };
         InBase: {
             currency?: string;
             cost?: string;
@@ -1115,6 +1231,8 @@ export interface components {
             holdings?: components["schemas"]["HoldingResponse"][];
             /** Format: int32 */
             unvalidated?: number;
+            /** Format: int32 */
+            pendingChanges?: number;
         };
         HoldingResponse: {
             /** Format: uuid */
@@ -1167,6 +1285,8 @@ export interface components {
             after?: unknown;
             /** Format: date-time */
             createdAt?: string;
+            revertible?: boolean;
+            changedSince?: boolean;
         };
     };
     responses: never;
@@ -1475,26 +1595,6 @@ export interface operations {
             };
         };
     };
-    approveAll: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description OK */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ApprovedResponse"];
-                };
-            };
-        };
-    };
     dismiss: {
         parameters: {
             query?: never;
@@ -1575,6 +1675,112 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleResponse"];
+                };
+            };
+        };
+    };
+    rejectAll: {
+        parameters: {
+            query?: {
+                agent?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecidedResponse"];
+                };
+            };
+        };
+    };
+    revert: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    reject_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approve_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approveAll: {
+        parameters: {
+            query?: {
+                agent?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DecidedResponse"];
                 };
             };
         };
@@ -1976,6 +2182,26 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["RuleCheckResponse"][];
+                };
+            };
+        };
+    };
+    changes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PendingChangeResponse"][];
                 };
             };
         };

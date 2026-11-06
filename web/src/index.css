@@ -986,3 +986,9 @@ button.sell {
   overflow-wrap: anywhere;
   white-space: normal;
 }
+
+.log-value {
+  max-height: 20rem;
+  overflow: auto;
+  white-space: pre-wrap;
+}

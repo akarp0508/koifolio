@@ -160,6 +160,7 @@ export function Portfolio() {
   }
 
   const currency = dashboard?.currency ?? ''
+  const toReview = (dashboard?.unvalidated ?? 0) + (dashboard?.pendingChanges ?? 0)
   const filteredByTags = instrumentTags.length > 0 || positionTags.length > 0
   const points = history ? inRange(history.points, range, today()) : []
   // A filter hides holdings, so only the whole list can tell what's really not held
@@ -229,7 +230,7 @@ export function Portfolio() {
             </Tile>
           </div>
 
-          {(dashboard.attention.length > 0 || failedRules.length > 0 || dashboard.unvalidated > 0) && (
+          {(dashboard.attention.length > 0 || failedRules.length > 0 || toReview > 0) && (
             <ul className="attention" aria-label="Needs attention">
               {failedRules.map(({ rule, actual }) => (
                 <li key={rule.id}>
@@ -237,11 +238,9 @@ export function Portfolio() {
                   <span className="signal loss">now {actual}%</span>
                 </li>
               ))}
-              {dashboard.unvalidated > 0 && (
+              {toReview > 0 && (
                 <li>
-                  <a href="#review">
-                    {dashboard.unvalidated} agent {dashboard.unvalidated === 1 ? 'transaction' : 'transactions'} to review
-                  </a>
+                  <a href="#review">{toReview} agent {toReview === 1 ? 'change' : 'changes'} to review</a>
                 </li>
               )}
               {dashboard.attention.map((item) => (

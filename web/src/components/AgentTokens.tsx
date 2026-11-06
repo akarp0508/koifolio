@@ -7,8 +7,8 @@ import { Field } from './Field'
 
 const SCOPES: { scope: AgentScope; label: string; short: string }[] = [
   { scope: 'transactions:write', label: 'Add transactions, for you to review', short: 'transactions' },
-  { scope: 'analysis:write', label: 'Edit company details and analysis', short: 'companies' },
-  { scope: 'rules:write', label: 'Change rules', short: 'rules' },
+  { scope: 'analysis:write', label: 'Propose company changes, for you to review', short: 'companies' },
+  { scope: 'rules:write', label: 'Propose rule changes, for you to review', short: 'rules' },
 ]
 
 const DEFAULT_SCOPES: AgentScope[] = ['transactions:write', 'analysis:write']
@@ -76,7 +76,7 @@ export function AgentTokens() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Can change</th>
+                <th>Can propose</th>
                 <th>Last used</th>
                 <th>Expires</th>
                 <th><span className="visually-hidden">Actions</span></th>

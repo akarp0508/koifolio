@@ -25,10 +25,8 @@ describe('fieldChanges', () => {
     ])
   })
 
-  it('shortens long values', () => {
-    const [change] = fieldChanges(undefined, { analysis: 'x'.repeat(400) })
-    expect(change.after).toHaveLength(301)
-    expect(change.after?.endsWith('…')).toBe(true)
+  it('keeps long values whole', () => {
+    expect(fieldChanges(undefined, { analysis: 'x'.repeat(400) })[0].after).toHaveLength(400)
   })
 
   it('shows lists as text', () => {
