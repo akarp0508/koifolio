@@ -2,14 +2,15 @@ package io.github.akarp0508.koifolio.transaction;
 
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.FieldValidationException;
+import io.github.akarp0508.koifolio.RequestChecker;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
+import io.github.akarp0508.koifolio.audit.Actor;
+import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
-import jakarta.validation.ConstraintViolation;
-import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.math.RoundingMode;
@@ -21,7 +22,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -43,11 +46,13 @@ public class TransactionService {
     private final AccountRepository accounts;
     private final AuthService authService;
     private final InstrumentService instruments;
-    private final Validator validator;
+    private final RequestChecker checker;
+    private final AuditLog auditLog;
 
     TransactionService(TransactionRepository transactions, AccountRepository accounts, AuthService authService,
-                       InstrumentService instruments, Validator validator) {
-        this.validator = validator;
+                       InstrumentService instruments, RequestChecker checker, AuditLog auditLog) {
+        this.checker = checker;
+        this.auditLog = auditLog;
         this.transactions = transactions;
         this.accounts = accounts;
         this.authService = authService;
@@ -60,7 +65,8 @@ public class TransactionService {
     /** A transaction for backup, with no ids of its own. */
     public record Exported(UUID accountId, TransactionType type, LocalDate date, String ticker, BigDecimal quantity,
                            BigDecimal price, BigDecimal fee, BigDecimal amount, BigDecimal withheldTax,
-                           BigDecimal splitFrom, BigDecimal splitTo, boolean affectsBalance, Instant createdAt) {
+                           BigDecimal splitFrom, BigDecimal splitTo, boolean affectsBalance, Instant createdAt,
+                           String createdBy, boolean unvalidated) {
     }
 
     /** Oldest first. */
@@ -71,7 +77,7 @@ public class TransactionService {
         return transactions.findByUserId(userId).stream().sorted(HISTORY_ORDER)
                 .map(t -> new Exported(t.getAccountId(), t.getType(), t.getDate(), tickers.get(t.getInstrumentId()),
                         t.getQuantity(), t.getPrice(), t.getFee(), t.getAmount(), t.getWithheldTax(), t.getSplitFrom(),
-                        t.getSplitTo(), t.isAffectsBalance(), t.getCreatedAt()))
+                        t.getSplitTo(), t.isAffectsBalance(), t.getCreatedAt(), t.getCreatedBy(), t.isUnvalidated()))
                 .toList();
     }
 
@@ -82,20 +88,22 @@ public class TransactionService {
         TransactionRequest request = new TransactionRequest(exported.accountId(), exported.type(), exported.date(),
                 exported.ticker(), exported.quantity(), exported.price(), exported.fee(), exported.amount(),
                 exported.withheldTax(), exported.splitFrom(), exported.splitTo(), exported.affectsBalance(), true);
-        Set<ConstraintViolation<TransactionRequest>> violations = validator.validate(request);
-        if (!violations.isEmpty()) {
-            ConstraintViolation<TransactionRequest> first = violations.iterator().next();
-            throw new FieldValidationException(Map.of(first.getPropertyPath().toString(), first.getMessage()));
-        }
+        checker.check(request);
         TransactionValues values = validate(request, account.getCurrency());
         Transaction transaction = new Transaction(userId, account.getId());
         transaction.apply(values, instrumentFor(userId, values));
         transaction.setCreatedAt(exported.createdAt());
+        transaction.addedBy(exported.createdBy(), exported.unvalidated());
         transactions.save(transaction);
     }
 
     @Transactional(readOnly = true)
     List<Listed> list(UUID userId, UUID accountId) {
+        return list(userId, accountId, false);
+    }
+
+    @Transactional(readOnly = true)
+    List<Listed> list(UUID userId, UUID accountId, boolean onlyUnvalidated) {
         authService.currentUser(userId);
         List<Transaction> all = transactions.findByUserId(userId);
         Set<UUID> oversold = oversold(all);
@@ -103,6 +111,7 @@ public class TransactionService {
         Map<UUID, String> tickers = instruments.tickers(userId);
         return all.stream()
                 .filter(transaction -> accountId == null || transaction.getAccountId().equals(accountId))
+                .filter(transaction -> !onlyUnvalidated || transaction.isUnvalidated())
                 .sorted(HISTORY_ORDER.reversed())
                 .map(transaction -> new Listed(transaction, currencies.get(transaction.getAccountId()),
                         tickers.get(transaction.getInstrumentId()), oversold.contains(transaction.getId())))
@@ -116,7 +125,7 @@ public class TransactionService {
     }
 
     @Transactional
-    Listed create(UUID userId, TransactionRequest request) {
+    Listed create(UUID userId, TransactionRequest request, Actor actor) {
         authService.currentUser(userId);
         if (request.accountId() == null) {
             throw new FieldValidationException(Map.of("accountId", "must not be null"));
@@ -128,13 +137,19 @@ public class TransactionService {
         transaction.apply(values, instrumentFor(userId, values));
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
-        return listed(userId, transactions.save(transaction));
+        if (actor.isAgent()) {
+            transaction.addedBy(actor.name(), true);
+        }
+        Listed saved = listed(userId, transactions.save(transaction));
+        log(userId, actor, transaction, "create", "Added", null, snapshot(saved));
+        return saved;
     }
 
     @Transactional
-    Listed update(UUID userId, UUID id, TransactionRequest request) {
+    Listed update(UUID userId, UUID id, TransactionRequest request, Actor actor) {
         authService.currentUser(userId);
         Transaction transaction = find(userId, id);
+        Map<String, Object> before = snapshot(listed(userId, transaction));
         Account account = lockAccount(userId, transaction.getAccountId());
         TransactionValues values = validate(request, account.getCurrency());
         BigDecimal balanceBefore = account.getBalance();
@@ -142,24 +157,105 @@ public class TransactionService {
         transaction.apply(values, instrumentFor(userId, values));
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
-        return listed(userId, transaction);
+        Listed saved = listed(userId, transaction);
+        log(userId, actor, transaction, "update", "Changed", before, snapshot(saved));
+        return saved;
     }
 
     @Transactional
-    void delete(UUID userId, UUID id) {
+    void delete(UUID userId, UUID id, Actor actor) {
         authService.currentUser(userId);
-        Transaction transaction = find(userId, id);
+        remove(userId, find(userId, id), actor, "delete", "Deleted");
+    }
+
+    /** Clears the mark. The transaction already counts, so nothing else changes. */
+    @Transactional
+    Listed approve(UUID userId, UUID id) {
+        authService.currentUser(userId);
+        return approve(userId, requireUnvalidated(find(userId, id)));
+    }
+
+    /** @return how many were approved */
+    @Transactional
+    int approveAll(UUID userId) {
+        authService.currentUser(userId);
+        List<Transaction> waiting = transactions.findByUserIdAndValidatedAtIsNull(userId);
+        waiting.forEach(transaction -> approve(userId, transaction));
+        return waiting.size();
+    }
+
+    /** Takes it out of every number and undoes its effect on the balance, but keeps it in the database. */
+    @Transactional
+    void reject(UUID userId, UUID id) {
+        authService.currentUser(userId);
+        remove(userId, requireUnvalidated(find(userId, id)), Actor.USER, "reject", "Rejected");
+    }
+
+    public int countUnvalidated(UUID userId) {
+        return transactions.countByUserIdAndValidatedAtIsNull(userId);
+    }
+
+    private Listed approve(UUID userId, Transaction transaction) {
+        Map<String, Object> before = snapshot(listed(userId, transaction));
+        transaction.approve();
+        Listed saved = listed(userId, transaction);
+        log(userId, Actor.USER, transaction, "approve", "Approved", before, snapshot(saved));
+        return saved;
+    }
+
+    private void remove(UUID userId, Transaction transaction, Actor actor, String action, String verb) {
+        Map<String, Object> before = snapshot(listed(userId, transaction));
         Account account = lockAccount(userId, transaction.getAccountId());
         account.adjustBalance(transaction.balanceEffect().negate());
         requireBalanceInRange(account);
-        transactions.delete(transaction);
+        transaction.softDelete();
+        log(userId, actor, transaction, action, verb, before, null);
+    }
+
+    private static Transaction requireUnvalidated(Transaction transaction) {
+        if (!transaction.isUnvalidated()) {
+            throw new ApiException(HttpStatus.CONFLICT, "transaction_already_validated", "This transaction isn't waiting for review");
+        }
+        return transaction;
+    }
+
+    private void log(UUID userId, Actor actor, Transaction transaction, String action, String verb, Map<String, Object> before,
+                     Map<String, Object> after) {
+        Map<String, Object> values = after == null ? before : after;
+        String ticker = values.get("ticker") == null ? "" : " " + values.get("ticker");
+        String summary = "%s %s%s on %s".formatted(verb, transaction.getType().name().toLowerCase(Locale.ROOT), ticker,
+                transaction.getDate());
+        auditLog.record(userId, actor, new AuditLog.Change("transaction", transaction.getId(), action, summary, before, after));
+    }
+
+    /** The transaction's values for the audit log, without the empty ones. */
+    private static Map<String, Object> snapshot(Listed listed) {
+        Transaction t = listed.transaction();
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("accountId", t.getAccountId());
+        values.put("type", t.getType());
+        values.put("date", t.getDate());
+        values.put("ticker", listed.ticker());
+        values.put("quantity", t.getQuantity());
+        values.put("price", t.getPrice());
+        values.put("fee", t.getFee());
+        values.put("amount", t.getAmount());
+        values.put("withheldTax", t.getWithheldTax());
+        values.put("splitFrom", t.getSplitFrom());
+        values.put("splitTo", t.getSplitTo());
+        values.put("cashEffect", t.getCashEffect());
+        values.put("affectsBalance", t.isAffectsBalance());
+        values.put("createdBy", t.getCreatedBy());
+        values.put("unvalidated", t.isUnvalidated());
+        values.values().removeIf(Objects::isNull);
+        return values;
     }
 
     /** Adds a split, as confirmed by the user. */
     @Transactional
     public void addSplit(UUID userId, UUID accountId, String ticker, LocalDate date, BigDecimal from, BigDecimal to) {
         create(userId, new TransactionRequest(accountId, TransactionType.SPLIT, date, ticker, null, null, null, null, null,
-                from, to, false, null));
+                from, to, false, null), Actor.USER);
     }
 
     /** Every buy, sell and split, oldest first. */

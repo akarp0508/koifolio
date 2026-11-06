@@ -6,6 +6,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 
 /** Lets one agent act for its user through MCP, and nowhere else. */
@@ -25,6 +26,9 @@ class AgentToken {
     @Column(name = "token_hash", nullable = false, updatable = false)
     private String tokenHash;
 
+    @Column(nullable = false, updatable = false)
+    private String scopes;
+
     @Column(name = "expires_on", updatable = false)
     private LocalDate expiresOn;
 
@@ -37,11 +41,12 @@ class AgentToken {
     protected AgentToken() {
     }
 
-    AgentToken(UUID userId, String name, String tokenHash, LocalDate expiresOn) {
+    AgentToken(UUID userId, String name, String tokenHash, Set<AgentScope> scopes, LocalDate expiresOn) {
         this.id = UUID.randomUUID();
         this.userId = userId;
         this.name = name;
         this.tokenHash = tokenHash;
+        this.scopes = AgentScope.store(scopes);
         this.expiresOn = expiresOn;
         this.createdAt = Instant.now();
     }
@@ -64,6 +69,10 @@ class AgentToken {
 
     String getName() {
         return name;
+    }
+
+    Set<AgentScope> getScopes() {
+        return AgentScope.load(scopes);
     }
 
     LocalDate getExpiresOn() {

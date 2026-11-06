@@ -9,5 +9,9 @@ interface TransactionRepository extends JpaRepository<Transaction, UUID> {
 
     List<Transaction> findByUserId(UUID userId);
 
+    List<Transaction> findByUserIdAndValidatedAtIsNull(UUID userId);
+
+    int countByUserIdAndValidatedAtIsNull(UUID userId);
+
     Optional<Transaction> findByIdAndUserId(UUID id, UUID userId);
 }

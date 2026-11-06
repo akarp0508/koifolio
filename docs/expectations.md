@@ -9,7 +9,7 @@ Last reviewed: 2026-11-06.
 | Promise | Status |
 |---|---|
 | **Analysis lives next to the numbers.** Each company has notes plus structured fields, in one place with its figures | ✅ Delivered: company details, per-account plans |
-| **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | 🟡 Read tools are built. Writes, checks and the audit log are next. See [mcp.md](mcp.md) |
+| **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | ✅ Read and write tools, per-token permissions, review and a change log, with personal tokens. OAuth waits for cloud clients. See [mcp.md](mcp.md) |
 | **Your data is never locked in.** Plain-text export/import, optional git backup | ✅ Export and restore done, on the profile page. The git backup is deferred. See [export-format.md](export-format.md) |
 | **Multiple accounts,** viewed separately or together | ✅ Delivered |
 | **Your rules, checked automatically,** like "max 20% in one company" or "~50% in low-risk" | ✅ Done |
@@ -29,7 +29,7 @@ Last reviewed: 2026-11-06.
 | Tax estimates per account | ✅ Done, as an estimate on sales and dividends |
 | Splits | ✅ Done; spin-offs aren't |
 | Purchase-date FX, with currency gains separated | ✅ Done |
-| Editing transactions without losing history | ❌ Edits are in place until the audit log exists |
+| Editing transactions without losing history | ✅ The change log keeps old values, and deletes are soft |
 | Manual prices | ❌ Not built |
 | PL / EN interface | ❌ English only |
 | Light / dark theme | ✅ Done |

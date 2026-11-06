@@ -1,6 +1,8 @@
 package io.github.akarp0508.koifolio.instrument;
 
 import io.github.akarp0508.koifolio.ApiException;
+import io.github.akarp0508.koifolio.audit.Actor;
+import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import java.time.Instant;
 import java.util.Comparator;
@@ -22,8 +24,10 @@ public class InstrumentService {
 
     private final InstrumentRepository instruments;
     private final AuthService authService;
+    private final AuditLog auditLog;
 
-    InstrumentService(InstrumentRepository instruments, AuthService authService) {
+    InstrumentService(InstrumentRepository instruments, AuthService authService, AuditLog auditLog) {
+        this.auditLog = auditLog;
         this.instruments = instruments;
         this.authService = authService;
     }
@@ -113,29 +117,35 @@ public class InstrumentService {
     }
 
     @Transactional
-    Instrument create(UUID userId, String ticker, InstrumentDetails details) {
+    Instrument create(UUID userId, String ticker, InstrumentDetails details, Actor actor) {
         authService.currentUser(userId);
         String normalized = normalizeTicker(ticker);
         Optional<Instrument> existing = instruments.findByUserIdAndTicker(userId, normalized);
         if (existing.isPresent() && !existing.get().isListed()) {
+            InstrumentDetails before = existing.get().details();
             existing.get().setListed(true);
             existing.get().describe(details);
+            log(userId, actor, existing.get(), "update", "Changed", before, details);
             return existing.get();
         }
         Instrument instrument = new Instrument(userId, normalized);
         instrument.describe(details);
         try {
-            return instruments.saveAndFlush(instrument);
+            instruments.saveAndFlush(instrument);
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(HttpStatus.CONFLICT, "instrument_exists", "This ticker is already on your list");
         }
+        log(userId, actor, instrument, "create", "Added", null, details);
+        return instrument;
     }
 
     @Transactional
-    Instrument update(UUID userId, UUID id, InstrumentDetails details) {
+    Instrument update(UUID userId, UUID id, InstrumentDetails details, Actor actor) {
         authService.currentUser(userId);
         Instrument instrument = instruments.findByIdAndUserId(id, userId).orElseThrow(InstrumentService::notFound);
+        InstrumentDetails before = instrument.details();
         instrument.describe(details);
+        log(userId, actor, instrument, "update", "Changed", before, details);
         return instrument;
     }
 
@@ -148,7 +158,15 @@ public class InstrumentService {
     @Transactional
     void delete(UUID userId, UUID id) {
         authService.currentUser(userId);
-        find(userId, id).setListed(false);
+        Instrument instrument = find(userId, id);
+        instrument.setListed(false);
+        log(userId, Actor.USER, instrument, "delete", "Removed", instrument.details(), null);
+    }
+
+    private void log(UUID userId, Actor actor, Instrument instrument, String action, String verb, InstrumentDetails before,
+                     InstrumentDetails after) {
+        auditLog.record(userId, actor, new AuditLog.Change("company", instrument.getId(), action,
+                "%s %s".formatted(verb, instrument.getTicker()), before, after));
     }
 
     private Instrument find(UUID userId, UUID id) {

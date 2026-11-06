@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.instrument;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.akarp0508.koifolio.audit.Actor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -47,7 +48,7 @@ class InstrumentController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Add an instrument to your list", description = "Using a new ticker in a transaction also adds it.")
     InstrumentResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateInstrumentRequest request) {
-        return InstrumentResponse.of(instruments.create(userId(jwt), request.ticker(), request.details()));
+        return InstrumentResponse.of(instruments.create(userId(jwt), request.ticker(), request.details(), Actor.USER));
     }
 
     @GetMapping("/{id}")
@@ -60,7 +61,7 @@ class InstrumentController {
     @Operation(summary = "Replace what you know about an instrument", description = "The ticker can't be changed.")
     InstrumentResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                               @Valid @RequestBody UpdateInstrumentRequest request) {
-        return InstrumentResponse.of(instruments.update(userId(jwt), id, request.details()));
+        return InstrumentResponse.of(instruments.update(userId(jwt), id, request.details(), Actor.USER));
     }
 
     @DeleteMapping("/{id}")

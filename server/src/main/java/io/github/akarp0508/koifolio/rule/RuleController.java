@@ -3,6 +3,7 @@ package io.github.akarp0508.koifolio.rule;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.domain.RuleCheck;
 import io.github.akarp0508.koifolio.domain.RuleType;
+import io.github.akarp0508.koifolio.audit.Actor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -52,20 +53,20 @@ class RuleController {
     @Operation(summary = "Add a rule", description = """
             Without an account it covers everything. A low-risk rule needs maxRisk, the highest risk that counts.""")
     RuleResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody RuleRequest request) {
-        return RuleResponse.of(rules.create(userId(jwt), request.input()));
+        return RuleResponse.of(rules.create(userId(jwt), request.input(), Actor.USER));
     }
 
     @PutMapping("/{id}")
     @Operation(summary = "Replace a rule")
     RuleResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @Valid @RequestBody RuleRequest request) {
-        return RuleResponse.of(rules.update(userId(jwt), id, request.input()));
+        return RuleResponse.of(rules.update(userId(jwt), id, request.input(), Actor.USER));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Delete a rule")
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        rules.delete(userId(jwt), id);
+        rules.delete(userId(jwt), id, Actor.USER);
     }
 
     @GetMapping("/check")

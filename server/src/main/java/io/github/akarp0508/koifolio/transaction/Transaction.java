@@ -10,8 +10,10 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
+import org.hibernate.annotations.SQLRestriction;
 
 @Entity
+@SQLRestriction("deleted_at IS NULL")
 @Table(name = "transactions")
 public class Transaction {
 
@@ -65,6 +67,17 @@ public class Transaction {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /** The agent that added it, empty for the user. */
+    @Column(name = "created_by")
+    private String createdBy;
+
+    /** Empty while it waits for review. */
+    @Column(name = "validated_at")
+    private Instant validatedAt;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     protected Transaction() {
     }
 
@@ -73,6 +86,29 @@ public class Transaction {
         this.userId = userId;
         this.accountId = accountId;
         this.createdAt = Instant.now();
+        this.validatedAt = createdAt;
+    }
+
+    /** It counts straight away, but stays marked until the user approves it. */
+    void addedBy(String agent, boolean unvalidated) {
+        createdBy = agent;
+        validatedAt = unvalidated ? null : validatedAt;
+    }
+
+    void approve() {
+        validatedAt = Instant.now();
+    }
+
+    void softDelete() {
+        deletedAt = Instant.now();
+    }
+
+    boolean isUnvalidated() {
+        return validatedAt == null;
+    }
+
+    String getCreatedBy() {
+        return createdBy;
     }
 
     void apply(TransactionValues values, UUID instrumentId) {

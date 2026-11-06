@@ -12,6 +12,7 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -43,7 +44,7 @@ class AgentTokenService {
     }
 
     @Transactional
-    Created create(UUID userId, String name, LocalDate expiresOn) {
+    Created create(UUID userId, String name, Set<AgentScope> scopes, LocalDate expiresOn) {
         authService.currentUser(userId);
         String trimmed = name.strip();
         if (tokens.existsByUserIdAndName(userId, trimmed)) {
@@ -52,7 +53,7 @@ class AgentTokenService {
         byte[] bytes = new byte[TOKEN_BYTES];
         random.nextBytes(bytes);
         String secret = PREFIX + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-        return new Created(tokens.save(new AgentToken(userId, trimmed, hash(secret), expiresOn)), secret);
+        return new Created(tokens.save(new AgentToken(userId, trimmed, hash(secret), scopes == null ? AgentScope.DEFAULTS : scopes, expiresOn)), secret);
     }
 
     @Transactional
@@ -68,7 +69,7 @@ class AgentTokenService {
                 .filter(token -> !token.expired(LocalDate.now(ZONE)))
                 .map(token -> {
                     token.used();
-                    return new AgentCaller(token.getUserId(), token.getName());
+                    return new AgentCaller(token.getUserId(), token.getName(), token.getScopes());
                 });
     }
 

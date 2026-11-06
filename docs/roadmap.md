@@ -29,7 +29,8 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 18. **Rules** (done): a maximum per company and a minimum in low risk, per account or overall, with failures in Needs attention.
 19. **Export and restore** (done): all your data as plain text, and a restore that replaces it, with all of it or none of it applied.
 20. **Dividend income** (done): dividends in returns and the chart, net of tax withheld, and what's left to pay on the Tax page.
-21. **MCP read tools** (done): agent tokens on the profile page, and read tools at `/mcp`. Next are agent writes with the audit log, unvalidated marks and a review tab, then company and rule edits.
+21. **MCP read tools** (done): agent tokens on the profile page, and read tools at `/mcp`.
+22. **MCP writes** (done): agents add transactions, edit companies and change rules, per token. Their transactions wait on a Review page, and a change log records who changed what. Deleted transactions are kept out of the numbers but not erased.
 
 ## Current focus: extending the site
 

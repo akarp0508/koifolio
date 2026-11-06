@@ -29,7 +29,8 @@
 - **Positions are calculated on each request,** in the `domain` package, not stored. One per account and ticker. A sale past the shares on record counts only the shares with a known cost, and the position is marked `incomplete`.
 - **Bonds:** one generic model, with Polish retail series as presets.
 - **Base currency:** configurable, default PLN.
-- **Transactions are edited in place and deleted for real in the MVP.** Revisions and soft delete come with the audit log. This replaces "never destroyed" for now.
+- **Transactions are edited in place and soft-deleted.** Each edit keeps its old values in the change log, and deleted ones stay in the database, out of every number and out of exports. A restore erases them for good, along with everything else it replaces.
+- **The change log covers transactions, companies and rules,** the things an agent can touch, from either you or an agent. Accounts, plans and settings aren't logged yet. It isn't part of an export, and a restore leaves it alone.
 - **Prices:** free APIs and scraping only, no headless browser.
 - **No Nix dev shell.** Local tools come from the system; Docker covers full builds.
 - **No CLI.** MCP covers what it was for.
@@ -49,7 +50,7 @@
 - **Dividends:** stored as gross + withheld; the form also accepts net only (withheld = 0). They count in returns net of withheld tax, apart from realized gain, at the rate of the day `costFxRule` picks. They also count in the chart's gain and the period changes, because prices fall by what's paid out. On the Tax page each dividend owes its gross at the account's rate less what was withheld, never below zero, and sale losses don't offset it. A dividend entered as net only therefore shows too much left to pay. This replaces leaving dividends out of the estimate.
 - **Dividends with no trades:** a dividend on a ticker with no buys on record makes a closed position, so it's still counted and can be seen.
 - **Personal data is isolated, market facts are shared (later).** Each user's sector, risk, scenarios, thesis, plans and notes are private. When prices arrive, ticker, market and prices are stored once.
-- **Agent transactions need review.** Agents can add transactions through MCP, but they arrive marked unvalidated and appear in an "Unvalidated changes" tab. They count in all numbers straight away. Approving clears the mark; rejecting soft-deletes the transaction. Agent edits to analysis apply immediately and go to the audit log. A settings screen for what MCP may do comes later.
+- **Agent transactions need review.** Agents can add transactions through MCP, but they arrive marked unvalidated and appear on a Review page. They count in all numbers straight away. Approving clears the mark; rejecting soft-deletes the transaction. Agent edits to analysis apply immediately and go to the change log. What a token may do is set when it's created. Agents can't approve their own work.
 - **Database layer: JPA / Hibernate** with Spring Data JPA, chosen because the database will grow well beyond the current tables. Flyway owns the schema (`ddl-auto: validate`), and entities stay separate from the `domain` records. Native SQL is fine where JPA doesn't fit, e.g. `ON CONFLICT` upserts.
 - **OpenAPI is generated from code** with `springdoc-openapi`, added with the first controllers. Swagger UI is switched on with `KOIFOLIO_SWAGGER` and is off by default. It's meant for local use and for testing each batch; a browser page can't send a JWT, so it can't sit behind login.
 - **Workflow:** every finished batch is committed, documented in Swagger and tested by hand by the user before the next batch starts.

@@ -19,6 +19,7 @@ import java.io.ByteArrayOutputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -314,5 +315,21 @@ class BackupTests {
     @Test
     void needsAToken() throws Exception {
         mvc.perform(get("/api/v1/export")).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void marksSurviveARestoreAndDeletedTransactionsDont() throws Exception {
+        var transactions = jdbc.sql("SELECT id FROM transactions WHERE user_id = (SELECT id FROM users WHERE username = 'anna') ORDER BY created_at")
+                .query(java.util.UUID.class).list();
+        jdbc.sql("UPDATE transactions SET created_by = 'Claude', validated_at = NULL WHERE id = ?").param(transactions.get(0)).update();
+        jdbc.sql("UPDATE transactions SET deleted_at = now() WHERE id = ?").param(transactions.get(1)).update();
+
+        byte[] zip = export(anna);
+        restore(bob, zip).andExpect(status().isOk());
+
+        String restored = as(bob, get("/api/v1/transactions")).andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<List<Object>>read(restored, "$[*]")).hasSize(transactions.size() - 1);
+        assertThat(JsonPath.<List<String>>read(restored, "$[?(@.unvalidated == true)].createdBy")).containsExactly("Claude");
+        assertThat(JsonPath.<List<String>>read(restored, "$[?(@.unvalidated == false)].createdBy")).isEmpty();
     }
 }

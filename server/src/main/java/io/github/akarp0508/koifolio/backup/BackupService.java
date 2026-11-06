@@ -92,7 +92,8 @@ class BackupService {
         for (TransactionService.Exported t : transactions.exportAll(userId)) {
             lines.computeIfAbsent(keys.get(t.accountId()), key -> new ArrayList<>()).add(new TransactionEntry(t.date(), t.type(),
                     t.ticker(), plain(t.quantity()), plain(t.price()), plain(t.fee()), plain(t.amount()), plain(t.withheldTax()),
-                    plain(t.splitFrom()), plain(t.splitTo()), t.affectsBalance(), t.createdAt()));
+                    plain(t.splitFrom()), plain(t.splitTo()), t.affectsBalance(), t.createdAt(), t.createdBy(),
+                    t.unvalidated() ? Boolean.TRUE : null));
         }
         List<CompanyEntry> companies = instruments.exportAll(userId).stream().map(i -> new CompanyEntry(i.ticker(),
                 i.details().name(), i.details().sector(), i.details().risk(), i.details().thesis(), i.details().tags(), i.listed(),
@@ -138,7 +139,7 @@ class BackupService {
                     String place = "%s line %d".formatted(name, i + 1);
                     restoreLine(place, new TransactionService.Exported(ids.get(file.getKey()), t.type(), t.date(), t.ticker(),
                             t.quantity(), t.price(), t.fee(), t.amount(), t.withheldTax(), t.splitFrom(), t.splitTo(),
-                            t.affectsBalance(), createdAt), userId);
+                            t.affectsBalance(), createdAt, t.createdBy(), Boolean.TRUE.equals(t.unvalidated())), userId);
                     restoredTransactions++;
                 }
             }

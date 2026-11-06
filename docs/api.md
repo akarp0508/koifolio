@@ -107,12 +107,14 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
 | `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
-- Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect` and `oversold`, and leave out fields the type doesn't use.
+- Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect`, `oversold` and `unvalidated`, plus `createdBy` for an agent's, and leave out fields the type doesn't use.
+- `GET /transactions?unvalidated=true` lists what agents added and you haven't reviewed. `POST /transactions/{id}/approve` and `POST /transactions/approve-all` clear the mark. `POST /transactions/{id}/reject` removes one and undoes its effect on the balance. Either returns `409` if it isn't waiting.
+- `DELETE /transactions/{id}` removes it from every number and undoes its effect on the balance, but keeps it in the database.
 - Cash effects are rounded to the currency's decimals.
 - `oversold` marks a sale of more than was held at that point, per account and ticker. It's a warning, and it clears once the history adds up.
 - A change that takes the balance below zero returns `409 negative_balance`, with the resulting balance in `detail`, and saves nothing. Sending `allowNegativeBalance: true` goes ahead. Changes that don't lower the balance, and transactions with `affectsBalance` off, never ask.
 - A transaction or balance past 15 digits returns `400` (`amount_out_of_range`, `balance_out_of_range`).
-- Pagination, revisions and `version` come later.
+- Pagination and `version` come later.
 
 ## Instruments
 
@@ -289,8 +291,12 @@ Implemented. Tokens for the [MCP server](mcp.md), which work there and nowhere e
 | Request | Purpose |
 |---|---|
 | `GET /agent-tokens` | List, without secrets |
-| `POST /agent-tokens` | Create from `name` and optional `expiresOn`, the last day it works. The `secret` is only returned here |
+| `POST /agent-tokens` | Create from `name`, optional `expiresOn`, the last day it works, and optional `scopes`. The `secret` is only returned here |
 | `DELETE /agent-tokens/{id}` | Revoke at once |
+
+## Change log
+
+Implemented. `GET /audit-log` gives recent changes to transactions, companies and rules, newest first, with `limit` up to 500. Each has `actorType`, `actorName` for an agent, `entityType`, `entityId`, `action`, `summary`, `before` and `after`.
 
 ## Split suggestions
 

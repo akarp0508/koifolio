@@ -64,7 +64,7 @@ final class BackupFormat {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record TransactionEntry(LocalDate date, TransactionType type, String ticker, BigDecimal quantity, BigDecimal price,
                             BigDecimal fee, BigDecimal amount, BigDecimal withheldTax, BigDecimal splitFrom,
-                            BigDecimal splitTo, boolean affectsBalance, Instant createdAt) {
+                            BigDecimal splitTo, boolean affectsBalance, Instant createdAt, String createdBy, Boolean unvalidated) {
     }
 
     /** @param analysis the file's Markdown body, kept out of the frontmatter */

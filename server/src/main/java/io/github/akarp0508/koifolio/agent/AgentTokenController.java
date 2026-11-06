@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -43,9 +44,10 @@ class AgentTokenController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a token for an agent", description = """
             It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so \
-            keep it. A token works through expiresOn, or until revoked without one.""")
+            keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without \
+            scopes it can also add transactions, which wait for your review, and edit companies, but not rules.""")
     CreatedAgentTokenResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AgentTokenRequest request) {
-        var created = tokens.create(userId(jwt), request.name(), request.expiresOn());
+        var created = tokens.create(userId(jwt), request.name(), request.scopes(), request.expiresOn());
         return new CreatedAgentTokenResponse(AgentTokenResponse.of(created.token()), created.secret());
     }
 
@@ -60,15 +62,16 @@ class AgentTokenController {
         return UUID.fromString(jwt.getSubject());
     }
 
-    record AgentTokenRequest(@NotBlank @Size(max = 100) String name, LocalDate expiresOn) {
+    record AgentTokenRequest(@NotBlank @Size(max = 100) String name, Set<AgentScope> scopes, LocalDate expiresOn) {
     }
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record AgentTokenResponse(UUID id, String name, LocalDate expiresOn, Instant lastUsedAt, Instant createdAt) {
+    record AgentTokenResponse(UUID id, String name, Set<AgentScope> scopes, LocalDate expiresOn, Instant lastUsedAt,
+                              Instant createdAt) {
 
         static AgentTokenResponse of(AgentToken token) {
-            return new AgentTokenResponse(token.getId(), token.getName(), token.getExpiresOn(), token.getLastUsedAt(),
-                    token.getCreatedAt());
+            return new AgentTokenResponse(token.getId(), token.getName(), token.getScopes(), token.getExpiresOn(),
+                    token.getLastUsedAt(), token.getCreatedAt());
         }
     }
 

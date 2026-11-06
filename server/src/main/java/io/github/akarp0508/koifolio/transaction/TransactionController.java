@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.transaction;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.akarp0508.koifolio.audit.Actor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -37,8 +38,9 @@ class TransactionController {
 
     @GetMapping
     @Operation(summary = "List your transactions, newest first")
-    List<TransactionResponse> list(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) UUID account) {
-        return transactions.list(userId(jwt), account).stream().map(TransactionResponse::of).toList();
+    List<TransactionResponse> list(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) UUID account,
+                                   @RequestParam(defaultValue = "false") boolean unvalidated) {
+        return transactions.list(userId(jwt), account, unvalidated).stream().map(TransactionResponse::of).toList();
     }
 
     @PostMapping
@@ -47,7 +49,7 @@ class TransactionController {
             Amounts are in the account's currency. With affectsBalance on, the account balance follows \
             the transaction. A sale of more than is held is saved, with oversold set.""")
     TransactionResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody TransactionRequest request) {
-        return TransactionResponse.of(transactions.create(userId(jwt), request));
+        return TransactionResponse.of(transactions.create(userId(jwt), request, Actor.USER));
     }
 
     @GetMapping("/{id}")
@@ -60,14 +62,39 @@ class TransactionController {
     @Operation(summary = "Replace a transaction", description = "The balance follows the change. accountId is ignored.")
     TransactionResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                @Valid @RequestBody TransactionRequest request) {
-        return TransactionResponse.of(transactions.update(userId(jwt), id, request));
+        return TransactionResponse.of(transactions.update(userId(jwt), id, request, Actor.USER));
     }
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Delete a transaction", description = "Undoes its effect on the balance.")
+    @Operation(summary = "Delete a transaction", description = """
+            Undoes its effect on the balance. It stays in the database and the change log, but out of every number.""")
     void delete(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
-        transactions.delete(userId(jwt), id);
+        transactions.delete(userId(jwt), id, Actor.USER);
+    }
+
+    @PostMapping("/{id}/approve")
+    @Operation(summary = "Approve a transaction an agent added", description = """
+            It already counts, so this only clears the mark.""")
+    TransactionResponse approve(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        return TransactionResponse.of(transactions.approve(userId(jwt), id));
+    }
+
+    @PostMapping("/approve-all")
+    @Operation(summary = "Approve everything waiting for review")
+    ApprovedResponse approveAll(@AuthenticationPrincipal Jwt jwt) {
+        return new ApprovedResponse(transactions.approveAll(userId(jwt)));
+    }
+
+    @PostMapping("/{id}/reject")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @Operation(summary = "Reject a transaction an agent added", description = """
+            Undoes its effect on the balance and takes it out of every number.""")
+    void reject(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
+        transactions.reject(userId(jwt), id);
+    }
+
+    record ApprovedResponse(int approved) {
     }
 
     private static UUID userId(Jwt jwt) {
@@ -79,12 +106,14 @@ class TransactionController {
      *
      * @param cashEffect what the transaction does to cash, signed
      * @param oversold a sale of more than was held at that point
+     * @param createdBy the agent that added it, left out for you
+     * @param unvalidated added by an agent and waiting for your review; it counts in the meantime
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record TransactionResponse(UUID id, UUID accountId, TransactionType type, LocalDate date, String currency,
                                String ticker, String quantity, String price, String fee, String amount,
                                String withheldTax, String splitFrom, String splitTo, String cashEffect,
-                               boolean affectsBalance, boolean oversold) {
+                               boolean affectsBalance, boolean oversold, String createdBy, boolean unvalidated) {
 
         static TransactionResponse of(TransactionService.Listed listed) {
             Transaction t = listed.transaction();
@@ -93,7 +122,7 @@ class TransactionController {
                     plain(t.getQuantity()), plain(t.getPrice()), money(t.getFee(), currency), money(t.getAmount(), currency),
                     money(t.getWithheldTax(), currency), plain(t.getSplitFrom()), plain(t.getSplitTo()),
                     money(t.getCashEffect(), currency),
-                    t.isAffectsBalance(), listed.oversold());
+                    t.isAffectsBalance(), listed.oversold(), t.getCreatedBy(), t.isUnvalidated());
         }
 
         private static String plain(BigDecimal value) {

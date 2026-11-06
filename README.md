@@ -8,12 +8,12 @@ A self-hosted portfolio tracker for individual investors. It works with any brok
 
 Brokerage apps show *what* you hold. They don't help you keep track of *why* you hold it, how risky it is, or whether your portfolio still follows your own rules.
 
-koifolio keeps your transactions, accounts and company analyses in one place. You use it through a web UI or, read-only so far, through agents over MCP. The app is open source and self-hosted, with plain-text export.
+koifolio keeps your transactions, accounts and company analyses in one place. You use it through a web UI or through agents over MCP. The app is open source and self-hosted, with plain-text export.
 
 ## Core ideas
 
 - **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
-- **Agents as first-class users.** A built-in MCP server exposes the same calculations the UI shows. Reading works today, and writing is next.
+- **Agents as first-class users.** A built-in MCP server exposes the same calculations the UI shows, and agents can enter data for you to review.
 - **Your data is never locked in.** Plain-text export and restore in a documented format.
 - **Multiple accounts.** Any kind of account, each with its own tax settings (e.g. a regular brokerage account, or a tax-free one like Polish IKE) — viewed separately or together.
 - **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
@@ -36,7 +36,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
-- **Unvalidated changes** — transactions added by agents count straight away, marked unvalidated, and wait in a tab for you to approve or reject.
+- **Review** — transactions added by agents count straight away, marked unvalidated, and wait on a page for you to approve or reject, next to a log of what changed.
 - **Login** — local user accounts with open registration, password, JWT access tokens.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 

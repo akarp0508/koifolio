@@ -12,6 +12,7 @@ import io.github.akarp0508.koifolio.TestDatabase;
 import io.github.akarp0508.koifolio.auth.UserRepository;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +34,7 @@ class McpTests {
 
     private static final List<String> READ_TOOLS = List.of("list_accounts", "get_portfolio", "get_history", "get_positions",
             "get_plan", "get_company", "list_transactions", "check_rules", "get_tax");
+    private static final List<String> WRITE_TOOLS = List.of("add_transaction", "update_company", "save_rule", "delete_rule");
 
     @Autowired
     private MockMvc mvc;
@@ -116,12 +118,14 @@ class McpTests {
     }
 
     @Test
-    void listsOnlyReadToolsAndMarksThem() throws Exception {
+    void listsEveryToolAndMarksWhichOnlyRead() throws Exception {
         String body = mcp(createToken(anna, "Claude"), "tools/list", "{}")
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
 
-        assertThat(JsonPath.<List<String>>read(body, "$.result.tools[*].name")).containsExactlyInAnyOrderElementsOf(READ_TOOLS);
-        assertThat(JsonPath.<List<Boolean>>read(body, "$.result.tools[*].annotations.readOnlyHint")).containsOnly(true);
+        assertThat(JsonPath.<List<String>>read(body, "$.result.tools[*].name"))
+                .containsExactlyInAnyOrderElementsOf(Stream.concat(READ_TOOLS.stream(), WRITE_TOOLS.stream()).toList());
+        assertThat(JsonPath.<List<String>>read(body, "$.result.tools[?(@.annotations.readOnlyHint == false)].name"))
+                .containsExactlyInAnyOrderElementsOf(WRITE_TOOLS);
     }
 
     @Test
@@ -217,5 +221,253 @@ class McpTests {
         String id = JsonPath.read(as(anna, get("/api/v1/agent-tokens")).andReturn().getResponse().getContentAsString(), "$[0].id");
 
         as(bob, delete("/api/v1/agent-tokens/" + id)).andExpect(status().isNotFound());
+    }
+
+    private String tokenWith(String name, String scopes) throws Exception {
+        String body = as(anna, post("/api/v1/agent-tokens").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"%s\",\"scopes\":%s}".formatted(name, scopes)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.secret");
+    }
+
+    private String buy(String token, String ticker) throws Exception {
+        return call(token, "add_transaction", """
+                {"account":"%s","type":"buy","date":"2026-02-02","affectsBalance":true,"ticker":"%s","quantity":"3","price":"10.5"}"""
+                .formatted(account, ticker));
+    }
+
+    private String balance() throws Exception {
+        String body = as(anna, get("/api/v1/accounts")).andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$[0].balance");
+    }
+
+    private String toolError(String token, String tool, String arguments) throws Exception {
+        String body = mcp(token, "tools/call", "{\"name\":\"%s\",\"arguments\":%s}".formatted(tool, arguments))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.isError").value(true))
+                .andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.result.content[0].text");
+    }
+
+    @Test
+    void anAgentTransactionCountsButWaitsForReview() throws Exception {
+        String added = buy(createToken(anna, "Claude"), "ABC");
+
+        assertThat(JsonPath.<String>read(added, "$.createdBy")).isEqualTo("Claude");
+        assertThat(JsonPath.<Boolean>read(added, "$.unvalidated")).isTrue();
+        assertThat(balance()).isEqualTo("468.50");
+        as(anna, get("/api/v1/positions")).andExpect(jsonPath("$[0].ticker").value("ABC"));
+        as(anna, get("/api/v1/dashboard")).andExpect(jsonPath("$.unvalidated").value(1));
+        as(anna, get("/api/v1/transactions").param("unvalidated", "true"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].ticker").value("ABC"));
+    }
+
+    @Test
+    void yourOwnTransactionsArentMarked() throws Exception {
+        as(anna, get("/api/v1/transactions"))
+                .andExpect(jsonPath("$[0].unvalidated").value(false))
+                .andExpect(jsonPath("$[0].createdBy").doesNotExist());
+    }
+
+    @Test
+    void approvingClearsTheMarkAndChangesNothingElse() throws Exception {
+        String id = JsonPath.read(buy(createToken(anna, "Claude"), "ABC"), "$.id");
+
+        as(anna, post("/api/v1/transactions/" + id + "/approve"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unvalidated").value(false))
+                .andExpect(jsonPath("$.createdBy").value("Claude"));
+
+        assertThat(balance()).isEqualTo("468.50");
+        as(anna, get("/api/v1/dashboard")).andExpect(jsonPath("$.unvalidated").value(0));
+        as(anna, post("/api/v1/transactions/" + id + "/approve")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void rejectingUndoesItEverywhereButKeepsTheRow() throws Exception {
+        String id = JsonPath.read(buy(createToken(anna, "Claude"), "ABC"), "$.id");
+
+        as(anna, post("/api/v1/transactions/" + id + "/reject")).andExpect(status().isNoContent());
+
+        assertThat(balance()).isEqualTo("500.00");
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(status().isNotFound());
+        as(anna, get("/api/v1/positions")).andExpect(jsonPath("$[?(@.ticker == 'ABC')]").isEmpty());
+        assertThat(jdbc.sql("SELECT count(*) FROM transactions WHERE id = ?::uuid AND deleted_at IS NOT NULL").param(id)
+                .query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void approveAllClearsEverythingWaiting() throws Exception {
+        String token = createToken(anna, "Claude");
+        buy(token, "ABC");
+        buy(token, "DEF");
+
+        as(anna, post("/api/v1/transactions/approve-all")).andExpect(jsonPath("$.approved").value(2));
+
+        as(anna, get("/api/v1/transactions").param("unvalidated", "true")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void onlyAgentTransactionsCanBeRejected() throws Exception {
+        String body = as(anna, get("/api/v1/transactions")).andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(body, "$[0].id");
+
+        as(anna, post("/api/v1/transactions/" + id + "/reject")).andExpect(status().isConflict());
+    }
+
+    @Test
+    void anotherUserCantReviewYourTransactions() throws Exception {
+        String id = JsonPath.read(buy(createToken(anna, "Claude"), "ABC"), "$.id");
+
+        as(bob, post("/api/v1/transactions/" + id + "/approve")).andExpect(status().isNotFound());
+        as(bob, post("/api/v1/transactions/" + id + "/reject")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void aBadTransactionIsExplainedToTheAgent() throws Exception {
+        String token = createToken(anna, "Claude");
+
+        assertThat(toolError(token, "add_transaction", """
+                {"account":"%s","type":"buy","date":"2026-02-02","affectsBalance":true,"ticker":"ABC"}""".formatted(account)))
+                .contains("quantity");
+        assertThat(toolError(token, "add_transaction", """
+                {"account":"%s","type":"buy","date":"2026-02-02","affectsBalance":true,"ticker":"ABC","quantity":"1","price":"1.1234567"}"""
+                .formatted(account))).contains("price");
+        assertThat(toolError(token, "add_transaction", """
+                {"account":"%s","type":"withdrawal","date":"2026-02-02","affectsBalance":true,"amount":"9000"}""".formatted(account)))
+                .contains("Main", "-8500");
+        assertThat(toolError(token, "add_transaction", """
+                {"account":"%s","type":"gift","date":"2026-02-02","affectsBalance":true}""".formatted(account)))
+                .contains("deposit, withdrawal, buy");
+        assertThat(toolError(token, "add_transaction", """
+                {"account":"%s","type":"deposit","date":"2026-02-02","affectsBalance":true,"amount":"lots"}""".formatted(account)))
+                .contains("amount");
+        assertThat(balance()).isEqualTo("500.00");
+    }
+
+    @Test
+    void typesWorkInAnyCaseAndMoneyStaysExact() throws Exception {
+        String added = call(createToken(anna, "Claude"), "add_transaction", """
+                {"account":"%s","type":"DEPOSIT","date":"2026-02-02","affectsBalance":true,"amount":"0.1"}""".formatted(account));
+
+        assertThat(JsonPath.<String>read(added, "$.type")).isEqualTo("deposit");
+        assertThat(balance()).isEqualTo("500.10");
+    }
+
+    @Test
+    void anAgentCantWriteToAnotherUsersAccount() throws Exception {
+        assertThat(toolError(createToken(bob, "Claude"), "add_transaction", """
+                {"account":"%s","type":"deposit","date":"2026-02-02","affectsBalance":true,"amount":"5"}""".formatted(account)))
+                .contains("not found");
+        assertThat(balance()).isEqualTo("500.00");
+    }
+
+    @Test
+    void aTokenCanOnlyDoWhatItsAllowed() throws Exception {
+        String readOnly = tokenWith("Reader", "[]");
+
+        assertThat(toolError(readOnly, "add_transaction", """
+                {"account":"%s","type":"deposit","date":"2026-02-02","affectsBalance":true,"amount":"5"}""".formatted(account)))
+                .contains("isn't allowed");
+        assertThat(toolError(readOnly, "update_company", "{\"ticker\":\"PAS\",\"risk\":2}")).contains("isn't allowed");
+        assertThat(toolError(readOnly, "save_rule", "{\"type\":\"max_position_weight\",\"limitPercent\":\"20\"}"))
+                .contains("isn't allowed");
+        assertThat(JsonPath.<String>read(call(readOnly, "list_accounts", "{}"), "$[0].name")).isEqualTo("Main");
+    }
+
+    @Test
+    void rulesNeedTheirOwnPermissionByDefault() throws Exception {
+        String defaults = createToken(anna, "Claude");
+
+        assertThat(toolError(defaults, "save_rule", "{\"type\":\"max_position_weight\",\"limitPercent\":\"20\"}"))
+                .contains("isn't allowed");
+        buy(defaults, "ABC");
+        call(defaults, "update_company", "{\"ticker\":\"ABC\",\"risk\":2}");
+    }
+
+    @Test
+    void updateCompanyOnlyChangesWhatItsGiven() throws Exception {
+        String token = createToken(anna, "Claude");
+        call(token, "update_company", "{\"ticker\":\"PAS\",\"sector\":\"Tech\",\"thesis\":\"Cheap\",\"tags\":[\"core\"]}");
+
+        String company = call(token, "update_company", "{\"ticker\":\"pas\",\"risk\":2}");
+
+        assertThat(JsonPath.<String>read(company, "$.sector")).isEqualTo("Tech");
+        assertThat(JsonPath.<String>read(company, "$.thesis")).isEqualTo("Cheap");
+        assertThat(JsonPath.<Integer>read(company, "$.risk")).isEqualTo(2);
+        assertThat(JsonPath.<List<String>>read(company, "$.tags")).containsExactly("core");
+    }
+
+    @Test
+    void updateCompanyAddsANewOne() throws Exception {
+        String company = call(createToken(anna, "Claude"), "update_company", "{\"ticker\":\"new\",\"name\":\"New Co\"}");
+
+        assertThat(JsonPath.<String>read(company, "$.ticker")).isEqualTo("NEW");
+    }
+
+    @Test
+    void updateCompanyChecksItsFields() throws Exception {
+        assertThat(toolError(createToken(anna, "Claude"), "update_company", "{\"ticker\":\"PAS\",\"risk\":9}")).contains("risk");
+    }
+
+    @Test
+    void rulesCanBeAddedReplacedAndRemoved() throws Exception {
+        String token = tokenWith("Rules", "[\"rules:write\"]");
+
+        String id = JsonPath.read(call(token, "save_rule", "{\"type\":\"max_position_weight\",\"limitPercent\":\"20\"}"), "$.id");
+        call(token, "save_rule", "{\"id\":\"%s\",\"type\":\"max_position_weight\",\"limitPercent\":\"25\"}".formatted(id));
+        as(anna, get("/api/v1/rules")).andExpect(jsonPath("$[0].limitPercent").value("25"));
+
+        call(token, "delete_rule", "{\"id\":\"%s\"}".formatted(id));
+        as(anna, get("/api/v1/rules")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void theChangeLogNamesTheAgentAndKeepsBothSides() throws Exception {
+        String token = createToken(anna, "Claude");
+        String id = JsonPath.read(buy(token, "ABC"), "$.id");
+        as(anna, post("/api/v1/transactions/" + id + "/approve")).andExpect(status().isOk());
+
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[0].action").value("approve"))
+                .andExpect(jsonPath("$[0].actorType").value("USER"))
+                .andExpect(jsonPath("$[0].actorName").doesNotExist())
+                .andExpect(jsonPath("$[0].before.unvalidated").value(true))
+                .andExpect(jsonPath("$[0].after.unvalidated").value(false))
+                .andExpect(jsonPath("$[1].action").value("create"))
+                .andExpect(jsonPath("$[1].actorType").value("AGENT"))
+                .andExpect(jsonPath("$[1].actorName").value("Claude"))
+                .andExpect(jsonPath("$[1].summary").value("Added buy ABC on 2026-02-02"))
+                .andExpect(jsonPath("$[1].before").doesNotExist())
+                .andExpect(jsonPath("$[1].after.ticker").value("ABC"));
+    }
+
+    @Test
+    void yourOwnChangesAreLoggedToo() throws Exception {
+        String body = as(anna, get("/api/v1/transactions")).andReturn().getResponse().getContentAsString();
+        String id = JsonPath.read(body, "$[0].id");
+
+        as(anna, delete("/api/v1/transactions/" + id)).andExpect(status().isNoContent());
+
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[0].action").value("delete"))
+                .andExpect(jsonPath("$[0].before.ticker").value("PAS"))
+                .andExpect(jsonPath("$[0].after").doesNotExist());
+    }
+
+    @Test
+    void aRefusedChangeLeavesNoLogEntry() throws Exception {
+        String before = as(anna, get("/api/v1/audit-log")).andReturn().getResponse().getContentAsString();
+
+        toolError(createToken(anna, "Claude"), "add_transaction", """
+                {"account":"%s","type":"withdrawal","date":"2026-02-02","affectsBalance":true,"amount":"9000"}""".formatted(account));
+
+        as(anna, get("/api/v1/audit-log")).andExpect(jsonPath("$.length()").value(JsonPath.<Integer>read(before, "$.length()")));
+    }
+
+    @Test
+    void theChangeLogIsPrivate() throws Exception {
+        as(bob, get("/api/v1/audit-log")).andExpect(jsonPath("$.length()").value(0));
     }
 }

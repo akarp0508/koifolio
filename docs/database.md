@@ -13,8 +13,7 @@ accounts            id, user_id, name, description, currency, balance, balance_s
                     planned: archived_at
 
 transactions        id, user_id, account_id, instrument_id, type, date, quantity, price, fee, amount,
-                    withheld_tax, cash_effect, affects_balance, created_at
-                    planned: revisions, soft delete, sequence, created_by, validated_at
+                    withheld_tax, cash_effect, affects_balance, created_at, created_by, validated_at, deleted_at
 
 instruments         id, user_id, ticker, name, sector, risk, thesis, analysis, listed, quote_symbol, quote_isin, quote_currency, quote_checked_at, created_at
                     UNIQUE (user_id, ticker)
@@ -34,7 +33,10 @@ price_overrides     user_id, instrument_id, price, currency, set_at
                     PK (user_id, instrument_id)
 
 audit_log           id, user_id, actor_type (user | agent), actor_name, entity_type, entity_id,
-                    action, before (jsonb), after (jsonb), created_at
+                    action, summary, before (jsonb), after (jsonb), created_at
+
+agent_tokens        id, user_id, name, token_hash, scopes, expires_on, last_used_at, created_at
+                    UNIQUE (user_id, name)
 ```
 
 - Each type uses a subset of the columns, enforced by a `CHECK`.

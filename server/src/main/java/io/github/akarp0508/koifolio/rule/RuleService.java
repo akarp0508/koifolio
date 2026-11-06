@@ -4,6 +4,8 @@ import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.FieldValidationException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
+import io.github.akarp0508.koifolio.audit.Actor;
+import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.domain.RuleCheck;
 import io.github.akarp0508.koifolio.domain.RuleType;
@@ -14,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,14 +32,16 @@ public class RuleService {
     private final AuthService authService;
     private final PositionService positions;
     private final FxService fx;
+    private final AuditLog auditLog;
 
     RuleService(RuleRepository rules, AccountRepository accounts, AuthService authService, PositionService positions,
-                FxService fx) {
+                FxService fx, AuditLog auditLog) {
         this.rules = rules;
         this.accounts = accounts;
         this.authService = authService;
         this.positions = positions;
         this.fx = fx;
+        this.auditLog = auditLog;
     }
 
     /** @param unpriced open positions left out of the check, lacking a price or an FX rate */
@@ -55,7 +60,7 @@ public class RuleService {
 
     @Transactional
     public void restore(UUID userId, Input input) {
-        create(userId, input);
+        save(userId, new Rule(userId), input);
     }
 
     @Transactional(readOnly = true)
@@ -65,21 +70,40 @@ public class RuleService {
     }
 
     @Transactional
-    Rule create(UUID userId, Input input) {
+    Rule create(UUID userId, Input input, Actor actor) {
         authService.currentUser(userId);
-        return save(userId, new Rule(userId), input);
+        Rule rule = save(userId, new Rule(userId), input);
+        log(userId, actor, rule, "create", "Added", null, input);
+        return rule;
     }
 
     @Transactional
-    Rule update(UUID userId, UUID id, Input input) {
+    Rule update(UUID userId, UUID id, Input input, Actor actor) {
         authService.currentUser(userId);
-        return save(userId, find(userId, id), input);
+        Rule rule = find(userId, id);
+        Input before = input(rule);
+        save(userId, rule, input);
+        log(userId, actor, rule, "update", "Changed", before, input);
+        return rule;
     }
 
     @Transactional
-    void delete(UUID userId, UUID id) {
+    void delete(UUID userId, UUID id, Actor actor) {
         authService.currentUser(userId);
-        rules.delete(find(userId, id));
+        Rule rule = find(userId, id);
+        log(userId, actor, rule, "delete", "Removed", input(rule), null);
+        rules.delete(rule);
+    }
+
+    private void log(UUID userId, Actor actor, Rule rule, String action, String verb, Input before, Input after) {
+        Input values = after == null ? before : after;
+        String summary = "%s rule %s %s%%".formatted(verb, values.type().name().toLowerCase(Locale.ROOT).replace('_', ' '),
+                values.limitPercent().stripTrailingZeros().toPlainString());
+        auditLog.record(userId, actor, new AuditLog.Change("rule", rule.getId(), action, summary, before, after));
+    }
+
+    private static Input input(Rule rule) {
+        return new Input(rule.getType(), rule.getAccountId(), rule.getLimitPercent(), rule.getMaxRisk());
     }
 
     private Rule save(UUID userId, Rule rule, Input input) {
