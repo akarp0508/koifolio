@@ -1,10 +1,52 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, AuditEntry, Transaction } from '../api/client'
+import { fieldChanges } from '../auditChanges'
 import { TYPE_LABELS, details, transactionAmount } from '../transactions'
 import { ConfirmDialog } from './ConfirmDialog'
 
 const who = (entry: AuditEntry) => entry.actorType === 'AGENT' ? entry.actorName : 'You'
+
+function LogEntry({ entry }: { entry: AuditEntry }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <>
+      <tr className="clickable" onClick={() => setOpen(!open)}>
+        <td className="nowrap">
+          <button className="expand" aria-expanded={open} aria-label={`Details of ${entry.summary}`}>{open ? '▾' : '▸'}</button>
+          {entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ''}
+        </td>
+        <td>{who(entry)}</td>
+        <td>{entry.summary}</td>
+      </tr>
+      {open && (
+        <tr>
+          <td colSpan={3}>
+            <table className="log-changes">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Before</th>
+                  <th>After</th>
+                </tr>
+              </thead>
+              <tbody>
+                {fieldChanges(entry.before, entry.after).map(({ field, before, after }) => (
+                  <tr key={field}>
+                    <td>{field}</td>
+                    <td>{before ?? '—'}</td>
+                    <td>{after ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </td>
+        </tr>
+      )}
+    </>
+  )
+}
 
 export function Review() {
   const [waiting, setWaiting] = useState<Transaction[] | null>(null)
@@ -93,7 +135,7 @@ export function Review() {
           )}
 
           <h2 className="section-title">Change log</h2>
-          {log.length === 0 && <p className="muted">Changes to transactions, companies and rules will show here.</p>}
+          {log.length === 0 && <p className="muted">Changes to transactions, companies, rules, accounts and plans will show here.</p>}
           {log.length > 0 && (
             <div className="table-scroll">
               <table>
@@ -105,13 +147,7 @@ export function Review() {
                   </tr>
                 </thead>
                 <tbody>
-                  {log.map((entry) => (
-                    <tr key={entry.id}>
-                      <td className="nowrap">{entry.createdAt ? new Date(entry.createdAt).toLocaleString() : ''}</td>
-                      <td>{who(entry)}</td>
-                      <td>{entry.summary}</td>
-                    </tr>
-                  ))}
+                  {log.map((entry) => <LogEntry key={entry.id} entry={entry} />)}
                 </tbody>
               </table>
             </div>

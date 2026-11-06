@@ -613,8 +613,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Recent changes to transactions, companies and rules, newest first
-         * @description From you or an agent. before and after hold the values on each side of the change.
+         * Recent changes to transactions, companies, rules, accounts and plans, newest first
+         * @description From you or an agent. before and after hold the values on each side of the change. Deleting an account keeps the transactions, plans and rules that went with it under before.
          */
         get: operations["recent"];
         put?: never;

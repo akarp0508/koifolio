@@ -981,3 +981,8 @@ button.sell {
   overflow-wrap: anywhere;
   user-select: all;
 }
+
+.log-changes td {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
