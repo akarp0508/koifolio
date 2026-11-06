@@ -37,17 +37,20 @@ class AccountService {
 
     @Transactional
     Account create(UUID userId, String name, String description, String currencyCode, BigDecimal balance,
-                   CostMethod costMethod) {
+                   CostMethod costMethod, BigDecimal taxRate) {
         requireUser(userId);
         Currency currency = parseCurrency(currencyCode);
         BigDecimal amount = balance == null ? BigDecimal.ZERO : balance;
         requireFits(amount, currency);
-        return accounts.save(new Account(userId, name.strip(), description == null ? "" : description,
-                currency.getCurrencyCode(), amount, costMethod == null ? CostMethod.AVERAGE : costMethod));
+        Account account = new Account(userId, name.strip(), description == null ? "" : description,
+                currency.getCurrencyCode(), amount, costMethod == null ? CostMethod.AVERAGE : costMethod);
+        account.setTaxRate(taxRate);
+        return accounts.save(account);
     }
 
     @Transactional
-    Account update(UUID userId, UUID id, String name, String description, BigDecimal balance, CostMethod costMethod) {
+    Account update(UUID userId, UUID id, String name, String description, BigDecimal balance, CostMethod costMethod,
+                   BigDecimal taxRate, boolean clearTaxRate) {
         requireUser(userId);
         Account account = accounts.findForUpdate(id, userId).orElseThrow(AccountService::notFound);
         if (name != null) {
@@ -62,6 +65,11 @@ class AccountService {
         }
         if (costMethod != null) {
             account.setCostMethod(costMethod);
+        }
+        if (clearTaxRate) {
+            account.setTaxRate(null);
+        } else if (taxRate != null) {
+            account.setTaxRate(taxRate);
         }
         return account;
     }

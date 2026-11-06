@@ -11,7 +11,9 @@ import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PositionCalculator;
 import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
+import io.github.akarp0508.koifolio.domain.TaxEstimate;
 import io.github.akarp0508.koifolio.domain.Trade;
+import io.github.akarp0508.koifolio.domain.Valuation;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import io.github.akarp0508.koifolio.instrument.InstrumentService.InstrumentView;
 import io.github.akarp0508.koifolio.instrument.InstrumentService.QuoteRef;
@@ -26,6 +28,7 @@ import java.math.MathContext;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +102,12 @@ public class PositionService {
                            Optional<BigDecimal> accountPrice, Optional<PositionPlan> plan, String baseCurrency,
                            Optional<PositionResult> inBase, BigDecimal rateToBase) {
 
+        /** What selling now would gain in the base currency, against each purchase's rate. Empty without a price. */
+        public Optional<BigDecimal> gainInBase() {
+            return accountPrice.map(price -> Valuation.of(result, price).value()).flatMap(this::convertToBase)
+                    .flatMap(value -> inBase.map(base -> value.subtract(base.cost(), MathContext.DECIMAL128)));
+        }
+
         /** An amount in the account's currency at today's rate. */
         Optional<BigDecimal> convertToBase(BigDecimal amount) {
             return Optional.ofNullable(rateToBase).map(rate -> amount.multiply(rate, MathContext.DECIMAL128));
@@ -152,6 +161,29 @@ public class PositionService {
         return new History(position.account(), normalized,
                 PositionHistory.calculate(trades, inAccountCurrency.orElse(closes), position.account().getCostMethod()),
                 ref.currency(), true, inAccountCurrency.isEmpty());
+    }
+
+    /** Realized gains in the base currency, per calendar year and account. */
+    @Transactional(readOnly = true)
+    public Map<Integer, Map<UUID, BigDecimal>> realizedByYear(UUID userId) {
+        User user = authService.currentUser(userId);
+        FxService.History rates = fx.history();
+        Map<UUID, Account> accountsById = accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId).stream()
+                .collect(Collectors.toMap(Account::getId, Function.identity()));
+        Map<List<UUID>, List<AccountTrade>> holdings = transactions.tradesOldestFirst(userId).stream()
+                .collect(Collectors.groupingBy(trade -> List.of(trade.accountId(), trade.instrumentId()),
+                        LinkedHashMap::new, Collectors.toList()));
+
+        Map<Integer, Map<UUID, BigDecimal>> years = new HashMap<>();
+        holdings.forEach((key, trades) -> {
+            Account account = accountsById.get(key.getFirst());
+            inBase(trades, account.getCurrency(), user, rates)
+                    .map(converted -> TaxEstimate.gainsByYear(converted, account.getCostMethod()))
+                    .orElse(Map.of())
+                    .forEach((year, gain) -> years.computeIfAbsent(year, unused -> new HashMap<>())
+                            .merge(account.getId(), gain, (a, b) -> a.add(b, MathContext.DECIMAL128)));
+        });
+        return years;
     }
 
     /**

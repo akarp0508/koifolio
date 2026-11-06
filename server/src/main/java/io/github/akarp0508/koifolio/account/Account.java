@@ -41,6 +41,10 @@ public class Account {
     @Column(name = "cost_method", nullable = false)
     private CostMethod costMethod;
 
+    /** In percent. Null means not set yet, which is different from a tax-free 0. */
+    @Column(name = "tax_rate", precision = 7, scale = 4)
+    private BigDecimal taxRate;
+
     /** The last day the balance was set by hand. Transactions dated before it are backfill by default. */
     @Column(name = "balance_set_on", nullable = false)
     private LocalDate balanceSetOn;
@@ -81,6 +85,14 @@ public class Account {
 
     public BigDecimal getBalance() {
         return balance;
+    }
+
+    public BigDecimal getTaxRate() {
+        return taxRate;
+    }
+
+    void setTaxRate(BigDecimal taxRate) {
+        this.taxRate = taxRate;
     }
 
     public CostMethod getCostMethod() {

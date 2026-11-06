@@ -1,10 +1,13 @@
 package io.github.akarp0508.koifolio.account;
 
 import io.github.akarp0508.koifolio.domain.CostMethod;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -53,7 +56,7 @@ class AccountController {
     @Operation(summary = "Create an account", description = "The balance defaults to 0. The currency can't be changed later.")
     AccountResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateAccountRequest request) {
         return AccountResponse.of(accounts.create(userId(jwt), request.name(), request.description(),
-                request.currency(), request.balance(), request.costMethod()));
+                request.currency(), request.balance(), request.costMethod(), request.taxRate()));
     }
 
     @GetMapping("/{id}")
@@ -67,7 +70,7 @@ class AccountController {
     AccountResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                            @Valid @RequestBody UpdateAccountRequest request) {
         return AccountResponse.of(accounts.update(userId(jwt), id, request.name(), request.description(),
-                request.balance(), request.costMethod()));
+                request.balance(), request.costMethod(), request.taxRate(), Boolean.TRUE.equals(request.clearTaxRate())));
     }
 
     @DeleteMapping("/{id}")
@@ -88,7 +91,12 @@ class AccountController {
             @Schema(example = "PLN") String currency,
             @Digits(integer = 15, fraction = 4, message = DIGITS_MESSAGE)
             @Schema(type = "string", example = "5000.00") BigDecimal balance,
-            @Schema(description = "How positions work out cost. Defaults to average.") CostMethod costMethod) {
+            @Schema(description = "How positions work out cost. Defaults to average.") CostMethod costMethod,
+            @DecimalMin(value = "0", message = "must be between 0 and 100")
+            @DecimalMax(value = "100", message = "must be between 0 and 100")
+            @Digits(integer = 3, fraction = 4, message = "must have at most 4 decimal places")
+            @Schema(type = "string", description = "In percent, e.g. 19. Left unset, the account is left out of tax estimates")
+            BigDecimal taxRate) {
     }
 
     record UpdateAccountRequest(
@@ -97,19 +105,27 @@ class AccountController {
             @Size(max = 2000, message = "must be at most 2000 characters") String description,
             @Digits(integer = 15, fraction = 4, message = DIGITS_MESSAGE)
             @Schema(type = "string", example = "5000.00") BigDecimal balance,
-            CostMethod costMethod) {
+            CostMethod costMethod,
+            @DecimalMin(value = "0", message = "must be between 0 and 100")
+            @DecimalMax(value = "100", message = "must be between 0 and 100")
+            @Digits(integer = 3, fraction = 4, message = "must have at most 4 decimal places")
+            @Schema(type = "string", description = "In percent, e.g. 19. Left unset, the account is left out of tax estimates")
+            BigDecimal taxRate,
+            @Schema(description = "Back to not set") Boolean clearTaxRate) {
     }
 
     /** @param balanceSetOn the last day the balance was set by hand */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     record AccountResponse(UUID id, String name, String description, String currency,
                            @Schema(example = "5000.00") String balance, LocalDate balanceSetOn,
-                           CostMethod costMethod) {
+                           CostMethod costMethod, @Schema(description = "In percent; left out if not set") String taxRate) {
 
         static AccountResponse of(Account account) {
             int digits = Currency.getInstance(account.getCurrency()).getDefaultFractionDigits();
             String balance = account.getBalance().setScale(digits, RoundingMode.UNNECESSARY).toPlainString();
             return new AccountResponse(account.getId(), account.getName(), account.getDescription(),
-                    account.getCurrency(), balance, account.getBalanceSetOn(), account.getCostMethod());
+                    account.getCurrency(), balance, account.getBalanceSetOn(), account.getCostMethod(),
+                    account.getTaxRate() == null ? null : account.getTaxRate().stripTrailingZeros().toPlainString());
         }
     }
 }
