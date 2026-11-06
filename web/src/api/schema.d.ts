@@ -215,6 +215,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/positions/{accountId}/{ticker}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A position's value on each trading day since its first trade
+         * @description Closes are stored daily and missing days are filled in automatically, so a new or backfilled position can take a few minutes to appear. Prices are adjusted for splits.
+         */
+        get: operations["history"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -390,6 +410,24 @@ export interface components {
             unrealizedGain?: string;
             unrealizedPercent?: string;
             currencyMismatch?: boolean;
+        };
+        HistoryPoint: {
+            /** Format: date */
+            date?: string;
+            quantity?: string;
+            close?: string;
+            value?: string;
+            cost?: string;
+            traded?: boolean;
+        };
+        HistoryResponse: {
+            /** Format: uuid */
+            accountId?: string;
+            ticker?: string;
+            currency?: string;
+            covered?: boolean;
+            currencyMismatch?: boolean;
+            points?: components["schemas"]["HistoryPoint"][];
         };
     };
     responses: never;
@@ -801,6 +839,29 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["PositionResponse"][];
+                };
+            };
+        };
+    };
+    history: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                accountId: string;
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["HistoryResponse"];
                 };
             };
         };

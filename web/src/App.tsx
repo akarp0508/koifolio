@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
@@ -7,6 +7,10 @@ import { Login } from './components/Login'
 import { Positions } from './components/Positions'
 import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
+
+// Holds the chart library, which most pages don't need
+const PositionDetail = lazy(() =>
+  import('./components/PositionDetail').then((module) => ({ default: module.PositionDetail })))
 
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
 
@@ -42,7 +46,8 @@ function App() {
   const [loading, setLoading] = useState(hasToken)
   const { theme, nextTheme } = useTheme()
   const hash = useHash()
-  const current = PAGES.find((page) => page.hash === hash) ?? PAGES[0]
+  const detail = hash.match(/^#positions\/([^/]+)\/(.+)$/)
+  const current = (detail ? PAGES.find((page) => page.hash === '#positions') : PAGES.find((page) => page.hash === hash)) ?? PAGES[0]
 
   const logOut = useCallback(() => {
     clearToken()
@@ -92,7 +97,13 @@ function App() {
         </div>
       </nav>
       <main className="content">
-        <current.Page />
+        {detail
+          ? (
+            <Suspense fallback={<p className="muted">Loading…</p>}>
+              <PositionDetail key={hash} accountId={detail[1]} ticker={decodeURIComponent(detail[2])} />
+            </Suspense>
+          )
+          : <current.Page />}
       </main>
     </div>
   )

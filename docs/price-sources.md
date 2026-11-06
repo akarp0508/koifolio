@@ -17,6 +17,7 @@ Implemented in `BankierQuoteProvider`, sent with the user agent `koifolio`.
 3. `investor-chart/?symbols=<symbol>` gives the currency, which quotes don't include.
 4. The symbol and currency are stored on the instrument, and tickers that aren't found are retried after a day.
 5. Every 15 minutes, one `instrument-header` request per 50 symbols updates the shared `quotes` table. If it fails, the last prices stay.
+6. In the same run, `PriceHistoryService` compares what's stored with each symbol's first trade across all users, and fetches anything missing, up to 20 symbols per run. Each symbol is checked once a day, re-reading the last 7 days in case of corrections, so downtime and backfilled transactions repair themselves.
 
 ## Current quotes
 | Source | Status |
@@ -25,13 +26,21 @@ Implemented in `BankierQuoteProvider`, sent with the user agent `koifolio`.
 | biznesradar `/notowania/<TICKER>` | ✅ HTML, price in `itemprop="price"`. Allowed by robots.txt. Fallback. |
 | NBP API (FX, reference rates) | ✅ official, free, no key |
 
-## Historical closes (for backfill)
+## Historical closes
+
+Implemented in `BankierQuoteProvider`. Checked live on 2026-11-06.
+
 | Source | Status |
 |---|---|
-| bankier `www.bankier.pl/new-charts/get-data?symbol=…&type=ohlc&max_period=true` | ⚠️ JSON OHLC from listing date, but **frozen: data ends 2026-01-02** |
-| bankier `api.bankier.pl/quotes/public/investor-chart/` | ❓ the new chart API; parameters not figured out yet |
-| biznesradar `/notowania-historyczne/<TICKER>` | ⚠️ HTML OHLC + volume, ~50 sessions per page. robots.txt disallows pages 2+, so only the latest page is used |
-| EODHD (`.WAR`) | ❓ free tier with a key; limits not verified |
+| `company-profile-chart/<isin>/?symbols=<symbol>` | ✅ GPW, NewConnect and ETFs, e.g. PKO from 2004. Takes `date_from` and `date_to` in ms, or `max_period=true` |
+| `foreign-company-section-chart/?symbols=<symbol>` | ✅ US and German stocks, e.g. Apple from 1980. Same parameters |
+| `www.bankier.pl/new-charts/get-data` | ⚠️ the old endpoint, frozen at 2026-01-02; not used |
+| `investor-chart/` | ⚠️ only useful for the currency |
+
+Rows are `[time, open, high, low, close]`. Foreign responses nest them in `data[0]`.
+
+- **History is split-adjusted:** Apple shows about $109 for August 2020, a quarter of what it traded at before its 4:1 split.
+- **Today's row is unfinished,** so only earlier days are stored.
 
 ## Not usable
 | Source | Status |
@@ -42,5 +51,5 @@ Implemented in `BankierQuoteProvider`, sent with the user agent `koifolio`.
 
 ## Provider chain
 - **Current:** bankier `instrument-header`. Planned: biznesradar as a fallback, and manual prices.
-- **History:** bankier legacy chart (until 2026-01-02) + biznesradar latest page + our own daily snapshots. Until `investor-chart` or another source fills the 2026 gap, backfill (v1.1) is incomplete for that period.
+- **History:** the bankier chart endpoints above, stored in `daily_closes`.
 - **Cache:** every cached price stores its source and fetch time.

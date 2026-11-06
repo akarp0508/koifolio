@@ -34,11 +34,11 @@ koifolio is a self-hosted portfolio tracker (universal: not tied to any broker, 
 Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`web/`), deployed as one Docker Compose stack (app + Postgres, multi-arch image).
 
 - `server/`: Spring Boot.
-  - `domain` package: pure domain logic, currently `PositionCalculator` (positions, average/FIFO cost basis, realized gains). Later P/L, tax, bond valuation and rules go here too. It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
+  - `domain` package: pure domain logic, currently `PositionCalculator`, `Valuation` and `PositionHistory`. Later P/L, tax, bond valuation and rules go here too. It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
   - REST API with an OpenAPI spec, plus an MCP server for agents (Spring AI).
   - Spring Security: local accounts with JWT access tokens (`auth` package). Later, an OAuth2 authorization server for MCP clients.
   - Spring Data JPA + Flyway on Postgres. Flyway owns the schema; JPA entities stay separate from `domain` records.
-  - `price` package: a pluggable `QuoteProvider` (bankier) and a 15-minute schedule. Never call a provider inside a database transaction. FX, CPI, snapshots and backfill come later.
+  - `price` package: a pluggable `QuoteProvider` (bankier) and a 15-minute schedule that updates quotes and fills `daily_closes`. Never call a provider inside a database transaction. FX and CPI come later.
   - Serves the built `web` app.
 - `web/`: React + Vite + TypeScript + Recharts, PL/EN, light/dark. Display and editing only, with no calculations. API types are generated from the OpenAPI spec.
 

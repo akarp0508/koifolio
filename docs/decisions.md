@@ -10,6 +10,7 @@
 - **Universal by design.** Nothing in the data model is tied to one broker, exchange, country or tax system. Polish things (bond series, tax presets, NBP) are presets and pluggable providers on top of a generic model.
 - **Automatic prices are limited for now** to what bankier covers, to keep the fetching code simple. Anything else shows no price.
 - **Prices are shared and fetched every 15 minutes,** with a Refresh button on a one-minute cooldown. See [price-sources.md](price-sources.md).
+- **Daily closes are stored locally,** shared between users, from each symbol's first trade onward. Only finished days are stored, and a check in the 15-minute run fills anything missing. Position values over time are calculated from them on request.
 - **No manual prices yet.** They'd matter for instruments the source doesn't cover, or if it goes down.
 - **A price in another currency than its account isn't valued yet:** the price shows, and value and P/L stay blank. This is a stopgap, to be handled properly with FX.
 - **Each account has one currency and one balance** in the MVP, set directly by the user. A multi-currency broker account means several accounts. This replaces the earlier plan of cash per currency within an account. How transactions affect the balance is decided in the transactions step.
@@ -44,6 +45,4 @@
 
 ## Open
 
-| # | Question | Notes |
-|---|---|---|
-| 1 | How do we fill the history gap for 2026? | Find the `investor-chart` parameters from the browser's network tab, or evaluate EODHD's free tier |
+Nothing right now.

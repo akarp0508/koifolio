@@ -130,6 +130,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 | Request | Purpose |
 |---|---|
 | `GET /positions` | By ticker, then account. Filters: `account`; `closed=true` includes fully sold positions |
+| `GET /positions/{accountId}/{ticker}/history` | One point per trading day since the first trade |
 
 ```json
 {
@@ -157,6 +158,26 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
 - Price fields are left out when there's no price, or nothing is held. A price in another currency than the account sets `currencyMismatch` and leaves out `value` and the gains.
+
+History response:
+
+```json
+{
+  "accountId": "…",
+  "ticker": "PAS",
+  "currency": "PLN",
+  "covered": true,
+  "currencyMismatch": false,
+  "points": [
+    {"date": "2026-03-02", "quantity": "10", "close": "120", "value": "1200.00", "cost": "1000.00", "traded": true}
+  ]
+}
+```
+
+- Today's point comes from the current price while the day is unfinished.
+- `covered` is false when the price source doesn't have the ticker. Covered with no points means history is still being fetched.
+- With `currencyMismatch`, points have `close` but no `value`.
+- `traded` marks a buy or sell since the previous point, and a trade on a non-trading day shows on the next one.
 
 ## Portfolio
 

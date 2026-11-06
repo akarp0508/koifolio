@@ -4,6 +4,8 @@ import type { Account, Position } from '../api/client'
 import { formatAmount, formatGain, formatQuoteTime } from '../format'
 
 const ALL = ''
+const detailHash = (position: Position) => `#positions/${position.accountId}/${encodeURIComponent(position.ticker)}`
+
 const gainClass = (amount?: string) => {
   if (amount === undefined || /^-?[0.]+$/.test(amount)) {
     return 'number'
@@ -104,9 +106,13 @@ export function Positions() {
             </thead>
             <tbody>
               {shown.map((position) => (
-                <tr key={`${position.accountId}-${position.ticker}`} className={position.closed ? 'closed' : undefined}>
+                <tr
+                  key={`${position.accountId}-${position.ticker}`}
+                  className={position.closed ? 'closed clickable' : 'clickable'}
+                  onClick={() => { window.location.hash = detailHash(position) }}
+                >
                   <td>
-                    {position.ticker}
+                    <a href={detailHash(position)} onClick={(e) => e.stopPropagation()}>{position.ticker}</a>
                     {position.incomplete && (
                       <span className="warning" role="img" aria-label={INCOMPLETE_HINT} title={INCOMPLETE_HINT}>⚠</span>
                     )}
