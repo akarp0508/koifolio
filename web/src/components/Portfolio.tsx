@@ -1,11 +1,12 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Dashboard, DashboardSlice, Instrument, PeriodChange, PortfolioHistory, Position, Settings, TaxEstimate } from '../api/client'
+import type { Account, Dashboard, DashboardSlice, Instrument, PeriodChange, PortfolioHistory, Position, RuleResult, Settings, TaxEstimate } from '../api/client'
 import { formatAmount, formatGain, formatQuoteTime, gainClass } from '../format'
 import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
+import { ruleLabel } from '../rules'
 import { today } from '../transactions'
 import { Holdings } from './Holdings'
 import { InstrumentDialog } from './InstrumentDialog'
@@ -101,6 +102,7 @@ export function Portfolio() {
   const [positionTags, setPositionTags] = useState<string[]>([])
   const [history, setHistory] = useState<PortfolioHistory | null>(null)
   const [tax, setTax] = useState<TaxEstimate | null>(null)
+  const [ruleResults, setRuleResults] = useState<RuleResult[]>([])
   const [range, setRange] = useState<Range>('1Y')
   const [error, setError] = useState<ApiError | null>(null)
   const [refreshing, setRefreshing] = useState(false)
@@ -124,9 +126,10 @@ export function Portfolio() {
   }, [fetchDashboard])
 
   const fetchOverview = useCallback(() =>
-    Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax(), api.listInstruments()])
-      .then(([accountList, positionList, settingsData, taxData, instrumentList]) => {
+    Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax(), api.listInstruments(), api.checkRules()])
+      .then(([accountList, positionList, settingsData, taxData, instrumentList, ruleList]) => {
         setTax(taxData)
+        setRuleResults(ruleList)
         setInstruments(instrumentList)
         setAccounts(accountList)
         setPositions(positionList)
@@ -149,8 +152,7 @@ export function Portfolio() {
     setError(null)
     try {
       await api.refreshPrices()
-      setPositions(await api.listPositions())
-      await fetchDashboard()
+      await Promise.all([fetchOverview(), fetchDashboard()])
     } catch (e) {
       setError(e as ApiError)
     } finally {
@@ -174,6 +176,7 @@ export function Portfolio() {
   const filtered = account !== ALL || filteredByTags
   const watched = filtered ? [] : instruments.filter((instrument) =>
     !dashboard?.holdings?.some((holding) => holding.instrumentId === instrument.id))
+  const failedRules = ruleResults.filter((result) => !result.passed)
   const quoteTime = formatQuoteTime(positions.map((position) => position.quotedAt))
 
   return (
@@ -249,8 +252,14 @@ export function Portfolio() {
             </Tile>
           </div>
 
-          {dashboard.attention.length > 0 && (
+          {(dashboard.attention.length > 0 || failedRules.length > 0) && (
             <ul className="attention" aria-label="Needs attention">
+              {failedRules.map(({ rule, actual }) => (
+                <li key={rule.id}>
+                  <a href="#rules">{ruleLabel(rule)}</a>
+                  <span className="signal loss">now {actual}%</span>
+                </li>
+              ))}
               {dashboard.attention.map((item) => (
                 <li key={`${item.accountId}-${item.ticker}`}>
                   <a href={`#companies/${item.instrumentId}/${item.accountId}`}>{item.ticker}</a>

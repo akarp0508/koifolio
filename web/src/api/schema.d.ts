@@ -29,6 +29,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Replace a rule */
+        put: operations["update_1"];
+        post?: never;
+        /** Delete a rule */
+        delete: operations["delete_1"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/positions/{accountId}/{ticker}/plan": {
         parameters: {
             query?: never;
@@ -65,13 +83,13 @@ export interface paths {
          * Replace what you know about an instrument
          * @description The ticker can't be changed.
          */
-        put: operations["update_1"];
+        put: operations["update_2"];
         post?: never;
         /**
          * Remove an instrument from your list
          * @description Its transactions are kept.
          */
-        delete: operations["delete_1"];
+        delete: operations["delete_2"];
         options?: never;
         head?: never;
         patch?: never;
@@ -132,6 +150,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your rules */
+        get: operations["list_1"];
+        put?: never;
+        /**
+         * Add a rule
+         * @description Without an account it covers everything. A low-risk rule needs maxRisk, the highest risk that counts.
+         */
+        post: operations["create_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/prices/refresh": {
         parameters: {
             query?: never;
@@ -160,13 +199,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your instruments, by ticker */
-        get: operations["list_1"];
+        get: operations["list_2"];
         put?: never;
         /**
          * Add an instrument to your list
          * @description Using a new ticker in a transaction also adds it.
          */
-        post: operations["create_1"];
+        post: operations["create_2"];
         delete?: never;
         options?: never;
         head?: never;
@@ -215,13 +254,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your accounts */
-        get: operations["list_2"];
+        get: operations["list_3"];
         put?: never;
         /**
          * Create an account
          * @description The balance defaults to 0. The currency can't be changed later.
          */
-        post: operations["create_2"];
+        post: operations["create_3"];
         delete?: never;
         options?: never;
         head?: never;
@@ -246,7 +285,7 @@ export interface paths {
          * Change your settings
          * @description Send only what changes.
          */
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/api/v1/accounts/{id}": {
@@ -264,14 +303,14 @@ export interface paths {
          * Delete an account
          * @description Also deletes its transactions.
          */
-        delete: operations["delete_2"];
+        delete: operations["delete_3"];
         options?: never;
         head?: never;
         /**
          * Change an account
          * @description Send only the fields to change.
          */
-        patch: operations["update_3"];
+        patch: operations["update_4"];
         trace?: never;
     };
     "/api/v1/tax": {
@@ -305,7 +344,27 @@ export interface paths {
          * Splits spotted in your stocks that you haven't entered
          * @description The date is the first day seen after the split, so it can be a few days late.
          */
-        get: operations["list_3"];
+        get: operations["list_4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/rules/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Check your rules against your holdings now
+         * @description Weights are of the value plus cash. A company in two accounts counts as one on a rule covering everything. Cash counts as low risk, and positions with no risk set don't.
+         */
+        get: operations["check"];
         put?: never;
         post?: never;
         delete?: never;
@@ -325,7 +384,7 @@ export interface paths {
          * List your positions, by ticker
          * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows. Weights are shares of the value, cash included.
          */
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -512,6 +571,33 @@ export interface components {
             affectsBalance?: boolean;
             oversold?: boolean;
         };
+        RuleRequest: {
+            /** @enum {string} */
+            type: "max_position_weight" | "min_low_risk_weight";
+            /**
+             * Format: uuid
+             * @description Leave out to cover every account
+             */
+            accountId?: string;
+            /** @example 20 */
+            limitPercent: string;
+            /**
+             * Format: int32
+             * @description Low-risk rules only: the highest risk that counts as low
+             */
+            maxRisk?: number;
+        };
+        RuleResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            type?: "max_position_weight" | "min_low_risk_weight";
+            /** Format: uuid */
+            accountId?: string;
+            limitPercent?: string;
+            /** Format: int32 */
+            maxRisk?: number;
+        };
         PlanRequest: {
             plan?: string;
             /**
@@ -697,6 +783,18 @@ export interface components {
             /** Format: int32 */
             splitTo?: number;
             accounts?: string[];
+        };
+        BreachResponse: {
+            ticker?: string;
+            weight?: string;
+        };
+        RuleCheckResponse: {
+            rule?: components["schemas"]["RuleResponse"];
+            passed?: boolean;
+            actual?: string;
+            breaches?: components["schemas"]["BreachResponse"][];
+            /** Format: int32 */
+            unpriced?: number;
         };
         InBase: {
             currency?: string;
@@ -907,6 +1005,52 @@ export interface operations {
             };
         };
     };
+    update_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleResponse"];
+                };
+            };
+        };
+    };
+    delete_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     savePlan: {
         parameters: {
             query?: never;
@@ -956,7 +1100,7 @@ export interface operations {
             };
         };
     };
-    update_1: {
+    update_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -982,7 +1126,7 @@ export interface operations {
             };
         };
     };
-    delete_1: {
+    delete_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1088,6 +1232,50 @@ export interface operations {
             };
         };
     };
+    list_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleResponse"][];
+                };
+            };
+        };
+    };
+    create_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleResponse"];
+                };
+            };
+        };
+    };
     refresh: {
         parameters: {
             query?: never;
@@ -1106,7 +1294,7 @@ export interface operations {
             };
         };
     };
-    list_1: {
+    list_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1126,7 +1314,7 @@ export interface operations {
             };
         };
     };
-    create_1: {
+    create_2: {
         parameters: {
             query?: never;
             header?: never;
@@ -1198,7 +1386,7 @@ export interface operations {
             };
         };
     };
-    list_2: {
+    list_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1218,7 +1406,7 @@ export interface operations {
             };
         };
     };
-    create_2: {
+    create_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1262,7 +1450,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1308,7 +1496,7 @@ export interface operations {
             };
         };
     };
-    delete_2: {
+    delete_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1328,7 +1516,7 @@ export interface operations {
             };
         };
     };
-    update_3: {
+    update_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1376,7 +1564,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1396,7 +1584,27 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    check: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["RuleCheckResponse"][];
+                };
+            };
+        };
+    };
+    list_5: {
         parameters: {
             query?: {
                 account?: string;

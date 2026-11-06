@@ -4,6 +4,7 @@ import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
 import { Login } from './components/Login'
 import { Portfolio } from './components/Portfolio'
+import { Rules } from './components/Rules'
 import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
@@ -21,6 +22,7 @@ const MAIN_PAGES = [
 
 const OTHER_PAGES = [
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
+  { hash: '#rules', label: 'Rules', Page: Rules },
   { hash: '#tax', label: 'Tax', Page: Tax },
 ]
 

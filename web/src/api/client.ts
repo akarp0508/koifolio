@@ -16,6 +16,9 @@ export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
   'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
 export type Settings = Required<Schemas['SettingsResponse']>
+export type Rule = Schemas['RuleResponse'] & Required<Pick<Schemas['RuleResponse'], 'id' | 'type' | 'limitPercent'>>
+export type RuleInput = Schemas['RuleRequest']
+export type RuleResult = Omit<Required<Schemas['RuleCheckResponse']>, 'actual' | 'rule'> & { actual?: string; rule: Rule }
 export type TaxEstimate = Schemas['TaxResponse']
 export type SplitSuggestion = Schemas['SuggestionResponse']
 export type PortfolioHistory = Required<Schemas['PortfolioHistoryResponse']>
@@ -150,6 +153,11 @@ export const api = {
   applySplit: (id: string) => request<void>('POST', `/split-suggestions/${id}/apply`),
   dismissSplit: (id: string) => request<void>('POST', `/split-suggestions/${id}/dismiss`),
   tax: (year?: number) => request<TaxEstimate>('GET', year ? `/tax?year=${year}` : '/tax'),
+  listRules: () => request<Rule[]>('GET', '/rules'),
+  createRule: (input: RuleInput) => request<Rule>('POST', '/rules', input),
+  updateRule: (id: string, input: RuleInput) => request<Rule>('PUT', `/rules/${id}`, input),
+  deleteRule: (id: string) => request<void>('DELETE', `/rules/${id}`),
+  checkRules: () => request<RuleResult[]>('GET', '/rules/check'),
   settings: () => request<Settings>('GET', '/settings'),
   updateSettings: (changes: Schemas['SettingsRequest']) => request<Settings>('PATCH', '/settings', changes),
   refreshPrices: () => request<void>('POST', '/prices/refresh'),
