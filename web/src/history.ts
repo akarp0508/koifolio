@@ -1,7 +1,7 @@
-export const RANGES = ['1M', '6M', '1Y', 'All'] as const
+export const RANGES = ['1W', '1M', '6M', 'YTD', '1Y', 'All'] as const
 export type Range = (typeof RANGES)[number]
 
-const MONTHS: Record<Exclude<Range, 'All'>, number> = { '1M': 1, '6M': 6, '1Y': 12 }
+const MONTHS: Record<'1M' | '6M' | '1Y', number> = { '1M': 1, '6M': 6, '1Y': 12 }
 
 /** The first date a range shows, as yyyy-mm-dd, or null for everything. */
 export function rangeStart(range: Range, today: string) {
@@ -9,6 +9,12 @@ export function rangeStart(range: Range, today: string) {
     return null
   }
   const [year, month, day] = today.split('-').map(Number)
+  if (range === 'YTD') {
+    return `${year}-01-01`
+  }
+  if (range === '1W') {
+    return new Date(Date.UTC(year, month - 1, day - 7)).toISOString().slice(0, 10)
+  }
   const start = new Date(Date.UTC(year, month - 1 - MONTHS[range], day))
   return start.toISOString().slice(0, 10)
 }

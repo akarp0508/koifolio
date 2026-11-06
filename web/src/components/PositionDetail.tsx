@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Instrument, Position, PositionDetails, PositionHistory } from '../api/client'
-import { formatAmount, formatGain } from '../format'
+import { formatAmount, formatGain, gainClass } from '../format'
 import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
 import { today } from '../transactions'
@@ -74,13 +74,13 @@ export function PositionDetail({ accountId, ticker }: { accountId: string; ticke
         <div className="summary">
           <div><span>Value</span><strong>{formatAmount(position.value)} {position.currency}</strong></div>
           {position.unrealizedGain && (
-            <div>
+            <div className={gainClass(position.unrealizedGain)}>
               <span>P/L</span>
               <strong>{formatGain(position.unrealizedGain)} {position.currency}</strong>
               {position.unrealizedPercent && <span>{formatGain(position.unrealizedPercent)}%</span>}
             </div>
           )}
-          <div><span>Realized</span><strong>{formatGain(position.realizedGain)} {position.currency}</strong></div>
+          <div className={gainClass(position.realizedGain)}><span>Realized</span><strong>{formatGain(position.realizedGain)} {position.currency}</strong></div>
         </div>
       )}
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatAmount, formatGain, formatQuoteTime, normalizeAmount } from './format'
+import { formatAmount, formatGain, formatQuoteTime, gainClass, normalizeAmount } from './format'
 
 const THIN = ' '
 
@@ -33,6 +33,19 @@ describe('formatGain', () => {
   it('leaves zero without a sign', () => {
     expect(formatGain('0.00')).toBe('0.00')
     expect(formatGain('0')).toBe('0')
+  })
+})
+
+describe('gainClass', () => {
+  it('follows the sign', () => {
+    expect(gainClass('12.50')).toBe('gain')
+    expect(gainClass('-0.01')).toBe('loss')
+  })
+
+  it('stays neutral at zero or without a value', () => {
+    expect(gainClass('0.00')).toBe('')
+    expect(gainClass('-0.00')).toBe('')
+    expect(gainClass(undefined)).toBe('')
   })
 })
 

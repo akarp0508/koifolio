@@ -16,6 +16,9 @@ export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
   'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
 export type Settings = Required<Schemas['SettingsResponse']>
+export type PortfolioHistory = Required<Schemas['PortfolioHistoryResponse']>
+export type PortfolioPoint = NonNullable<Schemas['PortfolioHistoryResponse']['points']>[number]
+export type PeriodChange = NonNullable<Schemas['PortfolioHistoryResponse']['changes']>[number]
 export type DashboardFilter = { account?: string; instrumentTags: string[]; positionTags: string[] }
 export type PositionDetails = Schemas['DetailsResponse']
 export type PlanInput = Schemas['PlanRequest']
@@ -101,6 +104,16 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return response.status === 204 ? (undefined as T) : response.json()
 }
 
+function filterQuery(filter: DashboardFilter) {
+  const query = new URLSearchParams()
+  if (filter.account) {
+    query.set('account', filter.account)
+  }
+  filter.instrumentTags.forEach((tag) => query.append('instrumentTag', tag))
+  filter.positionTags.forEach((tag) => query.append('positionTag', tag))
+  return query
+}
+
 export const api = {
   async login(username: string, password: string) {
     const token = await request<Token>('POST', '/auth/login', { username, password })
@@ -125,15 +138,9 @@ export const api = {
   listPositions: () => request<Position[]>('GET', '/positions?closed=true'),
   positionHistory: (accountId: string, ticker: string) =>
     request<PositionHistory>('GET', `/positions/${accountId}/${encodeURIComponent(ticker)}/history`),
-  dashboard: (filter: DashboardFilter) => {
-    const query = new URLSearchParams()
-    if (filter.account) {
-      query.set('account', filter.account)
-    }
-    filter.instrumentTags.forEach((tag) => query.append('instrumentTag', tag))
-    filter.positionTags.forEach((tag) => query.append('positionTag', tag))
-    return request<Dashboard>('GET', `/dashboard?${query}`)
-  },
+  dashboard: (filter: DashboardFilter) => request<Dashboard>('GET', `/dashboard?${filterQuery(filter)}`),
+  portfolioHistory: (filter: DashboardFilter) =>
+    request<PortfolioHistory>('GET', `/dashboard/history?${filterQuery(filter)}`),
   settings: () => request<Settings>('GET', '/settings'),
   updateSettings: (baseCurrency: string) => request<Settings>('PATCH', '/settings', { baseCurrency }),
   refreshPrices: () => request<void>('POST', '/prices/refresh'),

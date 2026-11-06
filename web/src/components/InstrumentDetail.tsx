@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Instrument, Position } from '../api/client'
-import { formatAmount, formatGain } from '../format'
+import { formatAmount, formatGain, gainClass } from '../format'
 import { CompanySection } from './CompanySection'
 import { InstrumentDialog } from './InstrumentDialog'
 
@@ -72,7 +72,9 @@ export function InstrumentDetail({ id }: { id: string }) {
                       <td><a href={positionHash(position)}>{accountName(position.accountId)}</a></td>
                       <td className="number">{formatAmount(position.quantity)}</td>
                       <td className="number">{position.value ? `${formatAmount(position.value)} ${position.currency}` : '—'}</td>
-                      <td className="number">{position.unrealizedGain ? formatGain(position.unrealizedGain) : '—'}</td>
+                      <td className={`number ${gainClass(position.unrealizedGain)}`}>
+                        {position.unrealizedGain ? formatGain(position.unrealizedGain) : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

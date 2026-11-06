@@ -19,12 +19,13 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 8. **Position history** (done): stored daily closes that repair themselves, and a chart per position.
 9. **Company details and plans** (done): sector, risk, thesis and analysis per company, and a plan with target, stop and risk per account.
 10. **Dashboard** (done): home page with totals in a base currency, sector and risk breakdowns, an attention list, and filters by account and two kinds of tags. NBP rates.
+11. **Portfolio chart** (done): value over time, 1D to 1Y changes, gain and loss colours, and FX history.
 
 ## After the MVP
 
 The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:
 
-- **Portfolio value over time:** needs FX history, recalculated per filter. Comes with cost at purchase-date rates, currency gains, the cost FX setting, and charts for stocks in another currency. Tax estimates are on the `domain-replay-wip` branch.
+- **Purchase-date FX:** cost at the rate of each buy, currency gains shown separately, and the cost FX setting. Tax estimates are on the `domain-replay-wip` branch.
 - Manual prices, for what the source doesn't cover
 - **Split transactions:** price history is split-adjusted, so a position held through a split shows wrong past values until splits can be entered
 - More web UI, with each screen's look agreed first

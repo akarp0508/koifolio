@@ -477,11 +477,11 @@ tr.closed td {
   font-size: 0.87rem;
 }
 
-.number.gain {
+.gain {
   color: var(--gain);
 }
 
-.number.loss {
+.loss {
   color: var(--loss);
 }
 
@@ -749,4 +749,56 @@ tr.clickable a {
   height: 100%;
   background: var(--accent);
   border-radius: 999px;
+}
+
+/* Colours on tiles: the label stays quiet, the number carries it */
+
+.tile.gain strong,
+.tile.gain small,
+.period.gain strong,
+.period.gain small,
+.summary .gain strong,
+.summary .gain span:last-child {
+  color: var(--gain);
+}
+
+.tile.loss strong,
+.tile.loss small,
+.period.loss strong,
+.period.loss small,
+.summary .loss strong,
+.summary .loss span:last-child {
+  color: var(--loss);
+}
+
+.periods {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.period {
+  padding: 0.5rem 0.75rem;
+  background: var(--surface);
+  border-radius: 8px;
+}
+
+.period span,
+.period small {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.period strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chart-panel {
+  margin-bottom: 1rem;
 }

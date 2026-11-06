@@ -54,6 +54,7 @@ quotes              symbol, price, quoted_at, fetched_at          (PK symbol)
 daily_closes        symbol, date, close                           (PK symbol, date)
 price_history       symbol, covered_from, checked_on              (PK symbol)
 fx_rates            currency, rate, effective_date, fetched_at    (PK currency; latest only)
+fx_history          currency, date, rate                          (PK currency, date)
 cpi_values          month, value, source                   PK (month)
 reference_rates     date, rate, source                     PK (date)
 ```

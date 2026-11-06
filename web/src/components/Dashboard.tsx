@@ -1,19 +1,56 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Dashboard as DashboardData, DashboardSlice, Position, Settings } from '../api/client'
-import { formatAmount, formatGain } from '../format'
+import type { Account, Dashboard as DashboardData, DashboardSlice, PeriodChange, PortfolioHistory, Position, Settings } from '../api/client'
+import { formatAmount, formatGain, gainClass } from '../format'
+import { RANGES, inRange } from '../history'
+import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
+import { today } from '../transactions'
 import { TagFilter } from './TagFilter'
+
+// Holds the chart library, so the rest of the page opens without it
+const PortfolioChart = lazy(() =>
+  import('./PortfolioChart').then((module) => ({ default: module.PortfolioChart })))
 
 const ALL = ''
 
-function Tile({ label, children, note }: { label: string; children: ReactNode; note?: string }) {
+const PERIOD_LABELS: Record<NonNullable<PeriodChange['period']>, string> = {
+  DAY: '1D',
+  WEEK: '1W',
+  MONTH: '1M',
+  YEAR_TO_DATE: 'YTD',
+  YEAR: '1Y',
+}
+
+function Tile({ label, children, note, tone = '' }: {
+  label: string
+  children: ReactNode
+  note?: string
+  tone?: string
+}) {
   return (
-    <div className="tile">
+    <div className={`tile ${tone}`}>
       <span>{label}</span>
       <strong>{children}</strong>
       {note && <small>{note}</small>}
+    </div>
+  )
+}
+
+function Periods({ changes, currency }: { changes: PeriodChange[]; currency: string }) {
+  return (
+    <div className="periods">
+      {Object.entries(PERIOD_LABELS).map(([period, label]) => {
+        const change = changes.find((item) => item.period === period)
+        return (
+          <div key={period} className={`period ${gainClass(change?.change)}`}>
+            <span>{label}</span>
+            <strong>{change ? `${formatGain(change.change ?? '')} ${currency}` : '—'}</strong>
+            {change?.percent && <small>{formatGain(change.percent)}%</small>}
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -42,15 +79,20 @@ export function Dashboard() {
   const [account, setAccount] = useState(ALL)
   const [instrumentTags, setInstrumentTags] = useState<string[]>([])
   const [positionTags, setPositionTags] = useState<string[]>([])
+  const [history, setHistory] = useState<PortfolioHistory | null>(null)
+  const [range, setRange] = useState<Range>('1Y')
   const [error, setError] = useState<ApiError | null>(null)
 
-  const fetchDashboard = useCallback(() =>
-    api.dashboard({ account: account || undefined, instrumentTags, positionTags })
-      .then((data) => {
+  const fetchDashboard = useCallback(() => {
+    const filter = { account: account || undefined, instrumentTags, positionTags }
+    return Promise.all([api.dashboard(filter), api.portfolioHistory(filter)])
+      .then(([data, historyData]) => {
         setDashboard(data)
+        setHistory(historyData)
         setError(null)
       })
-      .catch((e: ApiError) => setError(e)), [account, instrumentTags, positionTags])
+      .catch((e: ApiError) => setError(e))
+  }, [account, instrumentTags, positionTags])
 
   useEffect(() => {
     void fetchDashboard()
@@ -77,6 +119,7 @@ export function Dashboard() {
 
   const currency = dashboard?.currency ?? ''
   const filteredByTags = instrumentTags.length > 0 || positionTags.length > 0
+  const points = history ? inRange(history.points, range, today()) : []
 
   return (
     <>
@@ -117,14 +160,35 @@ export function Dashboard() {
         <>
           <div className="tiles">
             <Tile label="Value">{formatAmount(dashboard.value)} {currency}</Tile>
-            <Tile label="P/L" note={dashboard.unrealizedPercent && `${formatGain(dashboard.unrealizedPercent)}%`}>
+            <Tile label="P/L" tone={gainClass(dashboard.unrealizedGain)}
+                  note={dashboard.unrealizedPercent && `${formatGain(dashboard.unrealizedPercent)}%`}>
               {formatGain(dashboard.unrealizedGain)} {currency}
             </Tile>
-            <Tile label="Realized">{formatGain(dashboard.realizedGain)} {currency}</Tile>
+            <Tile label="Realized" tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>
             <Tile label="Cash" note={filteredByTags ? 'not filtered by tags' : undefined}>
               {dashboard.cash ? `${formatAmount(dashboard.cash)} ${currency}` : '—'}
             </Tile>
           </div>
+
+          {history && <Periods changes={history.changes} currency={currency} />}
+
+          {history && history.points.length > 0 && (
+            <section className="panel chart-panel">
+              <header>
+                <h2>Value over time</h2>
+                <div className="ranges">
+                  {RANGES.map((option) => (
+                    <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{option}</button>
+                  ))}
+                </div>
+              </header>
+              {points.length > 0 ? (
+                <Suspense fallback={<p className="muted">Loading…</p>}>
+                  <PortfolioChart points={points} currency={currency} />
+                </Suspense>
+              ) : <p className="muted">Nothing in this range.</p>}
+            </section>
+          )}
 
           {dashboard.unpriced > 0 && (
             <p className="muted">
@@ -151,7 +215,7 @@ export function Dashboard() {
                       <td>
                         {item.signal && <span className={signalClass(item.signal)}>{SIGNAL_LABELS[item.signal]}</span>}
                       </td>
-                      <td className="number">{item.distance && `${formatGain(item.distance)}%`}</td>
+                      <td className="number muted">{item.distance && `${formatGain(item.distance)}%`}</td>
                     </tr>
                   ))}
                 </tbody>

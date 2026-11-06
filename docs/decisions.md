@@ -12,7 +12,8 @@
 - **Prices are shared and fetched every 15 minutes,** with a Refresh button on a one-minute cooldown. See [price-sources.md](price-sources.md).
 - **Daily closes are stored locally,** shared between users, from each symbol's first trade onward. Only finished days are stored, and a check in the 15-minute run fills anything missing. Position values over time are calculated from them on request.
 - **No manual prices yet.** They'd matter for instruments the source doesn't cover, or if it goes down.
-- **FX uses NBP's latest table A rates,** refreshed hourly at most, with other pairs as cross rates through PLN. A price in another currency than its account is converted, and totals use a base currency per user. Cost at purchase-date rates, the cost FX setting and FX history in charts come with the portfolio value chart. Currencies outside table A have no rate.
+- **FX uses NBP table A,** latest rates plus stored daily history from the first trade, filled like closes. Other pairs are cross rates through PLN, and currencies outside the table have no rate. A price in another currency than its account is converted, and totals use a base currency per user. Cost stays in the account's currency, so purchase-date rates and the cost FX setting are still planned.
+- **Period changes measure gain, not value:** value − cost + realized, so deposits, buys and sells aren't profit.
 - **Each account has one currency and one balance** in the MVP, set directly by the user. A multi-currency broker account means several accounts. This replaces the earlier plan of cash per currency within an account. How transactions affect the balance is decided in the transactions step.
 - **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
 - **Deployment:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.

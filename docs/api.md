@@ -196,7 +196,7 @@ History response:
 
 - Today's point comes from the current price while the day is unfinished.
 - `covered` is false when the price source doesn't have the ticker. Covered with no points means history is still being fetched.
-- With `currencyMismatch`, points have `close` but no `value`. History doesn't convert yet: it needs FX history.
+- Closes in another currency convert at each day's rate. With `currencyMismatch` there's no rate, so points have `close` but no `value`.
 - `traded` marks a buy or sell since the previous point, and a trade on a non-trading day shows on the next one.
 
 ## Dashboard
@@ -206,6 +206,7 @@ Implemented.
 | Request | Purpose |
 |---|---|
 | `GET /dashboard` | Totals, breakdowns and attention list. Filters: `account`, `instrumentTag` and `positionTag`, each repeatable |
+| `GET /dashboard/history` | Value over time and period changes, with the same filters |
 
 ```json
 {
@@ -223,13 +224,28 @@ Implemented.
 }
 ```
 
-- Everything is in the base currency, converted at the latest rates. Cost isn't converted at purchase-date rates yet, so currency gains aren't separated.
+- Everything is in the base currency, at the latest rates. Cost isn't kept at purchase-date rates, so an account in a foreign currency shows its gain at today's rate.
 - A position matches if it has any of the wanted instrument tags, and any of the wanted position tags. The two kinds and the account must all match.
 - `cash` is left out while tags filter the view, because cash has no tags.
 - Slices with no `label` have no sector or risk set. Risk groups are `1-2`, `3` and `4-5`, using the plan's risk if set.
 - `unpriced` counts open positions left out of the numbers, lacking a price or a rate.
 
-Planned: `?asOf=`, value over time, realized gains and tax per year, income per year.
+History response:
+
+```json
+{
+  "currency": "PLN",
+  "points": [{"date": "2026-11-05", "value": "2000.00", "cost": "1400.00", "gain": "600.00"}],
+  "changes": [{"period": "DAY", "change": "60.00", "percent": "5.0"}]
+}
+```
+
+- Positions only, without cash. Each day converts at that day's rate, using the last one published.
+- `gain` is value − cost + realized, and a change is how much `gain` moved. Deposits, buys and sells therefore don't count as profit or loss.
+- `period` is `DAY`, `WEEK`, `MONTH`, `YEAR_TO_DATE` or `YEAR`, compared with the last point before the period starts. Periods reaching further back than the history are left out, and `percent` is of the value at the start.
+- Positions without prices or any rate are left out.
+
+Planned: realized gains and tax per year, income per year.
 
 ## Rules
 

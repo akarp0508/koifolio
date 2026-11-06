@@ -8,6 +8,11 @@ describe('rangeStart', () => {
     expect(rangeStart('1Y', '2026-11-06')).toBe('2025-11-06')
   })
 
+  it('handles week and year to date', () => {
+    expect(rangeStart('1W', '2026-11-06')).toBe('2026-10-30')
+    expect(rangeStart('YTD', '2026-11-06')).toBe('2026-01-01')
+  })
+
   it('crosses a year', () => {
     expect(rangeStart('1M', '2026-01-15')).toBe('2025-12-15')
   })

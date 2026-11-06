@@ -314,6 +314,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dashboard/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio value over time, and changes over 1D to 1Y
+         * @description Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit.
+         */
+        get: operations["history_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/me": {
         parameters: {
             query?: never;
@@ -605,6 +625,24 @@ export interface components {
             label?: string;
             value?: string;
             percent?: string;
+        };
+        PortfolioChangeResponse: {
+            /** @enum {string} */
+            period?: "DAY" | "WEEK" | "MONTH" | "YEAR_TO_DATE" | "YEAR";
+            change?: string;
+            percent?: string;
+        };
+        PortfolioHistoryPoint: {
+            /** Format: date */
+            date?: string;
+            value?: string;
+            cost?: string;
+            gain?: string;
+        };
+        PortfolioHistoryResponse: {
+            currency?: string;
+            points?: components["schemas"]["PortfolioHistoryPoint"][];
+            changes?: components["schemas"]["PortfolioChangeResponse"][];
         };
     };
     responses: never;
@@ -1179,6 +1217,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DashboardResponse"];
+                };
+            };
+        };
+    };
+    history_1: {
+        parameters: {
+            query?: {
+                account?: string;
+                instrumentTag?: string[];
+                positionTag?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["PortfolioHistoryResponse"];
                 };
             };
         };

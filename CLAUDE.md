@@ -21,7 +21,7 @@ Other:
 - Web (in `web/`): `npm install`, `npm run dev` (Vite, proxies `/api` and `/actuator` to :8080), `npm run lint` (oxlint), `npm test` (vitest), `npm run build` (tsc + vite), `npm run api:types` (regenerates `src/api/schema.d.ts` from a running server with Swagger on, or from `KOIFOLIO_API`; it uses its own TypeScript 5 because openapi-typescript doesn't support the project's TypeScript 7)
 - Docker: `cp .env.example .env`, set the secrets, then `docker compose up -d --build`. Swagger UI: `http://localhost:8080/swagger-ui.html` (needs `KOIFOLIO_SWAGGER=true`). Multi-arch: `docker buildx build --platform linux/amd64,linux/arm64 -t koifolio .`
 
-The Docker build type-checks `web`, so stale `schema.d.ts` fails it, and `docker compose up --build` then leaves the old container running. Check its exit code. After a breaking API change, run the new jar on a side port (`KOIFOLIO_SWAGGER=true java -jar server/target/koifolio.jar --server.port=18081`, with `.env` loaded), and generate with `KOIFOLIO_API=http://localhost:18081`. Request and response records need names unique across controllers, because springdoc merges same-named types.
+The Docker build type-checks `web`, so stale `schema.d.ts` fails it, and `docker compose up --build` then leaves the old container running. Check its exit code. After a breaking API change, run the new jar on a side port (`KOIFOLIO_SWAGGER=true java -jar server/target/koifolio.jar --server.port=18081`, with `.env` loaded), and generate with `KOIFOLIO_API=http://localhost:18081`. Request and response records need names unique across controllers, because springdoc merges same-named types; `SwaggerTests` fails on a repeat.
 
 Spring Boot 4.1 (Boot 4 starter names, e.g. `spring-boot-starter-webmvc`). Base package `io.github.akarp0508.koifolio`. The Docker build copies `web/dist` into `server/src/main/resources/static` (git-ignored) so Spring Boot serves the UI.
 
@@ -34,11 +34,11 @@ koifolio is a self-hosted portfolio tracker (universal: not tied to any broker, 
 Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`web/`), deployed as one Docker Compose stack (app + Postgres, multi-arch image).
 
 - `server/`: Spring Boot.
-  - `domain` package: pure domain logic, currently `PositionCalculator`, `Valuation`, `PositionHistory`, `PlanCheck` and `Breakdown`. Later P/L, tax, bond valuation and rules go here too. It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
+  - `domain` package: pure domain logic, currently `PositionCalculator`, `Valuation`, `PositionHistory`, `PlanCheck`, `Breakdown` and `PortfolioHistory`. Later P/L, tax, bond valuation and rules go here too. It's the single source of truth for calculations, used by the REST API, the MCP tools and export alike. No Spring imports and no I/O in this package (only a convention, nothing enforces it), and it's unit-tested without a Spring context.
   - REST API with an OpenAPI spec, plus an MCP server for agents (Spring AI).
   - Spring Security: local accounts with JWT access tokens (`auth` package). Later, an OAuth2 authorization server for MCP clients.
   - Spring Data JPA + Flyway on Postgres. Flyway owns the schema; JPA entities stay separate from `domain` records.
-  - `price` package: a pluggable `QuoteProvider` (bankier) and a 15-minute schedule that updates quotes and fills `daily_closes`. Never call a provider inside a database transaction. `FxService` converts at NBP's latest rates. FX history and CPI come later.
+  - `price` package: a pluggable `QuoteProvider` (bankier) and a 15-minute schedule that updates quotes and fills `daily_closes`. Never call a provider inside a database transaction. `FxService` converts at NBP's latest or past rates. CPI comes later.
   - Serves the built `web` app.
 - `web/`: React + Vite + TypeScript + Recharts, PL/EN, light/dark. Display and editing only, with no calculations. API types are generated from the OpenAPI spec.
 

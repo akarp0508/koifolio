@@ -17,6 +17,14 @@ export function formatGain(amount: string) {
   return amount.startsWith('-') ? `−${formatAmount(amount.slice(1))}` : `+${formatAmount(amount)}`
 }
 
+/** The class that colours a gain or loss. Zero stays neutral. */
+export function gainClass(amount?: string) {
+  if (amount === undefined || /^-?[0.]+$/.test(amount)) {
+    return ''
+  }
+  return amount.startsWith('-') ? 'loss' : 'gain'
+}
+
 /** The newest of some ISO timestamps, shown as a time today and with the date otherwise. */
 export function formatQuoteTime(times: (string | undefined)[], now = new Date()) {
   const latest = times.filter((time) => time !== undefined).sort().at(-1)

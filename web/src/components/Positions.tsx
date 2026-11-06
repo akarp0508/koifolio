@@ -1,18 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Position } from '../api/client'
-import { formatAmount, formatGain, formatQuoteTime } from '../format'
+import { formatAmount, formatGain, formatQuoteTime, gainClass } from '../format'
 import { SIGNAL_LABELS, signalClass } from '../plans'
 
 const ALL = ''
 const detailHash = (position: Position) => `#positions/${position.accountId}/${encodeURIComponent(position.ticker)}`
-
-const gainClass = (amount?: string) => {
-  if (amount === undefined || /^-?[0.]+$/.test(amount)) {
-    return 'number'
-  }
-  return amount.startsWith('-') ? 'number loss' : 'number gain'
-}
 
 const INCOMPLETE_HINT = 'A sale exceeds the shares on record, so realized gain only counts the shares with a known cost.'
 
@@ -135,13 +128,13 @@ export function Positions() {
                     {position.value ? `${formatAmount(position.value)} ${position.currency}` : '—'}
                     {position.currencyMismatch && <span className="not-in-balance">priced in {position.priceCurrency}</span>}
                   </td>
-                  <td className={gainClass(position.unrealizedGain)}>
+                  <td className={`number ${gainClass(position.unrealizedGain)}`}>
                     {position.unrealizedGain ? formatGain(position.unrealizedGain) : '—'}
                     {position.unrealizedPercent && (
                       <span className="not-in-balance">{formatGain(position.unrealizedPercent)}%</span>
                     )}
                   </td>
-                  <td className={gainClass(position.realizedGain)}>{formatGain(position.realizedGain)}</td>
+                  <td className={`number ${gainClass(position.realizedGain)}`}>{formatGain(position.realizedGain)}</td>
                 </tr>
               ))}
             </tbody>

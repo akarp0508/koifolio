@@ -48,35 +48,35 @@ class DashboardController {
     @Operation(summary = "Portfolio value over time, and changes over 1D to 1Y", description = """
             Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is \
             what the gain moved by, so deposits and buys don't count as profit.""")
-    HistoryResponse history(@AuthenticationPrincipal Jwt jwt,
+    PortfolioHistoryResponse history(@AuthenticationPrincipal Jwt jwt,
                             @RequestParam(required = false) UUID account,
                             @RequestParam(defaultValue = "") Set<String> instrumentTag,
                             @RequestParam(defaultValue = "") Set<String> positionTag) {
         var filter = new DashboardService.Filter(account, instrumentTag, positionTag);
-        return HistoryResponse.of(dashboards.history(UUID.fromString(jwt.getSubject()), filter));
+        return PortfolioHistoryResponse.of(dashboards.history(UUID.fromString(jwt.getSubject()), filter));
     }
 
-    record HistoryResponse(String currency, List<HistoryPoint> points, List<ChangeResponse> changes) {
+    record PortfolioHistoryResponse(String currency, List<PortfolioHistoryPoint> points, List<PortfolioChangeResponse> changes) {
 
-        static HistoryResponse of(DashboardService.History history) {
+        static PortfolioHistoryResponse of(DashboardService.History history) {
             String currency = history.currency();
-            return new HistoryResponse(currency,
-                    history.points().stream().map(point -> new HistoryPoint(point.date(),
+            return new PortfolioHistoryResponse(currency,
+                    history.points().stream().map(point -> new PortfolioHistoryPoint(point.date(),
                             DashboardResponse.money(point.value(), currency), DashboardResponse.money(point.cost(), currency),
                             DashboardResponse.money(point.gain(), currency))).toList(),
-                    history.changes().stream().map(change -> new ChangeResponse(change.period(),
+                    history.changes().stream().map(change -> new PortfolioChangeResponse(change.period(),
                             DashboardResponse.money(change.change(), currency),
                             change.percent().map(DashboardResponse::percent).orElse(null))).toList());
         }
     }
 
     /** @param gain value minus cost, plus what's been realized */
-    record HistoryPoint(LocalDate date, String value, String cost, String gain) {
+    record PortfolioHistoryPoint(LocalDate date, String value, String cost, String gain) {
     }
 
     /** @param percent of the value at the start; left out if nothing was held then */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record ChangeResponse(PortfolioHistory.Period period, String change, String percent) {
+    record PortfolioChangeResponse(PortfolioHistory.Period period, String change, String percent) {
     }
 
     /**
