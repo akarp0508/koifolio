@@ -229,7 +229,7 @@ export function Portfolio() {
             </Tile>
           </div>
 
-          {(dashboard.attention.length > 0 || failedRules.length > 0) && (
+          {(dashboard.attention.length > 0 || failedRules.length > 0 || dashboard.unvalidated > 0) && (
             <ul className="attention" aria-label="Needs attention">
               {failedRules.map(({ rule, actual }) => (
                 <li key={rule.id}>
@@ -237,6 +237,13 @@ export function Portfolio() {
                   <span className="signal loss">now {actual}%</span>
                 </li>
               ))}
+              {dashboard.unvalidated > 0 && (
+                <li>
+                  <a href="#review">
+                    {dashboard.unvalidated} agent {dashboard.unvalidated === 1 ? 'transaction' : 'transactions'} to review
+                  </a>
+                </li>
+              )}
               {dashboard.attention.map((item) => (
                 <li key={`${item.accountId}-${item.ticker}`}>
                   <a href={`#companies/${item.instrumentId}/${item.accountId}`}>{item.ticker}</a>

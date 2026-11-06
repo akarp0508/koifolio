@@ -21,7 +21,7 @@ export interface paths {
         post?: never;
         /**
          * Delete a transaction
-         * @description Undoes its effect on the balance.
+         * @description Undoes its effect on the balance. It stays in the database and the change log, but out of every number.
          */
         delete: operations["delete"];
         options?: never;
@@ -110,6 +110,63 @@ export interface paths {
          * @description Amounts are in the account's currency. With affectsBalance on, the account balance follows the transaction. A sale of more than is held is saved, with oversold set.
          */
         post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject a transaction an agent added
+         * @description Undoes its effect on the balance and takes it out of every number.
+         */
+        post: operations["reject"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve a transaction an agent added
+         * @description It already counts, so this only clears the mark.
+         */
+        post: operations["approve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/transactions/approve-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve everything waiting for review */
+        post: operations["approveAll"];
         delete?: never;
         options?: never;
         head?: never;
@@ -278,7 +335,7 @@ export interface paths {
         put?: never;
         /**
          * Create a token for an agent
-         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one.
+         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without scopes it can also add transactions, which wait for your review, and edit companies, but not rules.
          */
         post: operations["create_3"];
         delete?: never;
@@ -548,6 +605,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/audit-log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Recent changes to transactions, companies and rules, newest first
+         * @description From you or an agent. before and after hold the values on each side of the change.
+         */
+        get: operations["recent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/agent-tokens/{id}": {
         parameters: {
             query?: never;
@@ -651,6 +728,8 @@ export interface components {
             cashEffect?: string;
             affectsBalance?: boolean;
             oversold?: boolean;
+            createdBy?: string;
+            unvalidated?: boolean;
         };
         RuleRequest: {
             /** @enum {string} */
@@ -734,6 +813,10 @@ export interface components {
             analysis?: string;
             tags?: string[];
         };
+        ApprovedResponse: {
+            /** Format: int32 */
+            approved?: number;
+        };
         CreateInstrumentRequest: {
             /** @example PAS */
             ticker: string;
@@ -779,6 +862,7 @@ export interface components {
         };
         AgentTokenRequest: {
             name: string;
+            scopes?: ("analysis:write" | "transactions:write" | "rules:write")[];
             /** Format: date */
             expiresOn?: string;
         };
@@ -786,6 +870,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             name?: string;
+            scopes?: ("analysis:write" | "transactions:write" | "rules:write")[];
             /** Format: date */
             expiresOn?: string;
             /** Format: date-time */
@@ -1028,6 +1113,8 @@ export interface components {
             /** Format: int32 */
             unpriced?: number;
             holdings?: components["schemas"]["HoldingResponse"][];
+            /** Format: int32 */
+            unvalidated?: number;
         };
         HoldingResponse: {
             /** Format: uuid */
@@ -1064,6 +1151,22 @@ export interface components {
             currency?: string;
             points?: components["schemas"]["PortfolioHistoryPoint"][];
             changes?: components["schemas"]["PortfolioChangeResponse"][];
+        };
+        AuditEntryResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** @enum {string} */
+            actorType?: "USER" | "AGENT";
+            actorName?: string;
+            entityType?: string;
+            /** Format: uuid */
+            entityId?: string;
+            action?: string;
+            summary?: string;
+            before?: unknown;
+            after?: unknown;
+            /** Format: date-time */
+            createdAt?: string;
         };
     };
     responses: never;
@@ -1287,6 +1390,7 @@ export interface operations {
         parameters: {
             query?: {
                 account?: string;
+                unvalidated?: boolean;
             };
             header?: never;
             path?: never;
@@ -1325,6 +1429,68 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
+    reject: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    approve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TransactionResponse"];
+                };
+            };
+        };
+    };
+    approveAll: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ApprovedResponse"];
                 };
             };
         };
@@ -1969,6 +2135,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["UserResponse"];
+                };
+            };
+        };
+    };
+    recent: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AuditEntryResponse"][];
                 };
             };
         };

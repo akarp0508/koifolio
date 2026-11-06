@@ -48,6 +48,9 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
                 {transaction.oversold && (
                   <span className="warning" role="img" aria-label={OVERSOLD_HINT} title={OVERSOLD_HINT}>⚠</span>
                 )}
+                {transaction.unvalidated && (
+                  <span className="not-in-balance"><a href="#review">unvalidated</a>, from {transaction.createdBy}</span>
+                )}
               </td>
               <td className={transaction.affectsBalance ? 'number' : 'number backfill'}>
                 {transactionAmount(transaction)}
@@ -80,8 +83,8 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
         <ConfirmDialog
           title="Delete transaction?"
           message={dialog.transaction.affectsBalance
-            ? 'It will be permanently deleted, and its effect on the account balance undone.'
-            : 'It will be permanently deleted.'}
+            ? 'It will be removed from all your numbers, and its effect on the account balance undone.'
+            : 'It will be removed from all your numbers.'}
           onConfirm={() => api.deleteTransaction(dialog.transaction.id)}
           onDone={saved}
           onClose={() => setDialog(null)}

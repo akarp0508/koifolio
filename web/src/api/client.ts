@@ -14,12 +14,14 @@ export type Instrument = Schemas['InstrumentResponse'] & Required<Pick<Schemas['
 export type InstrumentInput = Schemas['UpdateInstrumentRequest']
 export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
-  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
+  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced' | 'unvalidated'>>
 export type Settings = Required<Schemas['SettingsResponse']>
 export type RestoredData = Required<Schemas['RestoredResponse']>
 export type Rule = Schemas['RuleResponse'] & Required<Pick<Schemas['RuleResponse'], 'id' | 'type' | 'limitPercent'>>
 export type RuleInput = Schemas['RuleRequest']
 export type AgentToken = Schemas['AgentTokenResponse'] & Required<Pick<Schemas['AgentTokenResponse'], 'id' | 'name'>>
+export type AgentScope = NonNullable<Schemas['AgentTokenResponse']['scopes']>[number]
+export type AuditEntry = Schemas['AuditEntryResponse']
 export type NewAgentToken = Required<Pick<Schemas['CreatedAgentTokenResponse'], 'secret'>> & { token: AgentToken }
 export type RuleResult = Omit<Required<Schemas['RuleCheckResponse']>, 'actual' | 'rule'> & { actual?: string; rule: Rule }
 export type TaxEstimate = Schemas['TaxResponse']
@@ -184,6 +186,11 @@ export const api = {
   updateSettings: (changes: Schemas['SettingsRequest']) => request<Settings>('PATCH', '/settings', changes),
   refreshPrices: () => request<void>('POST', '/prices/refresh'),
   listTransactions: () => request<Transaction[]>('GET', '/transactions'),
+  listUnvalidated: () => request<Transaction[]>('GET', '/transactions?unvalidated=true'),
+  approveTransaction: (id: string) => request<Transaction>('POST', `/transactions/${id}/approve`),
+  approveAllTransactions: () => request<{ approved?: number }>('POST', '/transactions/approve-all'),
+  rejectTransaction: (id: string) => request<void>('POST', `/transactions/${id}/reject`),
+  auditLog: () => request<AuditEntry[]>('GET', '/audit-log'),
   createTransaction: (input: TransactionInput) => request<Transaction>('POST', '/transactions', input),
   updateTransaction: (id: string, input: TransactionInput) =>
     request<Transaction>('PUT', `/transactions/${id}`, input),

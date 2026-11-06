@@ -5,6 +5,7 @@ import { Accounts } from './components/Accounts'
 import { Login } from './components/Login'
 import { Portfolio } from './components/Portfolio'
 import { Profile } from './components/Profile'
+import { Review } from './components/Review'
 import { Rules } from './components/Rules'
 import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
@@ -24,6 +25,7 @@ const MAIN_PAGES = [
 const OTHER_PAGES = [
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
   { hash: '#rules', label: 'Rules', Page: Rules },
+  { hash: '#review', label: 'Review', Page: Review },
   { hash: '#tax', label: 'Tax', Page: Tax },
 ]
 
