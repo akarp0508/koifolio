@@ -350,6 +350,81 @@ class DashboardTests {
     }
 
     @Test
+    void holdingsAddUpACompanyAcrossAccountsBiggestFirst() throws Exception {
+        String other = createAccount("XTB", "PLN", "0");
+        hold(ike, "AAA", "1", "50", "100", "PLN");
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        hold(other, "PAS", "5", "100", "300", "PLN");
+
+        dashboard().andExpect(jsonPath("$.holdings[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$.holdings[0].held").value(true))
+                .andExpect(jsonPath("$.holdings[0].value").value("4500.00"))
+                .andExpect(jsonPath("$.holdings[0].unrealizedGain").value("3000.00"))
+                .andExpect(jsonPath("$.holdings[0].unrealizedPercent").value("200.0"))
+                .andExpect(jsonPath("$.holdings[0].accounts.length()").value(2))
+                .andExpect(jsonPath("$.holdings[0].accounts[0].value").value("3000.00"))
+                .andExpect(jsonPath("$.holdings[1].ticker").value("AAA"));
+    }
+
+    @Test
+    void holdingWeightIsOfThePortfolioOrOfTheChosenAccount() throws Exception {
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        hold(usd, "AAPL", "1", "50", "100", "USD");
+
+        dashboard().andExpect(jsonPath("$.holdings[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$.holdings[0].weight").value("62.5"))
+                .andExpect(jsonPath("$.holdings[1].weight").value("8.3"));
+        dashboard("account", ike).andExpect(jsonPath("$.holdings.length()").value(1))
+                .andExpect(jsonPath("$.holdings[0].weight").value("75.0"));
+    }
+
+    @Test
+    void holdingsAreInTheBaseCurrency() throws Exception {
+        hold(usd, "AAPL", "1", "50", "100", "USD");
+
+        dashboard().andExpect(jsonPath("$.holdings[0].value").value("400.00"))
+                .andExpect(jsonPath("$.holdings[0].accounts[0].accountName").value("US"));
+    }
+
+    @Test
+    void tagsNarrowHoldingsButNotTheirWeight() throws Exception {
+        String other = createAccount("XTB", "PLN", "0");
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        hold(other, "PAS", "5", "100", "300", "PLN");
+        plan(ike, "PAS", "{\"tags\":[\"core\"]}");
+
+        dashboard("positionTag", "core").andExpect(jsonPath("$.holdings[0].accounts.length()").value(1))
+                .andExpect(jsonPath("$.holdings[0].value").value("3000.00"))
+                .andExpect(jsonPath("$.holdings[0].weight").value("50.8"));
+    }
+
+    @Test
+    void aSoldCompanyIsNotHeldAndKeepsItsRealizedGain() throws Exception {
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        String json = """
+                {"accountId":"%s","type":"sell","date":"2026-02-01","ticker":"PAS","quantity":"10","price":"120","affectsBalance":false}"""
+                .formatted(ike);
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated());
+
+        dashboard().andExpect(jsonPath("$.holdings[0].held").value(false))
+                .andExpect(jsonPath("$.holdings[0].realizedGain").value("200.00"))
+                .andExpect(jsonPath("$.holdings[0].value").doesNotExist())
+                .andExpect(jsonPath("$.holdings[0].weight").doesNotExist())
+                .andExpect(jsonPath("$.holdings[0].accounts[0].closed").value(true));
+    }
+
+    @Test
+    void anUnpricedHoldingComesLast() throws Exception {
+        hold(ike, "AAA", "1", "50", null, null);
+        hold(ike, "PAS", "1", "50", "10", "PLN");
+
+        dashboard().andExpect(jsonPath("$.holdings[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$.holdings[1].ticker").value("AAA"))
+                .andExpect(jsonPath("$.holdings[1].value").doesNotExist());
+    }
+
+    @Test
     void aNewUserHasAnEmptyDashboard() throws Exception {
         as(bob, get("/api/v1/dashboard")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.value").value("0.00"))

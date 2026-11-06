@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.dashboard;
 
 import io.github.akarp0508.koifolio.domain.Breakdown;
+import io.github.akarp0508.koifolio.domain.CompanyTotal;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PortfolioHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
@@ -16,7 +17,10 @@ import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -62,6 +66,18 @@ class DashboardService {
     record Attention(Position position, PlanCheck check) {
     }
 
+    record AccountHolding(Position position, CompanyTotal total) {
+    }
+
+    /** @param held anything is still owned, or the records are incomplete and need a look */
+    record Holding(UUID instrumentId, String ticker, boolean held, CompanyTotal total, List<AccountHolding> accounts) {
+
+        private static final Comparator<Holding> BIGGEST_FIRST = Comparator
+                .comparing((Holding holding) -> holding.total().value().isEmpty())
+                .thenComparing(holding -> holding.total().value().orElse(BigDecimal.ZERO), Comparator.reverseOrder())
+                .thenComparing(Holding::ticker);
+    }
+
     /**
      * @param value positions plus cash, without cash while tags filter the view
      * @param cash empty while tags filter the view, because cash has no tags
@@ -69,11 +85,12 @@ class DashboardService {
      * @param currencyGain the part of it from exchange rates moving, for accounts in another currency
      * @param gainPercent gain against the cost of priced positions, empty without any
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
+     * @param holdings the matching positions per company, biggest first
      */
     record Dashboard(String currency, BigDecimal value, BigDecimal positionsValue, BigDecimal unrealizedGain,
                      BigDecimal currencyGain, Optional<BigDecimal> gainPercent, BigDecimal realizedGain, Optional<BigDecimal> cash,
                      List<Breakdown.Slice> bySector, List<Breakdown.Slice> byRisk, List<Attention> attention,
-                     int unpriced) {
+                     int unpriced, List<Holding> holdings) {
     }
 
     @Transactional(readOnly = true)
@@ -89,11 +106,11 @@ class DashboardService {
         List<Breakdown.Part> sectors = new ArrayList<>();
         List<Breakdown.Part> risks = new ArrayList<>();
         List<Attention> attention = new ArrayList<>();
+        List<Position> all = positions.list(userId);
+        Map<Position, PositionService.Weight> weights = positions.weights(userId, all);
+        List<Position> matching = all.stream().filter(filter::matches).toList();
 
-        for (Position position : positions.list(userId)) {
-            if (!filter.matches(position)) {
-                continue;
-            }
+        for (Position position : matching) {
             String currency = position.account().getCurrency();
             realized = add(realized, position.inBase().map(PositionResult::realizedGain).orElse(BigDecimal.ZERO));
             position.planCheck().filter(check -> check.signal().isPresent())
@@ -122,7 +139,37 @@ class DashboardService {
         Optional<BigDecimal> percent = cost.signum() == 0 ? Optional.empty()
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));
         return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized, cash,
-                Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced);
+                Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced, holdings(matching, weights, filter));
+    }
+
+    /** One account in view weighs against that account, otherwise against the whole portfolio. */
+    private static List<Holding> holdings(List<Position> positions, Map<Position, PositionService.Weight> weights, Filter filter) {
+        Map<UUID, List<Position>> byCompany = new LinkedHashMap<>();
+        positions.forEach(position -> byCompany.computeIfAbsent(position.instrument().id(), id -> new ArrayList<>()).add(position));
+
+        return byCompany.entrySet().stream()
+                .map(entry -> {
+                    List<CompanyTotal.Line> lines = entry.getValue().stream()
+                            .map(position -> line(position, weights.getOrDefault(position, PositionService.Weight.NONE), filter))
+                            .toList();
+                    List<AccountHolding> accounts = new ArrayList<>();
+                    for (int i = 0; i < lines.size(); i++) {
+                        accounts.add(new AccountHolding(entry.getValue().get(i), CompanyTotal.of(List.of(lines.get(i)))));
+                    }
+                    boolean held = entry.getValue().stream()
+                            .anyMatch(position -> !position.result().isClosed() || position.result().incomplete());
+                    return new Holding(entry.getKey(), entry.getValue().getFirst().ticker(), held, CompanyTotal.of(lines), accounts);
+                })
+                .sorted(Holding.BIGGEST_FIRST)
+                .toList();
+    }
+
+    private static CompanyTotal.Line line(Position position, PositionService.Weight weight, Filter filter) {
+        Optional<PositionResult> inBase = position.inBase();
+        return new CompanyTotal.Line(position.value().flatMap(position::convertToBase).filter(value -> inBase.isPresent()),
+                inBase.map(PositionResult::cost).orElse(BigDecimal.ZERO),
+                inBase.map(PositionResult::realizedGain).orElse(BigDecimal.ZERO),
+                filter.account() == null ? weight.ofPortfolio() : weight.ofAccount());
     }
 
     /** Totals over time, each day at that day's rate. */

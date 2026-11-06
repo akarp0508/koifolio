@@ -2,6 +2,7 @@ package io.github.akarp0508.koifolio.dashboard;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.domain.Breakdown;
+import io.github.akarp0508.koifolio.domain.CompanyTotal;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PortfolioHistory;
 import io.swagger.v3.oas.annotations.Operation;
@@ -35,7 +36,9 @@ class DashboardController {
     @GetMapping
     @Operation(summary = "Totals and breakdowns in your base currency", description = """
             Converted at the latest rates. A position matches if it has any of the instrument tags and any of \
-            the position tags. Cash has no tags, so it's left out while tags filter the view.""")
+            the position tags. Cash has no tags, so it's left out while tags filter the view. Holdings group \
+            matching positions by company. Their weight is of the chosen account, or of the whole portfolio \
+            without one, with cash in the total; tags don't change it.""")
     DashboardResponse dashboard(@AuthenticationPrincipal Jwt jwt,
                                 @RequestParam(required = false) UUID account,
                                 @RequestParam(defaultValue = "") Set<String> instrumentTag,
@@ -83,11 +86,13 @@ class DashboardController {
      * @param cash left out while tags filter the view
      * @param currencyGain the part of unrealizedGain from exchange rates, for accounts in another currency
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
+     * @param holdings per company, biggest first, with sold ones marked by held being false
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record DashboardResponse(String currency, String value, String positionsValue, String unrealizedGain,
                              String currencyGain, String unrealizedPercent, String realizedGain, String cash, List<SliceResponse> bySector,
-                             List<SliceResponse> byRisk, List<AttentionResponse> attention, int unpriced) {
+                             List<SliceResponse> byRisk, List<AttentionResponse> attention, int unpriced,
+                             List<HoldingResponse> holdings) {
 
         static DashboardResponse of(DashboardService.Dashboard d) {
             String currency = d.currency();
@@ -95,7 +100,8 @@ class DashboardController {
                     money(d.unrealizedGain(), currency), money(d.currencyGain(), currency), d.gainPercent().map(DashboardResponse::percent).orElse(null),
                     money(d.realizedGain(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
                     slices(d.bySector(), currency), slices(d.byRisk(), currency),
-                    d.attention().stream().map(AttentionResponse::of).toList(), d.unpriced());
+                    d.attention().stream().map(AttentionResponse::of).toList(), d.unpriced(),
+                    d.holdings().stream().map(holding -> HoldingResponse.of(holding, currency)).toList());
         }
 
         private static List<SliceResponse> slices(List<Breakdown.Slice> slices, String currency) {
@@ -110,6 +116,45 @@ class DashboardController {
         static String money(BigDecimal value, String currency) {
             int digits = Currency.getInstance(currency).getDefaultFractionDigits();
             return value.setScale(digits, RoundingMode.HALF_UP).toPlainString();
+        }
+    }
+
+    /** A company's numbers, in the base currency. Value and gain are left out without a price. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record HoldingResponse(UUID instrumentId, String ticker, boolean held, String value, String unrealizedGain,
+                           String unrealizedPercent, String realizedGain, String weight,
+                           List<AccountHoldingResponse> accounts) {
+
+        static HoldingResponse of(DashboardService.Holding holding, String currency) {
+            CompanyTotal total = holding.total();
+            return new HoldingResponse(holding.instrumentId(), holding.ticker(), holding.held(),
+                    total.value().map(value -> DashboardResponse.money(value, currency)).orElse(null),
+                    total.gain().map(gain -> DashboardResponse.money(gain, currency)).orElse(null),
+                    total.gainPercent().map(DashboardResponse::percent).orElse(null),
+                    DashboardResponse.money(total.realized(), currency),
+                    total.weight().map(DashboardResponse::percent).orElse(null),
+                    holding.accounts().stream().map(account -> AccountHoldingResponse.of(account, currency)).toList());
+        }
+    }
+
+    /**
+     * @param closed nothing is held in this account any more
+     * @param incomplete a sale exceeded what was held, so the history is missing something
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record AccountHoldingResponse(UUID accountId, String accountName, boolean closed, boolean incomplete, String value,
+                                  String unrealizedGain, String unrealizedPercent, String realizedGain, String weight) {
+
+        static AccountHoldingResponse of(DashboardService.AccountHolding holding, String currency) {
+            CompanyTotal total = holding.total();
+            var position = holding.position();
+            return new AccountHoldingResponse(position.account().getId(), position.account().getName(),
+                    position.result().isClosed(), position.result().incomplete(),
+                    total.value().map(value -> DashboardResponse.money(value, currency)).orElse(null),
+                    total.gain().map(gain -> DashboardResponse.money(gain, currency)).orElse(null),
+                    total.gainPercent().map(DashboardResponse::percent).orElse(null),
+                    DashboardResponse.money(total.realized(), currency),
+                    total.weight().map(DashboardResponse::percent).orElse(null));
         }
     }
 

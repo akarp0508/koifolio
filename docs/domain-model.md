@@ -16,6 +16,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 | `SplitDetector` | Spots a split from stored closes changing by one ratio |
 | `TaxEstimate` | Groups accounts by rate, and splits realized gains by year |
 | `Weights` | Each value's percent of a total that includes cash |
+| `CompanyTotal` | Adds up one company across accounts |
 
 ## Calculation rules
 

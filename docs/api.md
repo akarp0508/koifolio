@@ -227,10 +227,18 @@ Implemented.
   "bySector": [{"label": "IT", "value": "1200.00", "percent": "60.0"}, {"value": "800.00", "percent": "40.0"}],
   "byRisk": [{"label": "4-5", "value": "1800.00", "percent": "90.0"}],
   "attention": [{"accountId": "…", "accountName": "IKE", "ticker": "PAS", "signal": "NEAR_TARGET", "distance": "2.9"}],
-  "unpriced": 0
+  "unpriced": 0,
+  "holdings": [{
+    "instrumentId": "…", "ticker": "PAS", "held": true, "value": "1200.00", "unrealizedGain": "300.00",
+    "unrealizedPercent": "33.3", "realizedGain": "80.00", "weight": "35.3",
+    "accounts": [{"accountId": "…", "accountName": "IKE", "closed": false, "incomplete": false, "value": "1200.00",
+                  "unrealizedGain": "300.00", "unrealizedPercent": "33.3", "realizedGain": "80.00", "weight": "35.3"}]
+  }]
 }
 ```
 
+- `holdings` groups the matching positions by company, in the base currency, biggest first, with unpriced ones last. `held` is false once everything is sold, unless the records are `incomplete`.
+- A holding's `weight` is of the chosen account, or of the whole portfolio without one, with cash in the total. Tags narrow what's listed but don't change the weight.
 - Value and cash are at the latest rates. Cost and realized gains use each trade's own rate, per `costFxRule`.
 - `currencyGain` is the part of `unrealizedGain` from rates moving: cost at today's rate minus cost at purchase rates. It covers accounts in another currency than the base. A foreign stock in a base-currency account has its currency effect inside the stock's gain, because its cost was entered in that currency.
 - A position matches if it has any of the wanted instrument tags, and any of the wanted position tags. The two kinds and the account must all match.

@@ -110,12 +110,12 @@ public class PositionService {
         }
 
         /** What an open position is worth in the account's currency. Empty without a price. */
-        Optional<BigDecimal> value() {
+        public Optional<BigDecimal> value() {
             return accountPrice.filter(price -> !result.isClosed()).map(price -> Valuation.of(result, price).value());
         }
 
         /** An amount in the account's currency at today's rate. */
-        Optional<BigDecimal> convertToBase(BigDecimal amount) {
+        public Optional<BigDecimal> convertToBase(BigDecimal amount) {
             return Optional.ofNullable(rateToBase).map(rate -> amount.multiply(rate, MathContext.DECIMAL128));
         }
 
@@ -141,14 +141,14 @@ public class PositionService {
 
 
     /** A position's percent of its account and of the portfolio, cash included. Empty when it has no value there. */
-    record Weight(Optional<BigDecimal> ofAccount, Optional<BigDecimal> ofPortfolio) {
+    public record Weight(Optional<BigDecimal> ofAccount, Optional<BigDecimal> ofPortfolio) {
 
-        static final Weight NONE = new Weight(Optional.empty(), Optional.empty());
+        public static final Weight NONE = new Weight(Optional.empty(), Optional.empty());
     }
 
     /** Weights across the whole portfolio, so pass every position, however the result gets filtered. */
     @Transactional(readOnly = true)
-    Map<Position, Weight> weights(UUID userId, List<Position> positions) {
+    public Map<Position, Weight> weights(UUID userId, List<Position> positions) {
         String base = authService.currentUser(userId).getBaseCurrency();
         FxService.Rates rates = fx.rates();
         BigDecimal allCash = BigDecimal.ZERO;

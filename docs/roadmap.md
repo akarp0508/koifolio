@@ -24,6 +24,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 13. **Purchase-date FX** (done): cost and realized gains at each trade's rate, currency gain shown separately, and the rate date as a setting.
 14. **Tax estimates** (done): a rate per account, a yearly estimate page and a dashboard tile.
 15. **Weights** (done): each position's share of its account and of everything, cash included.
+16. **Portfolio page** (done): Dashboard and Positions merged, holdings grouped by company, and Activity replacing Transactions.
 
 ## Current focus: extending the site
 

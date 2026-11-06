@@ -22,7 +22,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 ## Features
 
 ### v1
-- **Dashboard** — totals in your base currency, 1D to 1Y changes, value over time, sector and risk breakdowns, and what needs attention, filtered by account, company tags and position tags.
+- **Portfolio** — totals in your base currency, 1D to 1Y changes, value over time, sector and risk breakdowns, what needs attention and your holdings by company, filtered by account, company tags and position tags.
 - **Transactions & positions** — add, edit and delete buys/sells/dividends/deposits in a modal form; average price, P/L, weights computed automatically.
 - **Positions** — holdings, average cost, value and P/L per account and ticker, with average or FIFO cost, and a plan per account with target, stop and risk.
 - **Position history** — daily closes stored locally, with gaps filled automatically, and a value chart per position.
