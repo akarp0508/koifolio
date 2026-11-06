@@ -90,6 +90,11 @@ public class Transaction {
         affectsBalance = values.affectsBalance();
     }
 
+    /** Keeps the order of same-day transactions when they're restored. */
+    void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
     /** What this transaction currently contributes to the account balance. */
     BigDecimal balanceEffect() {
         return affectsBalance ? cashEffect : BigDecimal.ZERO;

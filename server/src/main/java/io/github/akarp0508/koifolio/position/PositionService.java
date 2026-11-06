@@ -91,6 +91,27 @@ public class PositionService {
                 position.rateToBase());
     }
 
+    public record ExportedPlan(UUID accountId, String ticker, String plan, Integer risk, BigDecimal targetPrice,
+                               BigDecimal stopPrice, Set<String> tags) {
+    }
+
+    @Transactional(readOnly = true)
+    public List<ExportedPlan> exportPlans(UUID userId) {
+        Map<UUID, InstrumentView> views = instruments.views(userId);
+        return plans.findByUserId(userId).stream()
+                .map(plan -> new ExportedPlan(plan.getAccountId(), views.get(plan.getInstrumentId()).ticker(), plan.getPlan(),
+                        plan.getRisk(), plan.getTargetPrice(), plan.getStopPrice(), plan.getTags()))
+                .toList();
+    }
+
+    @Transactional
+    public void restorePlan(UUID userId, ExportedPlan exported) {
+        UUID instrumentId = instruments.useTicker(userId, InstrumentService.normalizeTicker(exported.ticker()));
+        PositionPlan plan = new PositionPlan(exported.accountId(), instrumentId, userId);
+        plan.update(exported.plan(), exported.risk(), exported.targetPrice(), exported.stopPrice(), exported.tags());
+        plans.save(plan);
+    }
+
     private static ApiException notFound() {
         return new ApiException(HttpStatus.NOT_FOUND, "position_not_found", "Position not found");
     }

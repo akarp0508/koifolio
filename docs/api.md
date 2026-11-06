@@ -334,8 +334,13 @@ Planned: `GET /prices/status`, manual price overrides.
 
 ## v1.1
 
+Implemented.
+
 | Request | Purpose |
 |---|---|
 | `GET /export` | Zip in the [export format](export-format.md) |
-| `POST /import` | Upload, `?mode=replace\|merge` |
+| `POST /import?mode=replace` | Upload an export as multipart `file`, replacing all your data. Up to 20 MB |
+
+- There's no merge: telling a repeated trade from a real second one is a guess, and a wrong guess doubles a position.
+- Restoring runs in one transaction, so `400 invalid_import` means nothing changed. Its `detail` names the file and line.
 | `POST /portfolio/backfill` | Fill history gaps |

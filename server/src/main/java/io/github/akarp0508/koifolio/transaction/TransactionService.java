@@ -7,10 +7,13 @@ import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.time.LocalDate;
 import java.math.RoundingMode;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.Currency;
 import java.util.HashMap;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,9 +42,11 @@ public class TransactionService {
     private final AccountRepository accounts;
     private final AuthService authService;
     private final InstrumentService instruments;
+    private final Validator validator;
 
     TransactionService(TransactionRepository transactions, AccountRepository accounts, AuthService authService,
-                       InstrumentService instruments) {
+                       InstrumentService instruments, Validator validator) {
+        this.validator = validator;
         this.transactions = transactions;
         this.accounts = accounts;
         this.authService = authService;
@@ -48,6 +54,43 @@ public class TransactionService {
     }
 
     record Listed(Transaction transaction, String currency, String ticker, boolean oversold) {
+    }
+
+    /** A transaction for backup, with no ids of its own. */
+    public record Exported(UUID accountId, TransactionType type, LocalDate date, String ticker, BigDecimal quantity,
+                           BigDecimal price, BigDecimal fee, BigDecimal amount, BigDecimal withheldTax,
+                           BigDecimal splitFrom, BigDecimal splitTo, boolean affectsBalance, Instant createdAt) {
+    }
+
+    /** Oldest first. */
+    @Transactional(readOnly = true)
+    public List<Exported> exportAll(UUID userId) {
+        Map<UUID, String> tickers = instruments.views(userId).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().ticker()));
+        return transactions.findByUserId(userId).stream().sorted(HISTORY_ORDER)
+                .map(t -> new Exported(t.getAccountId(), t.getType(), t.getDate(), tickers.get(t.getInstrumentId()),
+                        t.getQuantity(), t.getPrice(), t.getFee(), t.getAmount(), t.getWithheldTax(), t.getSplitFrom(),
+                        t.getSplitTo(), t.isAffectsBalance(), t.getCreatedAt()))
+                .toList();
+    }
+
+    /** Checks it as a new transaction would be, but leaves the balance alone, because the export has that as it stood. */
+    @Transactional
+    public void restore(UUID userId, Exported exported) {
+        Account account = accounts.findByIdAndUserId(exported.accountId(), userId).orElseThrow();
+        TransactionRequest request = new TransactionRequest(exported.accountId(), exported.type(), exported.date(),
+                exported.ticker(), exported.quantity(), exported.price(), exported.fee(), exported.amount(),
+                exported.withheldTax(), exported.splitFrom(), exported.splitTo(), exported.affectsBalance(), true);
+        Set<ConstraintViolation<TransactionRequest>> violations = validator.validate(request);
+        if (!violations.isEmpty()) {
+            ConstraintViolation<TransactionRequest> first = violations.iterator().next();
+            throw new FieldValidationException(Map.of(first.getPropertyPath().toString(), first.getMessage()));
+        }
+        TransactionValues values = validate(request, account.getCurrency());
+        Transaction transaction = new Transaction(userId, account.getId());
+        transaction.apply(values, instrumentFor(userId, values));
+        transaction.setCreatedAt(exported.createdAt());
+        transactions.save(transaction);
     }
 
     @Transactional(readOnly = true)

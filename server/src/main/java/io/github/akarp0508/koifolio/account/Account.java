@@ -55,6 +55,16 @@ public class Account {
     protected Account() {
     }
 
+    /** An account as it was exported, with its balance as it stood rather than rebuilt from transactions. */
+    public static Account restored(UUID userId, String name, String description, String currency, BigDecimal balance,
+                                   LocalDate balanceSetOn, CostMethod costMethod, BigDecimal taxRate, Instant createdAt) {
+        Account account = new Account(userId, name, description, currency, balance, costMethod);
+        account.balanceSetOn = balanceSetOn;
+        account.taxRate = taxRate;
+        account.createdAt = createdAt;
+        return account;
+    }
+
     Account(UUID userId, String name, String description, String currency, BigDecimal balance, CostMethod costMethod) {
         this.id = UUID.randomUUID();
         this.userId = userId;
@@ -75,7 +85,7 @@ public class Account {
         return name;
     }
 
-    String getDescription() {
+    public String getDescription() {
         return description;
     }
 
@@ -85,6 +95,10 @@ public class Account {
 
     public BigDecimal getBalance() {
         return balance;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
     }
 
     public BigDecimal getTaxRate() {
@@ -99,7 +113,7 @@ public class Account {
         return costMethod;
     }
 
-    LocalDate getBalanceSetOn() {
+    public LocalDate getBalanceSetOn() {
         return balanceSetOn;
     }
 

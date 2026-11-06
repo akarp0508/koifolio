@@ -10,7 +10,7 @@ Last reviewed: 2026-11-06.
 |---|---|
 | **Analysis lives next to the numbers.** Each company has notes plus structured fields, in one place with its figures | ✅ Delivered: company details, per-account plans |
 | **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | ⏸ Deferred on purpose: the site comes first. See [mcp.md](mcp.md) |
-| **Your data is never locked in.** Plain-text export/import, optional git backup | ❌ Not built, so this isn't true yet. See [export-format.md](export-format.md) |
+| **Your data is never locked in.** Plain-text export/import, optional git backup | ✅ Export and restore done, on the Data page. The git backup is deferred. See [export-format.md](export-format.md) |
 | **Multiple accounts,** viewed separately or together | ✅ Delivered |
 | **Your rules, checked automatically,** like "max 20% in one company" or "~50% in low-risk" | ✅ Done |
 | **Self-hosted and always on,** on a Raspberry Pi over Tailscale | ⏸ Deferred on purpose: runs on the desktop for now |
@@ -52,6 +52,6 @@ These were deliberate, and are recorded in [decisions.md](decisions.md):
 Accepted for now, and worth rechecking before relying on the app for real data:
 
 - The repo has no remote, so the code exists only on the desktop.
-- Data is in one Docker volume with no scheduled backup.
+- Data is in one Docker volume with no scheduled backup, so exports are by hand.
 - CI has never run, and the arm64 image has never been tested on a Pi.
 - Live prices and daily closes only update while the app runs, though closes fill in afterwards.

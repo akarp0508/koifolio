@@ -27,6 +27,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 16. **Portfolio page** (done): Dashboard and Positions merged, holdings grouped by company with buy and sell on each, and Activity replacing Transactions.
 17. **Company page** (done): one page per company with account tabs, a combined chart, notes, plans and trades. It replaces the Instruments and position pages, and followed companies moved into Not held on Portfolio.
 18. **Rules** (done): a maximum per company and a minimum in low risk, per account or overall, with failures in Needs attention.
+19. **Export and restore** (done): all your data as plain text, and a restore that replaces it, with all of it or none of it applied.
 
 ## Current focus: extending the site
 
@@ -40,7 +41,6 @@ Rough priorities, to be picked one batch at a time:
 
 **Promised features**
 
-- **Plain-text export,** then import
 
 **Broader coverage**
 

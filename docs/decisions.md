@@ -21,7 +21,7 @@
 - **Each account has one currency and one balance** in the MVP, set directly by the user. A multi-currency broker account means several accounts. This replaces the earlier plan of cash per currency within an account. How transactions affect the balance is decided in the transactions step.
 - **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
 - **Deployment, when it comes:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
-- **Storage:** Postgres is the source of truth. Plain text is export/import plus an optional one-way git backup.
+- **Storage:** Postgres is the source of truth. Plain text is export and restore plus an optional one-way git backup. Restore replaces everything rather than merging, because a merge has to guess which trades are repeats, and a wrong guess silently doubles a position. Balances are restored as they stood, not rebuilt from transactions, because backfilled history doesn't affect them.
 - **Agents, when they come:** through MCP only.
 - **Accounts own lots and cash.** An account has a name, a free-form description, a currency and a cost method. There are no fixed account types.
 - **Cost basis:** `average` or `fifo`, set per account, average by default. Changing it recalculates positions.

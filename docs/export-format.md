@@ -1,64 +1,96 @@
 # Plain-text export format
 
-> **Planned.** Nothing here is built yet, and the examples still need updating to the current model.
-
-The export (and the optional git backup) is a directory of small, human- and agent-readable files. Import reads the same format, on demand (replace or merge). There is no live two-way sync.
+The export is a zip of small files that people and agents can read. **Data → Download export** gets it, and **Restore** loads one back, replacing all your data. There's no live sync, and no merge.
 
 ```
-my-portfolio/
+koifolio-export-2026-11-06.zip
+├─ koifolio.yaml            # format version and settings
 ├─ accounts.yaml
+├─ plans.yaml
 ├─ rules.yaml
-├─ bonds.yaml
 ├─ transactions/
-│  ├─ ike-xtb.jsonl         # one line = one transaction
-│  └─ bonds-tos-2025-08.jsonl
-├─ companies/
-│  └─ PAS.md                # YAML frontmatter + free-form analysis
-└─ history/
-   └─ snapshots.jsonl
+│  └─ ike-xtb.jsonl         # one line = one transaction, one file per account
+└─ companies/
+   └─ PAS.md                # YAML frontmatter, then the Markdown analysis
 ```
+
+It holds everything you entered, but no password and no shared market data: prices, closes and FX rates are fetched again. Numbers are written in full, so they don't lose precision.
+
+## `koifolio.yaml`
+
+```yaml
+format: 1
+exportedAt: "2026-11-06T14:00:00Z"
+baseCurrency: "PLN"
+costFxRule: "previous_publication"   # or transaction_date
+```
+
+A file in another format is refused.
 
 ## `accounts.yaml`
+
 ```yaml
-- id: ike-xtb
-  name: IKE (XTB)
-  description: Long-term retirement account, held until 60.   # free text
-  tax:
-    method: average        # average | fifo
-    rate: 0
-- id: bonds-tos-2025-08
-  name: TOS bonds 08.2025
-  description: Treasury bonds bought at PKO.
-  tax:
-    method: fifo
-    rate: 0.19
+- key: "ike-xtb"               # names the transactions file, and links plans and rules
+  name: "IKE (XTB)"
+  description: "Long-term account"
+  currency: "PLN"
+  balance: 1000.5              # as it stood, not rebuilt from transactions
+  balanceSetOn: "2026-01-05"   # optional
+  costMethod: "fifo"           # average | fifo, defaults to average
+  taxRate: 19                  # percent, left out when unset
+  createdAt: "2026-01-05T10:00:00Z"   # optional
 ```
 
-## `transactions/*.jsonl`
+## `transactions/<account key>.jsonl`
+
 ```json
-{"date":"2026-03-12","type":"buy","ticker":"PAS","qty":10,"price":120.00,"currency":"PLN","fee":0}
-{"date":"2026-07-02","type":"dividend","ticker":"PAS","amount":25.00,"currency":"PLN"}
-{"date":"2026-01-05","type":"deposit","amount":5000,"currency":"PLN"}
-{"date":"2025-08-14","type":"bond_buy","series":"TOS0828","nominal":10000,"rate":5.0}
+{"date":"2026-01-05","type":"deposit","amount":5000,"affectsBalance":true}
+{"date":"2026-03-12","type":"buy","ticker":"PAS","quantity":10,"price":120,"fee":3.15,"affectsBalance":true}
+{"date":"2026-07-02","type":"dividend","ticker":"PAS","amount":25,"withheldTax":4.75,"affectsBalance":true}
+{"date":"2026-08-01","type":"split","ticker":"PAS","splitFrom":1,"splitTo":10,"affectsBalance":false}
 ```
 
-## `companies/PAS.md`
-```yaml
+- Types are `deposit`, `withdrawal`, `buy`, `sell`, `dividend`, `fee` and `split`.
+- Amounts are in the account's currency.
+- `createdAt` is optional and orders trades on the same day. Without it, lines keep their order in the file.
+- Each line is checked like a new transaction, and an error names the file and line.
+- `affectsBalance` doesn't move the balance on restore, because `accounts.yaml` already has it.
+
+## `companies/<ticker>.md`
+
+```markdown
 ---
-ticker: PAS
-name: Passus
-market: GPW              # GPW | NASDAQ | NYSE ...
-currency: PLN
-sector: IT / cybersecurity
-risk: 3                  # 1 (very low) – 5 (very high)
-scenarios:               # 3-year total return, %
-  bear: -30
-  base: 25
-  bull: 70
-probabilities: [0.25, 0.5, 0.25]
+ticker: "PAS"
+name: "Passus"
+sector: "IT"
+risk: 3                # 1 (very low) to 5 (very high)
 thesis: "Growing demand for cybersecurity"
-updated: 2026-01-15
+tags: ["core"]
+listed: true           # false: removed from your list, still on transactions
 ---
-# PAS — Passus
-(free-form analysis written by you or an agent)
+# Passus
+Your analysis, kept exactly as written.
+```
+
+## `plans.yaml`
+
+```yaml
+- account: "ike-xtb"
+  ticker: "PAS"
+  plan: "Hold through the next report"
+  risk: 2
+  targetPrice: 180.5
+  stopPrice: 90
+  tags: ["long"]
+```
+
+## `rules.yaml`
+
+```yaml
+- type: "max_position_weight"
+  limitPercent: 20
+- type: "min_low_risk_weight"
+  account: "ike-xtb"           # left out to cover every account
+  limitPercent: 50
+  maxRisk: 2
 ```

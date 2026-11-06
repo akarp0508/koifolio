@@ -11,7 +11,7 @@ What we intend to build, in enough detail to implement from. Keep these files in
 | [database.md](database.md) | Postgres schema |
 | [api.md](api.md) | REST requests and responses |
 | [mcp.md](mcp.md) | MCP tools and agent permissions (deferred) |
-| [export-format.md](export-format.md) | Plain-text export/import format (planned) |
+| [export-format.md](export-format.md) | Plain-text export and restore format |
 | [price-sources.md](price-sources.md) | Tested data sources and provider chain |
 
 Status markers: **OPEN** means not decided yet, and the text describes the recommended option.

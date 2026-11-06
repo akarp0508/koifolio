@@ -14,7 +14,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 
 - **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
 - **Agents as first-class users (planned).** A built-in MCP server will expose the same calculations the UI shows.
-- **Your data is never locked in (planned).** Plain-text export/import in documented formats.
+- **Your data is never locked in.** Plain-text export and restore in a documented format.
 - **Multiple accounts.** Any kind of account, each with its own tax settings (e.g. a regular brokerage account, or a tax-free one like Polish IKE) — viewed separately or together.
 - **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
 - **Self-hosted.** One Docker Compose stack (app + Postgres). Built multi-user from day one, even if you're the only user.

@@ -3,6 +3,7 @@ package io.github.akarp0508.koifolio.instrument;
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -45,6 +46,28 @@ public class InstrumentService {
     }
 
     public record QuoteRef(String symbol, String currency) {
+    }
+
+    public record Exported(String ticker, InstrumentDetails details, boolean listed) {
+    }
+
+    @Transactional(readOnly = true)
+    public List<Exported> exportAll(UUID userId) {
+        return instruments.findByUserId(userId).stream()
+                .sorted(Comparator.comparing(Instrument::getTicker))
+                .map(instrument -> new Exported(instrument.getTicker(), instrument.details(), instrument.isListed()))
+                .toList();
+    }
+
+    /** Runs after the transactions, which may have added the ticker already. */
+    @Transactional
+    public void restore(UUID userId, Exported exported) {
+        String ticker = normalizeTicker(exported.ticker());
+        Instrument instrument = instruments.findByUserIdAndTicker(userId, ticker)
+                .orElseGet(() -> new Instrument(userId, ticker));
+        instrument.describe(exported.details());
+        instrument.setListed(exported.listed());
+        instruments.save(instrument);
     }
 
     public record InstrumentView(UUID id, String ticker, InstrumentDetails details) {

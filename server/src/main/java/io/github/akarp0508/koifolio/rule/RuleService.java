@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-class RuleService {
+public class RuleService {
 
     private final RuleRepository rules;
     private final AccountRepository accounts;
@@ -43,7 +43,19 @@ class RuleService {
     record Checked(Rule rule, RuleCheck check, int unpriced) {
     }
 
-    record Input(RuleType type, UUID accountId, BigDecimal limitPercent, Integer maxRisk) {
+    public record Input(RuleType type, UUID accountId, BigDecimal limitPercent, Integer maxRisk) {
+    }
+
+    @Transactional(readOnly = true)
+    public List<Input> exportAll(UUID userId) {
+        return list(userId).stream()
+                .map(rule -> new Input(rule.getType(), rule.getAccountId(), rule.getLimitPercent(), rule.getMaxRisk()))
+                .toList();
+    }
+
+    @Transactional
+    public void restore(UUID userId, Input input) {
+        create(userId, input);
     }
 
     @Transactional(readOnly = true)

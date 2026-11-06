@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.auth;
 
 import io.github.akarp0508.koifolio.ApiException;
+import io.github.akarp0508.koifolio.domain.CostFxRule;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Locale;
@@ -18,6 +19,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AuthService {
@@ -63,6 +65,14 @@ public class AuthService {
     }
 
     /** The user a token belongs to. Tokens outlive deleted users, so this can fail. */
+    /** Sets what an export carried. The base currency must already be known to have a rate. */
+    @Transactional
+    public void restoreSettings(UUID userId, String baseCurrency, CostFxRule costFxRule) {
+        User user = currentUser(userId);
+        user.setBaseCurrency(baseCurrency);
+        user.setCostFxRule(costFxRule);
+    }
+
     public User currentUser(UUID id) {
         return users.findById(id).orElseThrow(() ->
                 new ApiException(HttpStatus.UNAUTHORIZED, "unknown_user", "This user no longer exists"));
