@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { RestoredData, Settings, User } from '../api/client'
+import { AgentTokens } from './AgentTokens'
 import { ConfirmDialog } from './ConfirmDialog'
 
 function saveFile(blob: Blob, name: string) {
@@ -111,6 +112,7 @@ export function Profile({ user }: { user: User }) {
             </p>
           )}
         </section>
+        <AgentTokens />
       </div>
 
       {file && (

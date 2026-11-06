@@ -266,6 +266,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agent-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List your agent tokens */
+        get: operations["list_3"];
+        put?: never;
+        /**
+         * Create a token for an agent
+         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one.
+         */
+        post: operations["create_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounts": {
         parameters: {
             query?: never;
@@ -274,13 +295,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your accounts */
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         /**
          * Create an account
          * @description The balance defaults to 0. The currency can't be changed later.
          */
-        post: operations["create_3"];
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -364,7 +385,7 @@ export interface paths {
          * Splits spotted in your stocks that you haven't entered
          * @description The date is the first day seen after the split, so it can be a few days late.
          */
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         post?: never;
         delete?: never;
@@ -404,7 +425,7 @@ export interface paths {
          * List your positions, by ticker
          * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows. Weights are shares of the value, cash included.
          */
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -522,6 +543,26 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agent-tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Revoke a token
+         * @description It stops working at once.
+         */
+        delete: operations["revoke"];
         options?: never;
         head?: never;
         patch?: never;
@@ -735,6 +776,26 @@ export interface components {
             accessToken?: string;
             /** Format: int64 */
             expiresIn?: number;
+        };
+        AgentTokenRequest: {
+            name: string;
+            /** Format: date */
+            expiresOn?: string;
+        };
+        AgentTokenResponse: {
+            /** Format: uuid */
+            id?: string;
+            name?: string;
+            /** Format: date */
+            expiresOn?: string;
+            /** Format: date-time */
+            lastUsedAt?: string;
+            /** Format: date-time */
+            createdAt?: string;
+        };
+        CreatedAgentTokenResponse: {
+            token?: components["schemas"]["AgentTokenResponse"];
+            secret?: string;
         };
         CreateAccountRequest: {
             name: string;
@@ -1506,12 +1567,56 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "*/*": components["schemas"]["AccountResponse"][];
+                    "*/*": components["schemas"]["AgentTokenResponse"][];
                 };
             };
         };
     };
     create_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTokenRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["CreatedAgentTokenResponse"];
+                };
+            };
+        };
+    };
+    list_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["AccountResponse"][];
+                };
+            };
+        };
+    };
+    create_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1669,7 +1774,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1709,7 +1814,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: {
                 account?: string;
@@ -1865,6 +1970,26 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["UserResponse"];
                 };
+            };
+        };
+    };
+    revoke: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

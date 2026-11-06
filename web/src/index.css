@@ -974,3 +974,10 @@ button.sell {
   color: inherit;
   border-bottom-color: var(--accent);
 }
+
+.agent-secret {
+  display: block;
+  margin: 0.5rem 0;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
