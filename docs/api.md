@@ -296,7 +296,7 @@ Implemented. Tokens for the [MCP server](mcp.md), which work there and nowhere e
 
 ## Review
 
-Implemented. Agent company and rule changes wait here, and apply only when approved.
+Implemented. Agent company, rule and account changes wait here, and apply only when approved.
 
 | Request | Purpose |
 |---|---|
@@ -306,7 +306,7 @@ Implemented. Agent company and rule changes wait here, and apply only when appro
 | `POST /review/changes/{id}/reject` | Drop one |
 | `POST /review/approve-all` | Approve transactions and changes, for `?agent=` or everyone. If any can't apply, none are |
 | `POST /review/reject-all` | Reject transactions and changes, for `?agent=` or everyone |
-| `POST /review/log/{id}/revert` | Undo an agent's company or rule change from the change log. `409 changed_since` if it has changed since, unless `force=true` |
+| `POST /review/log/{id}/revert` | Undo an agent's company, rule or account change from the change log. `409 changed_since` if it has changed since, unless `force=true`. `409 account_in_use` if an account has transactions |
 
 ## Change log
 

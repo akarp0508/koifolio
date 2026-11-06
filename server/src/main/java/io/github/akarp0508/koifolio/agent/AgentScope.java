@@ -9,9 +9,10 @@ import java.util.stream.Collectors;
 public enum AgentScope {
     @JsonProperty("analysis:write") ANALYSIS_WRITE,
     @JsonProperty("transactions:write") TRANSACTIONS_WRITE,
+    @JsonProperty("accounts:write") ACCOUNTS_WRITE,
     @JsonProperty("rules:write") RULES_WRITE;
 
-    static final Set<AgentScope> DEFAULTS = EnumSet.of(ANALYSIS_WRITE, TRANSACTIONS_WRITE);
+    static final Set<AgentScope> DEFAULTS = EnumSet.of(ANALYSIS_WRITE, TRANSACTIONS_WRITE, ACCOUNTS_WRITE);
 
     static String store(Set<AgentScope> scopes) {
         return scopes.stream().map(Enum::name).collect(Collectors.joining(" "));

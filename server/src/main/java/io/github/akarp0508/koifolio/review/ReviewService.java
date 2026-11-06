@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.review;
 
 import io.github.akarp0508.koifolio.ApiException;
+import io.github.akarp0508.koifolio.account.AccountService;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.instrument.InstrumentDetails;
@@ -37,9 +38,11 @@ public class ReviewService {
     private final InstrumentService instruments;
     private final RuleService rules;
     private final TransactionService transactions;
+    private final AccountService accounts;
 
     ReviewService(JdbcClient jdbc, JsonMapper json, AuditLog auditLog, InstrumentService instruments, RuleService rules,
-                  TransactionService transactions) {
+                  TransactionService transactions, AccountService accounts) {
+        this.accounts = accounts;
         this.jdbc = jdbc;
         this.json = json;
         this.auditLog = auditLog;
@@ -51,7 +54,8 @@ public class ReviewService {
     enum Kind {
         COMPANY,
         RULE,
-        RULE_DELETE
+        RULE_DELETE,
+        ACCOUNT
     }
 
     record Pending(UUID id, String agent, Kind kind, String ticker, UUID ruleId, String summary, Map<String, Object> changes,
@@ -82,6 +86,14 @@ public class ReviewService {
         }
         return propose(userId, agent, Kind.RULE, null, id, json.convertValue(input, MAP),
                 (id == null ? "Add rule " : "Change rule to ") + RuleService.describe(input));
+    }
+
+    @Transactional
+    public Proposed proposeAccount(UUID userId, String agent, AccountService.Input input) {
+        accounts.check(input);
+        String balance = input.balance() == null ? "0" : input.balance().toPlainString();
+        return propose(userId, agent, Kind.ACCOUNT, null, null, json.convertValue(input, MAP),
+                "Create account %s (%s, balance %s)".formatted(input.name().strip(), input.currency(), balance));
     }
 
     @Transactional
@@ -132,6 +144,7 @@ public class ReviewService {
             }).orElse(Map.of());
             case RULE, RULE_DELETE -> pending.ruleId() == null ? Map.of()
                     : rules.lookUp(userId, pending.ruleId()).<Map<String, Object>>map(input -> json.convertValue(input, MAP)).orElse(Map.of());
+            case ACCOUNT -> Map.of();
         };
     }
 
@@ -179,6 +192,7 @@ public class ReviewService {
                 }
             }
             case RULE_DELETE -> rules.delete(userId, pending.ruleId(), agent);
+            case ACCOUNT -> accounts.create(userId, convert(pending.changes(), AccountService.Input.class), agent);
         }
         decide(userId, pending, "approve", "Approved: ");
     }
@@ -226,6 +240,7 @@ public class ReviewService {
                     rules.update(userId, entry.entityId(), convert(entry.before(), RuleService.Input.class), Actor.USER);
                 }
             }
+            case "account" -> accounts.deleteUnused(userId, entry.entityId());
             default -> throw new IllegalStateException(entry.entityType());
         }
         auditLog.markReverted(entryId);

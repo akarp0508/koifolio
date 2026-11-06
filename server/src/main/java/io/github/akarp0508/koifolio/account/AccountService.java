@@ -1,5 +1,6 @@
 package io.github.akarp0508.koifolio.account;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Every lookup is scoped to the user, so another user's account simply doesn't exist. */
 @Service
-class AccountService {
+public class AccountService {
 
     private final AccountRepository accounts;
     private final AuthService authService;
@@ -40,6 +41,12 @@ class AccountService {
         this.rules = rules;
     }
 
+    /** A new account. @param balance 0 if null @param costMethod average if null */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Input(String name, String description, String currency, BigDecimal balance, CostMethod costMethod,
+                        BigDecimal taxRate) {
+    }
+
     @Transactional(readOnly = true)
     List<Account> list(UUID userId) {
         requireUser(userId);
@@ -52,19 +59,32 @@ class AccountService {
         return find(userId, id);
     }
 
+    /** Refuses what {@link #create} would, so a proposal fails early instead of at approval. */
+    public void check(Input input) {
+        requireFits(input.balance() == null ? BigDecimal.ZERO : input.balance(), parseCurrency(input.currency()));
+    }
+
     @Transactional
-    Account create(UUID userId, String name, String description, String currencyCode, BigDecimal balance,
-                   CostMethod costMethod, BigDecimal taxRate) {
+    public Account create(UUID userId, Input input, Actor actor) {
         requireUser(userId);
-        Currency currency = parseCurrency(currencyCode);
-        BigDecimal amount = balance == null ? BigDecimal.ZERO : balance;
-        requireFits(amount, currency);
-        Account account = new Account(userId, name.strip(), description == null ? "" : description,
-                currency.getCurrencyCode(), amount, costMethod == null ? CostMethod.AVERAGE : costMethod);
-        account.setTaxRate(taxRate);
+        check(input);
+        Account account = new Account(userId, input.name().strip(), input.description() == null ? "" : input.description(),
+                parseCurrency(input.currency()).getCurrencyCode(), input.balance() == null ? BigDecimal.ZERO : input.balance(),
+                input.costMethod() == null ? CostMethod.AVERAGE : input.costMethod());
+        account.setTaxRate(input.taxRate());
         accounts.save(account);
-        log(userId, account, "create", "Added account " + account.getName(), null, snapshot(account));
+        log(userId, actor, account, "create", "Added account " + account.getName(), null, snapshot(account));
         return account;
+    }
+
+    /** Undoes an agent's account. Deleting one erases its transactions, so one that has any stays. */
+    @Transactional
+    public void deleteUnused(UUID userId, UUID id) {
+        if (transactions.exportAll(userId).stream().anyMatch(found -> id.equals(found.accountId()))) {
+            throw new ApiException(HttpStatus.CONFLICT, "account_in_use",
+                    "This account has transactions, so it can't be reverted. You can delete it from Accounts, which erases them.");
+        }
+        delete(userId, id);
     }
 
     @Transactional
@@ -93,7 +113,7 @@ class AccountService {
         }
         Map<String, Object> after = snapshot(account);
         if (!after.equals(before)) {
-            log(userId, account, "update", "Changed account " + account.getName(), before, after);
+            log(userId, Actor.USER, account, "update", "Changed account " + account.getName(), before, after);
         }
         return account;
     }
@@ -107,14 +127,14 @@ class AccountService {
         before.put("transactions", itsTransactions);
         before.put("plans", positions.exportPlans(userId).stream().filter(plan -> id.equals(plan.accountId())).toList());
         before.put("rules", rules.exportAll(userId).stream().filter(rule -> id.equals(rule.accountId())).toList());
-        log(userId, account, "delete", "Deleted account %s with %d transactions".formatted(account.getName(), itsTransactions.size()),
+        log(userId, Actor.USER, account, "delete", "Deleted account %s with %d transactions".formatted(account.getName(), itsTransactions.size()),
                 before, null);
         accounts.delete(account);
     }
 
-    private void log(UUID userId, Account account, String action, String summary, Map<String, Object> before,
+    private void log(UUID userId, Actor actor, Account account, String action, String summary, Map<String, Object> before,
                      Map<String, Object> after) {
-        auditLog.record(userId, Actor.USER, new AuditLog.Change("account", account.getId(), action, summary, before, after));
+        auditLog.record(userId, actor, new AuditLog.Change("account", account.getId(), action, summary, before, after));
     }
 
     /** Trailing zeros are dropped, so an edit that changes nothing compares as equal. */

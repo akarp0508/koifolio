@@ -47,7 +47,7 @@ class ReviewTests {
         users.deleteAll();
         anna = tokenFor("anna");
         bob = tokenFor("bob");
-        claude = agent("Claude", "[\"analysis:write\",\"transactions:write\",\"rules:write\"]");
+        claude = agent("Claude", "[\"analysis:write\",\"transactions:write\",\"accounts:write\",\"rules:write\"]");
     }
 
     private String tokenFor(String username) throws Exception {
@@ -404,6 +404,105 @@ class ReviewTests {
 
         as(anna, post("/api/v1/review/reject-all"));
         as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(0));
+    }
+
+    private static final String IKE = """
+            {"name":"IKE","currency":"pln","balance":"2301.96","taxRate":"0","costMethod":"fifo","description":"At XTB"}""";
+
+    private String accountsBody() throws Exception {
+        return body(get("/api/v1/accounts"));
+    }
+
+    @Test
+    void anAccountWaitsUntilApproved() throws Exception {
+        String proposed = call(claude, "create_account", IKE);
+
+        assertThat(JsonPath.<String>read(proposed, "$.status")).isEqualTo("waiting for review");
+        as(anna, get("/api/v1/accounts")).andExpect(jsonPath("$.length()").value(0));
+        as(anna, get("/api/v1/review/changes"))
+                .andExpect(jsonPath("$[0].summary").value("Create account IKE (PLN, balance 2301.96)"))
+                .andExpect(jsonPath("$[0].current").doesNotExist())
+                .andExpect(jsonPath("$[0].proposed.currency").value("PLN"));
+
+        approveNext();
+
+        as(anna, get("/api/v1/accounts"))
+                .andExpect(jsonPath("$[0].name").value("IKE"))
+                .andExpect(jsonPath("$[0].balance").value("2301.96"))
+                .andExpect(jsonPath("$[0].taxRate").value("0"))
+                .andExpect(jsonPath("$[0].costMethod").value("fifo"))
+                .andExpect(jsonPath("$[0].description").value("At XTB"));
+        as(anna, get("/api/v1/audit-log"))
+                .andExpect(jsonPath("$[1].summary").value("Added account IKE"))
+                .andExpect(jsonPath("$[1].actorName").value("Claude"));
+    }
+
+    @Test
+    void anApprovedAccountTakesTransactions() throws Exception {
+        call(claude, "create_account", IKE);
+        approveNext();
+        String id = JsonPath.read(accountsBody(), "$[0].id");
+
+        deposit(claude, id, "10");
+
+        assertThat(JsonPath.<String>read(accountsBody(), "$[0].balance")).isEqualTo("2311.96");
+    }
+
+    @Test
+    void rejectingAnAccountCreatesNothing() throws Exception {
+        call(claude, "create_account", IKE);
+
+        as(anna, post("/api/v1/review/reject-all")).andExpect(jsonPath("$.changes").value(1));
+
+        as(anna, get("/api/v1/accounts")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void aBadAccountIsRefusedWhenProposed() throws Exception {
+        for (String arguments : List.of("{\"name\":\"X\",\"currency\":\"ZZZ\"}", "{\"name\":\" \",\"currency\":\"PLN\"}",
+                "{\"name\":\"X\",\"currency\":\"PLN\",\"balance\":\"1.234\"}",
+                "{\"name\":\"X\",\"currency\":\"PLN\",\"taxRate\":\"140\"}",
+                "{\"name\":\"X\",\"currency\":\"PLN\",\"costMethod\":\"lifo\"}")) {
+            String json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"create_account\",\"arguments\":%s}}"
+                    .formatted(arguments);
+            as(claude, post("/mcp").contentType(MediaType.APPLICATION_JSON)
+                    .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM).content(json))
+                    .andExpect(jsonPath("$.result.isError").value(true));
+        }
+        as(anna, get("/api/v1/review/changes")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void revertRemovesAnEmptyAccount() throws Exception {
+        call(claude, "create_account", IKE);
+        approveNext();
+
+        revert(lastAgentChange()).andExpect(status().isNoContent());
+
+        as(anna, get("/api/v1/accounts")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void revertKeepsAnAccountWithTransactions() throws Exception {
+        call(claude, "create_account", IKE);
+        approveNext();
+        String change = lastAgentChange();
+        deposit(claude, JsonPath.read(accountsBody(), "$[0].id"), "10");
+
+        revert(change).andExpect(status().isConflict());
+
+        as(anna, get("/api/v1/accounts")).andExpect(jsonPath("$.length()").value(1));
+        as(anna, get("/api/v1/transactions")).andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    void existingTokensDontGainThePermission() throws Exception {
+        String old = agent("Old", "[\"transactions:write\",\"analysis:write\"]");
+        String json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"create_account\",\"arguments\":%s}}"
+                .formatted(IKE);
+
+        as(old, post("/mcp").contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM)
+                .content(json)).andExpect(jsonPath("$.result.isError").value(true));
     }
 
     @Test

@@ -38,9 +38,9 @@ public class AuditLog {
     public record Entry(UUID id, Actor actor, String entityType, UUID entityId, String action, String summary, Object before,
                         Object after, Instant createdAt, boolean reverted, boolean changedSince) {
 
-        /** An agent's change to a company or a rule that still stands. Its transactions have their own reject and delete. */
+        /** An agent's change to a company, a rule or an account that still stands. Its transactions have their own reject and delete. */
         public boolean revertible() {
-            return actor.isAgent() && !reverted && Set.of("company", "rule").contains(entityType)
+            return actor.isAgent() && !reverted && Set.of("company", "rule", "account").contains(entityType)
                     && Set.of("create", "update", "delete").contains(action);
         }
     }

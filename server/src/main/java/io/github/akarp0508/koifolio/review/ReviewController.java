@@ -36,7 +36,7 @@ class ReviewController {
     }
 
     @GetMapping("/changes")
-    @Operation(summary = "Company and rule changes from agents, waiting for you", description = """
+    @Operation(summary = "Company, rule and account changes from agents, waiting for you", description = """
             Nothing here has applied yet. current has the values each would replace.""")
     List<PendingChangeResponse> changes(@AuthenticationPrincipal Jwt jwt) {
         UUID userId = userId(jwt);
@@ -73,8 +73,8 @@ class ReviewController {
 
     @PostMapping("/log/{id}/revert")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    @Operation(summary = "Undo an agent's company or rule change", description = """
-            Puts back the values from before it, in full. If the same thing has changed since, this returns 409 \
+    @Operation(summary = "Undo an agent's company, rule or account change", description = """
+            Puts back the values from before it, in full. An account can only be undone while it has no transactions. If the same thing has changed since, this returns 409 \
             changed_since unless force is on, because those later changes would be lost.""")
     void revert(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id, @RequestParam(defaultValue = "false") boolean force) {
         review.revert(userId(jwt), id, force);

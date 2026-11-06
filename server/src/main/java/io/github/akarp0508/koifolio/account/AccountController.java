@@ -2,6 +2,7 @@ package io.github.akarp0508.koifolio.account;
 
 import io.github.akarp0508.koifolio.domain.CostMethod;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.akarp0508.koifolio.audit.Actor;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -55,8 +56,7 @@ class AccountController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create an account", description = "The balance defaults to 0. The currency can't be changed later.")
     AccountResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody CreateAccountRequest request) {
-        return AccountResponse.of(accounts.create(userId(jwt), request.name(), request.description(),
-                request.currency(), request.balance(), request.costMethod(), request.taxRate()));
+        return AccountResponse.of(accounts.create(userId(jwt), request.input(), Actor.USER));
     }
 
     @GetMapping("/{id}")
@@ -97,6 +97,10 @@ class AccountController {
             @Digits(integer = 3, fraction = 4, message = "must have at most 4 decimal places")
             @Schema(type = "string", description = "In percent, e.g. 19. Left unset, the account is left out of tax estimates")
             BigDecimal taxRate) {
+
+        AccountService.Input input() {
+            return new AccountService.Input(name, description, currency, balance, costMethod, taxRate);
+        }
     }
 
     record UpdateAccountRequest(

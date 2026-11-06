@@ -36,7 +36,7 @@ class McpTests {
 
     private static final List<String> READ_TOOLS = List.of("list_accounts", "get_portfolio", "get_history", "get_positions",
             "get_plan", "get_company", "list_transactions", "check_rules", "get_tax", "list_pending_changes");
-    private static final List<String> WRITE_TOOLS = List.of("add_transaction", "update_company", "save_rule", "delete_rule");
+    private static final List<String> WRITE_TOOLS = List.of("add_transaction", "update_company", "save_rule", "delete_rule", "create_account");
 
     @Autowired
     private MockMvc mvc;
@@ -372,6 +372,7 @@ class McpTests {
         assertThat(toolError(readOnly, "add_transaction", """
                 {"account":"%s","type":"deposit","date":"2026-02-02","affectsBalance":true,"amount":"5"}""".formatted(account)))
                 .contains("isn't allowed");
+        assertThat(toolError(readOnly, "create_account", "{\"name\":\"X\",\"currency\":\"PLN\"}")).contains("isn't allowed");
         assertThat(toolError(readOnly, "update_company", "{\"ticker\":\"PAS\",\"risk\":2}")).contains("isn't allowed");
         assertThat(toolError(readOnly, "save_rule", "{\"type\":\"max_position_weight\",\"limitPercent\":\"20\"}"))
                 .contains("isn't allowed");

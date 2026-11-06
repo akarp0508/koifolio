@@ -45,7 +45,7 @@ class AgentTokenController {
     @Operation(summary = "Create a token for an agent", description = """
             It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so \
             keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without \
-            scopes it can also propose transactions and company changes for your review, but not rules.""")
+            scopes it can also propose transactions, company changes and new accounts for your review, but not rules.""")
     CreatedAgentTokenResponse create(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody AgentTokenRequest request) {
         var created = tokens.create(userId(jwt), request.name(), request.scopes(), request.expiresOn());
         return new CreatedAgentTokenResponse(AgentTokenResponse.of(created.token()), created.secret());

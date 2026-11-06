@@ -26,9 +26,10 @@ Set per token when it's created. Every token can read, and tokens created before
 |---|---|---|
 | `analysis:write` | Proposing company changes | on |
 | `transactions:write` | Adding transactions, marked unvalidated | on |
+| `accounts:write` | Proposing new accounts | on |
 | `rules:write` | Proposing rule changes | off |
 
-A token without the scope gets a tool error. Every tool still shows in the list.
+Scopes can't be changed later, so an older token needs replacing to get a new one. A token without the scope gets a tool error. Every tool still shows in the list.
 
 ## Tools
 
@@ -46,10 +47,11 @@ A token without the scope gets a tool error. Every tool still shows in the list.
 | `list_pending_changes` | | read |
 | `update_company` | `ticker`, `name?`, `sector?`, `risk?`, `thesis?`, `analysis?`, `tags?` | analysis:write |
 | `add_transaction` | `account`, `type`, `date`, `affectsBalance`, then the fields of `POST /transactions` | transactions:write |
+| `create_account` | `name`, `currency`, `balance?`, `description?`, `costMethod?`, `taxRate?` | accounts:write |
 | `save_rule` | `type`, `limitPercent`, `id?`, `account?`, `maxRisk?` | rules:write |
 | `delete_rule` | `id` | rules:write |
 
-Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company` proposes only the fields it's given, and adds the company if it's new. Agents can't edit or delete transactions: a wrong one is rejected and entered again. They can't change plans or accounts.
+Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company` proposes only the fields it's given, and adds the company if it's new. Agents can't edit or delete transactions: a wrong one is rejected and entered again. They can't change plans, or edit or delete accounts.
 
 Account descriptions are included in `list_accounts`, so agents can use the notes you keep there.
 
@@ -60,9 +62,9 @@ Agents can't change anything you can't see and undo.
 | What the agent does | When it applies | How you undo it |
 |---|---|---|
 | `add_transaction` | At once, marked unvalidated | Reject it, or delete it from Activity once approved |
-| `update_company`, `save_rule`, `delete_rule` | Only when you approve it | Reject it, or Revert it from the change log once approved |
+| `update_company`, `create_account`, `save_rule`, `delete_rule` | Only when you approve it | Reject it, or Revert it from the change log once approved |
 
-**Approve all** and **Reject all** cover both, for one agent or everyone. Approving a company change applies its fields over whatever the company holds by then, so edits made in the meantime survive. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too.
+**Approve all** and **Reject all** cover both, for one agent or everyone. Approving a company change applies its fields over whatever the company holds by then, so edits made in the meantime survive. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too. An approved account can only be reverted while it has no transactions, because deleting it erases them.
 
 ### Unvalidated transactions
 

@@ -44,7 +44,7 @@ Java 25, Spring Boot + Postgres (Maven project in `server/`), React frontend (`w
 
 Key constraints:
 - All user data is scoped by `user_id`; market data is shared. Money is `numeric`/`BigDecimal`, never floating point.
-- Transactions are edited in place and soft-deleted, with old values in the audit log. Agent transactions count immediately but stay marked unvalidated until approved, and agent company and rule changes apply only once approved. Changes to transactions, companies, rules, accounts and plans (UI or agent) go to the audit log with their author, in the same database transaction.
+- Transactions are edited in place and soft-deleted, with old values in the audit log. Agent transactions count immediately but stay marked unvalidated until approved, and agent company, rule and new account changes apply only once approved. Changes to transactions, companies, rules, accounts and plans (UI or agent) go to the audit log with their author, in the same database transaction.
 - Postgres is the source of truth. Plain text (YAML/JSONL/Markdown, format in `docs/export-format.md`) is export/import plus an optional one-way git backup, never a live sync.
 - Must run on arm64 with modest resources: no headless browser. Price providers are pluggable (free APIs or scraping, no paid keys) with a manual override. Current source findings and the provider chain are in `docs/price-sources.md`; respect robots.txt.
 
