@@ -34,10 +34,12 @@ Implemented.
 
 ## Settings
 
+Implemented.
+
 | Request | Purpose |
 |---|---|
-| `GET /settings` | `{"baseCurrency": "PLN", "costFxRule": "previous_publication"}` |
-| `PATCH /settings` | Change settings; a base currency change recomputes snapshots |
+| `GET /settings` | `{"baseCurrency": "PLN", "currencies": ["AUD", "…"]}`: the base currency and those with a rate |
+| `PATCH /settings` | `{"baseCurrency": "USD"}`; a currency with no rate gives `400 unknown_currency` |
 
 ## Accounts
 
@@ -122,6 +124,7 @@ Implemented. Each user has their own private list. An instrument holds what's tr
 
 - `risk` is 1 (very low) to 5 (very high), and left out if not set.
 - `analysis` is Markdown. The UI doesn't render raw HTML in it.
+- `tags` are cleaned to lower case without repeats, up to 20 of 30 characters each.
 
 A transaction using a new ticker adds it to the list. Removing one hides it from the list and keeps its transactions; using it again, or adding it again, brings it back.
 
@@ -161,7 +164,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - `cost` and `realizedGain` include fees. Dividends aren't part of realized gain.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
-- Price fields are left out when there's no price, or nothing is held. A price in another currency than the account sets `currencyMismatch` and leaves out `value` and the gains.
+- Price fields are left out when there's no price, or nothing is held. A price in another currency is converted to the account's at the latest rate; without a rate, `currencyMismatch` is set and `value` and the gains are left out.
 
 | `GET /positions/{accountId}/{ticker}/details` | The company and your plan together |
 | `PUT /positions/{accountId}/{ticker}/plan` | Replace your plan |
@@ -169,7 +172,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 A plan belongs to an account and instrument, and stays if you sell out and buy back:
 
 ```json
-{"plan": "Trade around earnings", "risk": 4, "targetPrice": "180", "stopPrice": "120"}
+{"plan": "Trade around earnings", "risk": 4, "targetPrice": "180", "stopPrice": "120", "tags": ["swing"]}
 ```
 
 - `risk` overrides the company's risk for this position. `GET /positions` shows the plan's risk if set, otherwise the company's.
@@ -193,21 +196,40 @@ History response:
 
 - Today's point comes from the current price while the day is unfinished.
 - `covered` is false when the price source doesn't have the ticker. Covered with no points means history is still being fetched.
-- With `currencyMismatch`, points have `close` but no `value`.
+- With `currencyMismatch`, points have `close` but no `value`. History doesn't convert yet: it needs FX history.
 - `traded` marks a buy or sell since the previous point, and a trade on a non-trading day shows on the next one.
 
-## Portfolio
+## Dashboard
 
-Planned. All take `account` (omit for all accounts) and `asOf` (default today). Calculations happen only on the server.
+Implemented.
 
 | Request | Purpose |
 |---|---|
-| `GET /portfolio/summary` | Total value, P/L, cash, rule status, warnings |
-| `GET /portfolio/bonds` | Bond holdings |
-| `GET /portfolio/allocation?by=company\|sector` | Weights |
-| `GET /portfolio/history?from=&to=` | Value over time, from snapshots |
-| `GET /portfolio/realized?year=` | Realized gains and estimated tax |
-| `GET /portfolio/income?year=` | Dividends and interest |
+| `GET /dashboard` | Totals, breakdowns and attention list. Filters: `account`, `instrumentTag` and `positionTag`, each repeatable |
+
+```json
+{
+  "currency": "PLN",
+  "value": "3400.00",
+  "positionsValue": "2000.00",
+  "unrealizedGain": "600.00",
+  "unrealizedPercent": "42.9",
+  "realizedGain": "80.00",
+  "cash": "1400.00",
+  "bySector": [{"label": "IT", "value": "1200.00", "percent": "60.0"}, {"value": "800.00", "percent": "40.0"}],
+  "byRisk": [{"label": "4-5", "value": "1800.00", "percent": "90.0"}],
+  "attention": [{"accountId": "…", "accountName": "IKE", "ticker": "PAS", "signal": "NEAR_TARGET", "distance": "2.9"}],
+  "unpriced": 0
+}
+```
+
+- Everything is in the base currency, converted at the latest rates. Cost isn't converted at purchase-date rates yet, so currency gains aren't separated.
+- A position matches if it has any of the wanted instrument tags, and any of the wanted position tags. The two kinds and the account must all match.
+- `cash` is left out while tags filter the view, because cash has no tags.
+- Slices with no `label` have no sector or risk set. Risk groups are `1-2`, `3` and `4-5`, using the plan's risk if set.
+- `unpriced` counts open positions left out of the numbers, lacking a price or a rate.
+
+Planned: `?asOf=`, value over time, realized gains and tax per year, income per year.
 
 ## Rules
 

@@ -50,6 +50,7 @@ export function InstrumentDetail({ id }: { id: string }) {
             risk={instrument.risk}
             thesis={instrument.thesis}
             analysis={instrument.analysis}
+            tags={instrument.tags}
             onEdit={() => setEditing(true)}
           />
           <h2 className="section-title">Where you hold it</h2>

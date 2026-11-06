@@ -26,3 +26,13 @@ export function usedSectors(instruments: { sector?: string }[]) {
   const sectors = instruments.map((instrument) => instrument.sector ?? '').filter((sector) => sector !== '')
   return [...new Set(sectors)].sort()
 }
+
+/** Reads what's typed into a tags field: separated by commas. The server cleans them up. */
+export function parseTags(text: string) {
+  return text.split(',').map((tag) => tag.trim()).filter((tag) => tag !== '')
+}
+
+/** Every tag of one kind across positions, for the filters. */
+export function allTags(positions: Position[], kind: 'instrumentTags' | 'positionTags') {
+  return [...new Set(positions.flatMap((position) => position[kind] ?? []))].sort()
+}

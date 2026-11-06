@@ -2,6 +2,7 @@ import type { PositionDetails } from '../api/client'
 import { formatAmount, formatGain } from '../format'
 import { RISK_LABELS, SIGNAL_LABELS, signalClass } from '../plans'
 import { Markdown } from './Markdown'
+import { Tags } from './Tags'
 
 function Level({ label, price, distance, currency }: {
   label: string
@@ -26,7 +27,7 @@ export function PlanSection({ accountName, details, priceCurrency, onEdit }: {
   priceCurrency?: string
   onEdit: () => void
 }) {
-  const empty = !details.plan && !details.risk && !details.targetPrice && !details.stopPrice
+  const empty = !details.plan && !details.risk && !details.targetPrice && !details.stopPrice && !details.positionTags?.length
   return (
     <section className="panel">
       <header>
@@ -35,6 +36,7 @@ export function PlanSection({ accountName, details, priceCurrency, onEdit }: {
       </header>
       {empty && <p className="muted">No plan yet. Why do you hold it here, and what would make you sell?</p>}
       {details.signal && <p className={signalClass(details.signal)}>{SIGNAL_LABELS[details.signal]}</p>}
+      <Tags tags={details.positionTags} />
       {details.risk !== undefined && (
         <p>
           Risk: {RISK_LABELS[details.risk]}

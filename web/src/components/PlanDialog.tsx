@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { ApiError, api } from '../api/client'
 import type { PositionDetails } from '../api/client'
 import { normalizeAmount } from '../format'
+import { parseTags } from '../plans'
 import { Field, TextAreaField } from './Field'
 import { Modal } from './Modal'
 import { RiskField } from './RiskField'
@@ -19,6 +20,7 @@ export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved,
   const [risk, setRisk] = useState(details.risk)
   const [target, setTarget] = useState(details.targetPrice ?? '')
   const [stop, setStop] = useState(details.stopPrice ?? '')
+  const [tags, setTags] = useState((details.positionTags ?? []).join(', '))
   const [error, setError] = useState<ApiError | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -32,6 +34,7 @@ export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved,
         risk,
         targetPrice: normalizeAmount(target) || undefined,
         stopPrice: normalizeAmount(stop) || undefined,
+        tags: parseTags(tags),
       })
       onSaved()
     } catch (e) {
@@ -79,6 +82,12 @@ export function PlanDialog({ accountId, ticker, details, priceCurrency, onSaved,
           value={risk}
           error={fieldErrors.risk}
           onChange={setRisk}
+        />
+        <Field
+          label="Position tags"
+          placeholder="Comma separated, e.g. core, swing"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
         />
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">

@@ -1,15 +1,17 @@
 import { RISK_LABELS } from '../plans'
 import { Markdown } from './Markdown'
+import { Tags } from './Tags'
 
-export function CompanySection({ title, sector, risk, thesis, analysis, onEdit }: {
+export function CompanySection({ title, sector, risk, thesis, analysis, tags, onEdit }: {
   title: string
   sector?: string
   risk?: number
   thesis?: string
   analysis?: string
+  tags?: string[]
   onEdit: () => void
 }) {
-  const empty = !sector && !risk && !thesis && !analysis
+  const empty = !sector && !risk && !thesis && !analysis && !tags?.length
   return (
     <section className="panel">
       <header>
@@ -18,6 +20,7 @@ export function CompanySection({ title, sector, risk, thesis, analysis, onEdit }
       </header>
       {empty && <p className="muted">Nothing here yet. Add a sector, risk score and your analysis.</p>}
       {sector && <p className="muted">{sector}</p>}
+      <Tags tags={tags} />
       {risk !== undefined && <p>Risk: {RISK_LABELS[risk]}</p>}
       {thesis && <p><strong>Thesis:</strong> {thesis}</p>}
       {analysis && <Markdown text={analysis} />}

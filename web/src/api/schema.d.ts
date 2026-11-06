@@ -194,6 +194,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Your settings, with the currencies that can be used as a base */
+        get: operations["get_2"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Change your base currency */
+        patch: operations["update_2"];
+        trace?: never;
+    };
     "/api/v1/accounts/{id}": {
         parameters: {
             query?: never;
@@ -202,7 +220,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get one account */
-        get: operations["get_2"];
+        get: operations["get_3"];
         put?: never;
         post?: never;
         /**
@@ -216,7 +234,7 @@ export interface paths {
          * Change an account
          * @description Send only the fields to change.
          */
-        patch: operations["update_2"];
+        patch: operations["update_3"];
         trace?: never;
     };
     "/api/v1/positions": {
@@ -268,6 +286,26 @@ export interface paths {
         };
         /** The company and your plan for a position */
         get: operations["details"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Totals and breakdowns in your base currency
+         * @description Converted at the latest rates. A position matches if it has any of the instrument tags and any of the position tags. Cash has no tags, so it's left out while tags filter the view.
+         */
+        get: operations["dashboard"];
         put?: never;
         post?: never;
         delete?: never;
@@ -376,6 +414,7 @@ export interface components {
             targetPrice?: string;
             /** @example 120 */
             stopPrice?: string;
+            tags?: string[];
         };
         DetailsResponse: {
             /** Format: uuid */
@@ -395,6 +434,8 @@ export interface components {
             stopDistance?: string;
             /** @enum {string} */
             signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
+            instrumentTags?: string[];
+            positionTags?: string[];
         };
         UpdateInstrumentRequest: {
             name?: string;
@@ -403,6 +444,7 @@ export interface components {
             risk?: number;
             thesis?: string;
             analysis?: string;
+            tags?: string[];
         };
         InstrumentResponse: {
             /** Format: uuid */
@@ -414,6 +456,7 @@ export interface components {
             risk?: number;
             thesis?: string;
             analysis?: string;
+            tags?: string[];
         };
         CreateInstrumentRequest: {
             /** @example PAS */
@@ -426,6 +469,7 @@ export interface components {
             risk?: number;
             thesis?: string;
             analysis?: string;
+            tags?: string[];
         };
         RegisterRequest: {
             username: string;
@@ -471,6 +515,14 @@ export interface components {
             /** @enum {string} */
             costMethod?: "average" | "fifo";
         };
+        SettingsRequest: {
+            /** @example PLN */
+            baseCurrency: string;
+        };
+        SettingsResponse: {
+            baseCurrency?: string;
+            currencies?: string[];
+        };
         UpdateAccountRequest: {
             name?: string;
             description?: string;
@@ -505,6 +557,8 @@ export interface components {
             risk?: number;
             /** @enum {string} */
             signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
+            instrumentTags?: string[];
+            positionTags?: string[];
         };
         HistoryPoint: {
             /** Format: date */
@@ -523,6 +577,34 @@ export interface components {
             covered?: boolean;
             currencyMismatch?: boolean;
             points?: components["schemas"]["HistoryPoint"][];
+        };
+        AttentionResponse: {
+            /** Format: uuid */
+            accountId?: string;
+            accountName?: string;
+            ticker?: string;
+            /** @enum {string} */
+            signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
+            distance?: string;
+        };
+        DashboardResponse: {
+            currency?: string;
+            value?: string;
+            positionsValue?: string;
+            unrealizedGain?: string;
+            unrealizedPercent?: string;
+            realizedGain?: string;
+            cash?: string;
+            bySector?: components["schemas"]["SliceResponse"][];
+            byRisk?: components["schemas"]["SliceResponse"][];
+            attention?: components["schemas"]["AttentionResponse"][];
+            /** Format: int32 */
+            unpriced?: number;
+        };
+        SliceResponse: {
+            label?: string;
+            value?: string;
+            percent?: string;
         };
     };
     responses: never;
@@ -900,6 +982,50 @@ export interface operations {
         parameters: {
             query?: never;
             header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SettingsResponse"];
+                };
+            };
+        };
+    };
+    update_2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SettingsRequest"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["SettingsResponse"];
+                };
+            };
+        };
+    };
+    get_3: {
+        parameters: {
+            query?: never;
+            header?: never;
             path: {
                 id: string;
             };
@@ -938,7 +1064,7 @@ export interface operations {
             };
         };
     };
-    update_2: {
+    update_3: {
         parameters: {
             query?: never;
             header?: never;
@@ -1029,6 +1155,30 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["DetailsResponse"];
+                };
+            };
+        };
+    };
+    dashboard: {
+        parameters: {
+            query?: {
+                account?: string;
+                instrumentTag?: string[];
+                positionTag?: string[];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DashboardResponse"];
                 };
             };
         };

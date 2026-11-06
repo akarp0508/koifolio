@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Instrument } from '../api/client'
-import { usedSectors } from '../plans'
+import { parseTags, usedSectors } from '../plans'
 import { Field, TextAreaField } from './Field'
 import { Modal } from './Modal'
 import { RiskField } from './RiskField'
@@ -18,6 +18,7 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
   const [risk, setRisk] = useState(instrument?.risk)
   const [thesis, setThesis] = useState(instrument?.thesis ?? '')
   const [analysis, setAnalysis] = useState(instrument?.analysis ?? '')
+  const [tags, setTags] = useState((instrument?.tags ?? []).join(', '))
   const [sectors, setSectors] = useState<string[]>([])
   const [error, setError] = useState<ApiError | null>(null)
   const [busy, setBusy] = useState(false)
@@ -31,7 +32,7 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
     event.preventDefault()
     setBusy(true)
     setError(null)
-    const details = { name, sector, risk, thesis, analysis }
+    const details = { name, sector, risk, thesis, analysis, tags: parseTags(tags) }
     try {
       if (instrument) {
         await api.updateInstrument(instrument.id, details)
@@ -92,6 +93,12 @@ export function InstrumentDialog({ instrument, onSaved, onClose }: {
           value={thesis}
           error={fieldErrors.thesis}
           onChange={(e) => setThesis(e.target.value)}
+        />
+        <Field
+          label="Company tags"
+          placeholder="Comma separated, e.g. dividend, long-term"
+          value={tags}
+          onChange={(e) => setTags(e.target.value)}
         />
         <TextAreaField
           label="Analysis"

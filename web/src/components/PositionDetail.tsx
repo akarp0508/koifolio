@@ -114,6 +114,7 @@ export function PositionDetail({ accountId, ticker }: { accountId: string; ticke
             risk={details.companyRisk}
             thesis={details.thesis}
             analysis={details.analysis}
+            tags={details.instrumentTags}
             onEdit={openCompanyEditor}
           />
         </div>

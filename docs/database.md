@@ -7,7 +7,7 @@ User data has a `user_id`. Market data (instruments, prices, FX, CPI, rates) is 
 ## User data
 
 ```
-users               id, username, password_hash, base_currency, cost_fx_rule, created_at
+users               id, username, password_hash, base_currency, created_at
 
 accounts            id, user_id, name, description, currency, balance, balance_set_on, cost_method, created_at
                     planned: tax_rate, archived_at
@@ -21,6 +21,9 @@ instruments         id, user_id, ticker, name, sector, risk, thesis, analysis, l
 
 position_plans      account_id, instrument_id, user_id, plan, risk, target_price, stop_price
                     PK (account_id, instrument_id)
+
+instrument_tags     instrument_id, tag
+position_tags       account_id, instrument_id, tag
 
 rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
 
@@ -50,7 +53,7 @@ provider_symbols    instrument_id, provider, symbol        PK (instrument_id, pr
 quotes              symbol, price, quoted_at, fetched_at          (PK symbol)
 daily_closes        symbol, date, close                           (PK symbol, date)
 price_history       symbol, covered_from, checked_on              (PK symbol)
-fx_rates            currency, date, rate, source           PK (currency, date)
+fx_rates            currency, rate, effective_date, fetched_at    (PK currency; latest only)
 cpi_values          month, value, source                   PK (month)
 reference_rates     date, rate, source                     PK (date)
 ```

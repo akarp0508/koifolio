@@ -1,6 +1,6 @@
 # Domain model (`domain` package)
 
-> **Mostly a plan.** Only `PositionCalculator`, `Valuation`, `PositionHistory` and `PlanCheck` are implemented so far. `docs/api.md` describes what exists.
+> **Mostly a plan.** Only `PositionCalculator`, `Valuation`, `PositionHistory`, `PlanCheck` and `Breakdown` are implemented so far. `docs/api.md` describes what exists.
 
 The `domain` package in `server` is pure Java: no Spring, no I/O, no users. The server loads one user's data and passes it in.
 

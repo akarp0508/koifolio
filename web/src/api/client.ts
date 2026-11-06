@@ -12,6 +12,11 @@ export type AccountChanges = Schemas['UpdateAccountRequest']
 export type Instrument = Schemas['InstrumentResponse'] & Required<Pick<Schemas['InstrumentResponse'],
   'id' | 'ticker' | 'name' | 'sector' | 'thesis' | 'analysis'>>
 export type InstrumentInput = Schemas['UpdateInstrumentRequest']
+export type DashboardSlice = Schemas['SliceResponse']
+export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
+  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
+export type Settings = Required<Schemas['SettingsResponse']>
+export type DashboardFilter = { account?: string; instrumentTags: string[]; positionTags: string[] }
 export type PositionDetails = Schemas['DetailsResponse']
 export type PlanInput = Schemas['PlanRequest']
 export type CostMethod = NonNullable<Schemas['AccountResponse']['costMethod']>
@@ -120,6 +125,17 @@ export const api = {
   listPositions: () => request<Position[]>('GET', '/positions?closed=true'),
   positionHistory: (accountId: string, ticker: string) =>
     request<PositionHistory>('GET', `/positions/${accountId}/${encodeURIComponent(ticker)}/history`),
+  dashboard: (filter: DashboardFilter) => {
+    const query = new URLSearchParams()
+    if (filter.account) {
+      query.set('account', filter.account)
+    }
+    filter.instrumentTags.forEach((tag) => query.append('instrumentTag', tag))
+    filter.positionTags.forEach((tag) => query.append('positionTag', tag))
+    return request<Dashboard>('GET', `/dashboard?${query}`)
+  },
+  settings: () => request<Settings>('GET', '/settings'),
+  updateSettings: (baseCurrency: string) => request<Settings>('PATCH', '/settings', { baseCurrency }),
   refreshPrices: () => request<void>('POST', '/prices/refresh'),
   listTransactions: () => request<Transaction[]>('GET', '/transactions'),
   createTransaction: (input: TransactionInput) => request<Transaction>('POST', '/transactions', input),

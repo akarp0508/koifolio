@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
+import { Dashboard } from './components/Dashboard'
 import { Instruments } from './components/Instruments'
 import { Login } from './components/Login'
 import { Positions } from './components/Positions'
@@ -18,6 +19,7 @@ const InstrumentDetail = lazy(() =>
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
 
 const PAGES = [
+  { hash: '#dashboard', label: 'Dashboard', Page: Dashboard },
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
   { hash: '#transactions', label: 'Transactions', Page: Transactions },
   { hash: '#positions', label: 'Positions', Page: Positions },
