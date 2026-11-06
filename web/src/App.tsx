@@ -2,7 +2,6 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
-import { Instruments } from './components/Instruments'
 import { Login } from './components/Login'
 import { Portfolio } from './components/Portfolio'
 import { Tax } from './components/Tax'
@@ -10,11 +9,8 @@ import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
 
 // Holds the chart library, which most pages don't need
-const PositionDetail = lazy(() =>
-  import('./components/PositionDetail').then((module) => ({ default: module.PositionDetail })))
-
-const InstrumentDetail = lazy(() =>
-  import('./components/InstrumentDetail').then((module) => ({ default: module.InstrumentDetail })))
+const CompanyDetail = lazy(() =>
+  import('./components/CompanyDetail').then((module) => ({ default: module.CompanyDetail })))
 
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
 
@@ -25,7 +21,6 @@ const MAIN_PAGES = [
 
 const OTHER_PAGES = [
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
-  { hash: '#instruments', label: 'Instruments', Page: Instruments },
   { hash: '#tax', label: 'Tax', Page: Tax },
 ]
 
@@ -56,9 +51,8 @@ function App() {
   const [loading, setLoading] = useState(hasToken)
   const { theme, nextTheme } = useTheme()
   const hash = useHash()
-  const detail = hash.match(/^#positions\/([^/]+)\/(.+)$/)
-  const instrumentDetail = hash.match(/^#instruments\/(.+)$/)
-  const parent = detail ? '#portfolio' : instrumentDetail ? '#instruments' : hash
+  const company = hash.match(/^#companies\/([^/]+)(?:\/([^/]+))?$/)
+  const parent = company ? '#portfolio' : hash
   const current = PAGES.find((page) => page.hash === parent) ?? PAGES[0]
 
   const logOut = useCallback(() => {
@@ -115,9 +109,7 @@ function App() {
       </nav>
       <main className="content">
         <Suspense fallback={<p className="muted">Loading…</p>}>
-          {detail && <PositionDetail key={hash} accountId={detail[1]} ticker={decodeURIComponent(detail[2])} />}
-          {instrumentDetail && <InstrumentDetail key={hash} id={instrumentDetail[1]} />}
-          {!detail && !instrumentDetail && <current.Page />}
+          {company ? <CompanyDetail key={company[1]} id={company[1]} accountId={company[2]} /> : <current.Page />}
         </Suspense>
       </main>
     </div>

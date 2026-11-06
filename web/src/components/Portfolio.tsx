@@ -1,13 +1,14 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Dashboard, DashboardSlice, PeriodChange, PortfolioHistory, Position, Settings, TaxEstimate } from '../api/client'
+import type { Account, Dashboard, DashboardSlice, Instrument, PeriodChange, PortfolioHistory, Position, Settings, TaxEstimate } from '../api/client'
 import { formatAmount, formatGain, formatQuoteTime, gainClass } from '../format'
 import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
 import { today } from '../transactions'
 import { Holdings } from './Holdings'
+import { InstrumentDialog } from './InstrumentDialog'
 import type { TradeRequest } from './Holdings'
 import { SplitSuggestions } from './SplitSuggestions'
 import { TagFilter } from './TagFilter'
@@ -92,6 +93,7 @@ function Bars({ title, slices, currency }: { title: string; slices: DashboardSli
 export function Portfolio() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [positions, setPositions] = useState<Position[]>([])
+  const [instruments, setInstruments] = useState<Instrument[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [account, setAccount] = useState(ALL)
@@ -104,6 +106,7 @@ export function Portfolio() {
   const [refreshing, setRefreshing] = useState(false)
   // null while closed; an empty request is a transaction for anything
   const [trade, setTrade] = useState<Partial<TradeRequest> | null>(null)
+  const [addingCompany, setAddingCompany] = useState(false)
 
   const fetchDashboard = useCallback(() => {
     const filter = { account: account || undefined, instrumentTags, positionTags }
@@ -121,9 +124,10 @@ export function Portfolio() {
   }, [fetchDashboard])
 
   const fetchOverview = useCallback(() =>
-    Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax()])
-      .then(([accountList, positionList, settingsData, taxData]) => {
+    Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax(), api.listInstruments()])
+      .then(([accountList, positionList, settingsData, taxData, instrumentList]) => {
         setTax(taxData)
+        setInstruments(instrumentList)
         setAccounts(accountList)
         setPositions(positionList)
         setSettings(settingsData)
@@ -136,6 +140,7 @@ export function Portfolio() {
 
   function traded() {
     setTrade(null)
+    setAddingCompany(false)
     void Promise.all([fetchOverview(), fetchDashboard()])
   }
 
@@ -165,6 +170,10 @@ export function Portfolio() {
   const currency = dashboard?.currency ?? ''
   const filteredByTags = instrumentTags.length > 0 || positionTags.length > 0
   const points = history ? inRange(history.points, range, today()) : []
+  // A filter hides holdings, so only the whole list can tell what's really not held
+  const filtered = account !== ALL || filteredByTags
+  const watched = filtered ? [] : instruments.filter((instrument) =>
+    !dashboard?.holdings?.some((holding) => holding.instrumentId === instrument.id))
   const quoteTime = formatQuoteTime(positions.map((position) => position.quotedAt))
 
   return (
@@ -174,6 +183,7 @@ export function Portfolio() {
         <div className="header-actions wrap">
           {quoteTime && <span className="muted">Prices as of {quoteTime}</span>}
           <button disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          <button onClick={() => setAddingCompany(true)}>+ Company</button>
           <button className="primary" disabled={accounts.length === 0} onClick={() => setTrade({})}>+ Transaction</button>
           {settings && (
             <>
@@ -243,7 +253,7 @@ export function Portfolio() {
             <ul className="attention" aria-label="Needs attention">
               {dashboard.attention.map((item) => (
                 <li key={`${item.accountId}-${item.ticker}`}>
-                  <a href={`#positions/${item.accountId}/${encodeURIComponent(item.ticker ?? '')}`}>{item.ticker}</a>
+                  <a href={`#companies/${item.instrumentId}/${item.accountId}`}>{item.ticker}</a>
                   <span className="muted">{item.accountName}</span>
                   {item.signal && <span className={signalClass(item.signal)}>{SIGNAL_LABELS[item.signal]}</span>}
                   {item.distance && <span className="muted">{formatGain(item.distance)}%</span>}
@@ -286,10 +296,11 @@ export function Portfolio() {
             </p>
           )}
 
-          <Holdings holdings={dashboard.holdings ?? []} currency={currency} onTrade={setTrade} />
+          <Holdings holdings={dashboard.holdings ?? []} watched={watched} currency={currency} onTrade={setTrade} />
         </>
       )}
 
+      {addingCompany && <InstrumentDialog instrument={null} onSaved={traded} onClose={() => setAddingCompany(false)} />}
       {trade && (
         <TransactionDialog
           transaction={null}

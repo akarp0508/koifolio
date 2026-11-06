@@ -935,12 +935,32 @@ tr.sub-row td:first-child {
   margin-left: 0.3rem;
 }
 
-.trade.buy {
+button.buy {
   color: var(--gain);
   border-color: var(--gain);
 }
 
-.trade.sell {
+button.sell {
   color: var(--loss);
   border-color: var(--loss);
+}
+
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabs a {
+  padding: 0.4rem 0.8rem;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+}
+
+.tabs a[aria-current='page'] {
+  color: inherit;
+  border-bottom-color: var(--accent);
 }

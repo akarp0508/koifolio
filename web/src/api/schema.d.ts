@@ -380,7 +380,7 @@ export interface paths {
         };
         /**
          * Totals and breakdowns in your base currency
-         * @description Converted at the latest rates. A position matches if it has any of the instrument tags and any of the position tags. Cash has no tags, so it's left out while tags filter the view. Holdings group matching positions by company. Their weight is of the chosen account, or of the whole portfolio without one, with cash in the total; tags don't change it.
+         * @description Converted at the latest rates. A position matches if it has any of the instrument tags and any of the position tags. Cash has no company or tags, so it's left out while those filter the view. Holdings group matching positions by company. Their weight is of the chosen account, or of the whole portfolio without one, with cash in the total; tags don't change it.
          */
         get: operations["dashboard"];
         put?: never;
@@ -662,6 +662,8 @@ export interface components {
             /** Format: uuid */
             accountId?: string;
             accountName?: string;
+            /** Format: uuid */
+            instrumentId?: string;
             ticker?: string;
             gain?: string;
         };
@@ -770,6 +772,8 @@ export interface components {
             /** Format: uuid */
             accountId?: string;
             accountName?: string;
+            /** Format: uuid */
+            instrumentId?: string;
             ticker?: string;
             /** @enum {string} */
             signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
@@ -1465,6 +1469,7 @@ export interface operations {
         parameters: {
             query?: {
                 account?: string;
+                instrument?: string;
                 instrumentTag?: string[];
                 positionTag?: string[];
             };
@@ -1489,6 +1494,7 @@ export interface operations {
         parameters: {
             query?: {
                 account?: string;
+                instrument?: string;
                 instrumentTag?: string[];
                 positionTag?: string[];
             };
