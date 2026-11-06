@@ -47,6 +47,16 @@ public class InstrumentService {
     public record QuoteRef(String symbol, String currency) {
     }
 
+    public record InstrumentView(UUID id, String ticker, InstrumentDetails details) {
+    }
+
+    /** Everything the user has by instrument id, including ones removed from their list. */
+    @Transactional(readOnly = true)
+    public Map<UUID, InstrumentView> views(UUID userId) {
+        return instruments.findByUserId(userId).stream().collect(Collectors.toMap(Instrument::getId,
+                instrument -> new InstrumentView(instrument.getId(), instrument.getTicker(), instrument.details())));
+    }
+
     /** The price source's symbol for each of the user's instruments that has one. */
     @Transactional(readOnly = true)
     public Map<UUID, QuoteRef> quoteRefs(UUID userId) {
@@ -80,29 +90,36 @@ public class InstrumentService {
     }
 
     @Transactional
-    Instrument create(UUID userId, String ticker, String name) {
+    Instrument create(UUID userId, String ticker, InstrumentDetails details) {
         authService.currentUser(userId);
         String normalized = normalizeTicker(ticker);
-        String cleanName = name == null ? "" : name.strip();
         Optional<Instrument> existing = instruments.findByUserIdAndTicker(userId, normalized);
         if (existing.isPresent() && !existing.get().isListed()) {
             existing.get().setListed(true);
-            existing.get().setName(cleanName);
+            existing.get().describe(details);
             return existing.get();
         }
+        Instrument instrument = new Instrument(userId, normalized);
+        instrument.describe(details);
         try {
-            return instruments.saveAndFlush(new Instrument(userId, normalized, cleanName));
+            return instruments.saveAndFlush(instrument);
         } catch (DataIntegrityViolationException e) {
             throw new ApiException(HttpStatus.CONFLICT, "instrument_exists", "This ticker is already on your list");
         }
     }
 
     @Transactional
-    Instrument rename(UUID userId, UUID id, String name) {
+    Instrument update(UUID userId, UUID id, InstrumentDetails details) {
         authService.currentUser(userId);
-        Instrument instrument = find(userId, id);
-        instrument.setName(name.strip());
+        Instrument instrument = instruments.findByIdAndUserId(id, userId).orElseThrow(InstrumentService::notFound);
+        instrument.describe(details);
         return instrument;
+    }
+
+    @Transactional(readOnly = true)
+    Instrument get(UUID userId, UUID id) {
+        authService.currentUser(userId);
+        return instruments.findByIdAndUserId(id, userId).orElseThrow(InstrumentService::notFound);
     }
 
     @Transactional
@@ -112,7 +129,10 @@ public class InstrumentService {
     }
 
     private Instrument find(UUID userId, UUID id) {
-        return instruments.findByIdAndUserIdAndListedTrue(id, userId).orElseThrow(() ->
-                new ApiException(HttpStatus.NOT_FOUND, "instrument_not_found", "Instrument not found"));
+        return instruments.findByIdAndUserIdAndListedTrue(id, userId).orElseThrow(InstrumentService::notFound);
+    }
+
+    private static ApiException notFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "instrument_not_found", "Instrument not found");
     }
 }

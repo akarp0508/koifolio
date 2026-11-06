@@ -25,6 +25,17 @@ public class Instrument {
     private String name;
 
     @Column(nullable = false)
+    private String sector;
+
+    private Short risk;
+
+    @Column(nullable = false)
+    private String thesis;
+
+    @Column(nullable = false)
+    private String analysis;
+
+    @Column(nullable = false)
     private boolean listed;
 
     /** The price source's own symbol, once found. */
@@ -47,11 +58,10 @@ public class Instrument {
     protected Instrument() {
     }
 
-    Instrument(UUID userId, String ticker, String name) {
+    Instrument(UUID userId, String ticker) {
         this.id = UUID.randomUUID();
         this.userId = userId;
         this.ticker = ticker;
-        this.name = name;
         this.listed = true;
         this.createdAt = Instant.now();
     }
@@ -80,8 +90,16 @@ public class Instrument {
         return listed;
     }
 
-    void setName(String name) {
-        this.name = name;
+    void describe(InstrumentDetails details) {
+        name = details.name();
+        sector = details.sector();
+        risk = details.risk() == null ? null : details.risk().shortValue();
+        thesis = details.thesis();
+        analysis = details.analysis();
+    }
+
+    InstrumentDetails details() {
+        return new InstrumentDetails(name, sector, risk == null ? null : risk.intValue(), thesis, analysis);
     }
 
     void setListed(boolean listed) {

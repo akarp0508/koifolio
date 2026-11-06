@@ -19,6 +19,8 @@ interface InstrumentRepository extends JpaRepository<Instrument, UUID> {
 
     Optional<Instrument> findByIdAndUserIdAndListedTrue(UUID id, UUID userId);
 
+    Optional<Instrument> findByIdAndUserId(UUID id, UUID userId);
+
     @Query("""
             select distinct i.ticker from Instrument i
             where i.quoteSymbol is null and (i.quoteCheckedAt is null or i.quoteCheckedAt < :checkedBefore)

@@ -1,12 +1,21 @@
 package io.github.akarp0508.koifolio.position;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.Valuation;
+import io.github.akarp0508.koifolio.instrument.InstrumentDetails;
 import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -19,6 +28,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,6 +67,65 @@ class PositionController {
         return HistoryResponse.of(positions.history(UUID.fromString(jwt.getSubject()), accountId, ticker));
     }
 
+    @GetMapping("/{accountId}/{ticker}/details")
+    @Operation(summary = "The company and your plan for a position")
+    DetailsResponse details(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID accountId, @PathVariable String ticker) {
+        return DetailsResponse.of(positions.one(UUID.fromString(jwt.getSubject()), accountId, ticker));
+    }
+
+    @PutMapping("/{accountId}/{ticker}/plan")
+    @Operation(summary = "Replace your plan for a position", description = """
+            Prices are in the instrument's price currency. A plan stays if you sell out and buy back.""")
+    DetailsResponse savePlan(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID accountId, @PathVariable String ticker,
+                             @Valid @RequestBody PlanRequest request) {
+        return DetailsResponse.of(positions.savePlan(UUID.fromString(jwt.getSubject()), accountId, ticker, request.plan(),
+                request.risk(), request.targetPrice(), request.stopPrice()));
+    }
+
+    record PlanRequest(
+            @Size(max = 20000, message = "must be at most 20000 characters") String plan,
+            @Min(value = 1, message = "must be between 1 and 5") @Max(value = 5, message = "must be between 1 and 5")
+            @Schema(description = "Overrides the company's risk for this position") Integer risk,
+            @Positive(message = "must be greater than 0")
+            @Digits(integer = 13, fraction = 6, message = "must have at most 13 digits and 6 decimal places")
+            @Schema(type = "string", example = "180") BigDecimal targetPrice,
+            @Positive(message = "must be greater than 0")
+            @Digits(integer = 13, fraction = 6, message = "must have at most 13 digits and 6 decimal places")
+            @Schema(type = "string", example = "120") BigDecimal stopPrice) {
+    }
+
+    /**
+     * @param risk the plan's own risk, not the company's
+     * @param targetDistance how far the price must move to the target, in percent; left out without both
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record DetailsResponse(UUID instrumentId, String name, String sector, Integer companyRisk, String thesis, String analysis,
+                           String plan, Integer risk, String targetPrice, String stopPrice, String targetDistance,
+                           String stopDistance, PlanCheck.Signal signal) {
+
+        static DetailsResponse of(PositionService.Position position) {
+            InstrumentDetails company = position.instrument().details();
+            Optional<PositionPlan> plan = position.plan();
+            Optional<PlanCheck> check = position.planCheck();
+            return new DetailsResponse(position.instrument().id(), company.name(), company.sector(), company.risk(),
+                    company.thesis(), company.analysis(),
+                    plan.map(PositionPlan::getPlan).orElse(""), plan.map(PositionPlan::getRisk).orElse(null),
+                    plan.map(PositionPlan::getTargetPrice).map(PositionController::plain).orElse(null),
+                    plan.map(PositionPlan::getStopPrice).map(PositionController::plain).orElse(null),
+                    check.flatMap(PlanCheck::targetDistance).map(PositionController::percent).orElse(null),
+                    check.flatMap(PlanCheck::stopDistance).map(PositionController::percent).orElse(null),
+                    check.flatMap(PlanCheck::signal).orElse(null));
+        }
+    }
+
+    private static String plain(BigDecimal value) {
+        return value.stripTrailingZeros().toPlainString();
+    }
+
+    private static String percent(BigDecimal value) {
+        return value.setScale(1, RoundingMode.HALF_UP).toPlainString();
+    }
+
     /**
      * @param covered whether the price source has this ticker at all
      * @param currencyMismatch prices are in another currency than the account, so points have no value
@@ -89,12 +159,15 @@ class PositionController {
      * @param incomplete a sale exceeded what was held, so the history is missing something
      * @param priceCurrency can differ from {@code currency}; value and gain are then left out
      * @param currencyMismatch the price is in another currency than the account
+     * @param risk the plan's risk if set, otherwise the company's; left out if neither is
+     * @param signal the price is at or near the plan's target or stop
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record PositionResponse(UUID accountId, String ticker, String currency, String quantity, String averageCost,
                             String cost, String realizedGain, boolean closed, boolean incomplete,
                             String price, String priceCurrency, Instant quotedAt, String value,
-                            String unrealizedGain, String unrealizedPercent, boolean currencyMismatch) {
+                            String unrealizedGain, String unrealizedPercent, boolean currencyMismatch,
+                            UUID instrumentId, String sector, Integer risk, PlanCheck.Signal signal) {
 
         static PositionResponse of(PositionService.Position position) {
             PositionResult result = position.result();
@@ -117,7 +190,9 @@ class PositionController {
                     valuation.map(v -> money(v.gain(), currency)).orElse(null),
                     valuation.flatMap(Valuation::gainPercent)
                             .map(percent -> percent.setScale(1, RoundingMode.HALF_UP).toPlainString()).orElse(null),
-                    mismatch);
+                    mismatch,
+                    position.instrument().id(), position.instrument().details().sector(), position.risk(),
+                    position.planCheck().flatMap(PlanCheck::signal).orElse(null));
         }
 
         static String money(BigDecimal value, String currency) {

@@ -6,16 +6,19 @@ import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.domain.DailyClose;
 import io.github.akarp0508.koifolio.domain.DatedTrade;
+import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PositionCalculator;
 import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
+import io.github.akarp0508.koifolio.instrument.InstrumentService.InstrumentView;
 import io.github.akarp0508.koifolio.price.PriceHistoryService;
 import io.github.akarp0508.koifolio.price.PriceService;
 import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
 import io.github.akarp0508.koifolio.transaction.AccountTrade;
 import io.github.akarp0508.koifolio.transaction.TransactionService;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -40,19 +43,65 @@ class PositionService {
     private final InstrumentService instruments;
     private final PriceService prices;
     private final PriceHistoryService priceHistory;
+    private final PositionPlanRepository plans;
 
     PositionService(AuthService authService, AccountRepository accounts, TransactionService transactions,
-                    InstrumentService instruments, PriceService prices, PriceHistoryService priceHistory) {
+                    InstrumentService instruments, PriceService prices, PriceHistoryService priceHistory,
+                    PositionPlanRepository plans) {
         this.authService = authService;
         this.accounts = accounts;
         this.transactions = transactions;
         this.instruments = instruments;
         this.prices = prices;
         this.priceHistory = priceHistory;
+        this.plans = plans;
     }
 
-    record Position(Account account, String ticker, PositionResult result, Optional<CurrentPrice> price) {
+    /** A position's numbers, the company and the plan. Closed positions work too. */
+    @Transactional(readOnly = true)
+    Position one(UUID userId, UUID accountId, String ticker) {
+        String normalized = InstrumentService.normalizeTicker(ticker);
+        return list(userId).stream()
+                .filter(position -> position.account().getId().equals(accountId) && position.ticker().equals(normalized))
+                .findFirst()
+                .orElseThrow(PositionService::notFound);
     }
+
+    @Transactional
+    Position savePlan(UUID userId, UUID accountId, String ticker, String text, Integer risk, BigDecimal target,
+                      BigDecimal stop) {
+        Position position = one(userId, accountId, ticker);
+        UUID instrumentId = position.instrument().id();
+        PositionPlan plan = plans.findById(new PositionPlan.Key(accountId, instrumentId))
+                .orElseGet(() -> new PositionPlan(accountId, instrumentId, userId));
+        plan.update(text, risk, target, stop);
+        return new Position(position.account(), position.instrument(), position.result(), position.price(),
+                Optional.of(plans.save(plan)));
+    }
+
+    private static ApiException notFound() {
+        return new ApiException(HttpStatus.NOT_FOUND, "position_not_found", "Position not found");
+    }
+
+    record Position(Account account, InstrumentView instrument, PositionResult result, Optional<CurrentPrice> price,
+                    Optional<PositionPlan> plan) {
+
+        String ticker() {
+            return instrument.ticker();
+        }
+
+        /** The plan's risk if it has one, otherwise the company's. */
+        Integer risk() {
+            return plan.map(PositionPlan::getRisk).orElse(null) != null
+                    ? plan.get().getRisk() : instrument.details().risk();
+        }
+
+        Optional<PlanCheck> planCheck() {
+            return price.filter(current -> !result.isClosed()).flatMap(current -> plan.map(found -> PlanCheck.of(
+                    current.price(), Optional.ofNullable(found.getTargetPrice()), Optional.ofNullable(found.getStopPrice()))));
+        }
+    }
+
 
     record History(Account account, String ticker, List<PositionHistory.Point> points, String priceCurrency,
                    boolean covered) {
@@ -73,7 +122,7 @@ class PositionService {
                 .filter(trade -> normalized.equals(tickers.get(trade.instrumentId())))
                 .toList();
         Account account = accounts.findByIdAndUserId(accountId, userId).filter(found -> !trades.isEmpty())
-                .orElseThrow(() -> new ApiException(HttpStatus.NOT_FOUND, "position_not_found", "Position not found"));
+                .orElseThrow(PositionService::notFound);
 
         UUID instrumentId = trades.getFirst().instrumentId();
         InstrumentService.QuoteRef ref = instruments.quoteRefs(userId).get(instrumentId);
@@ -99,8 +148,10 @@ class PositionService {
         authService.currentUser(userId);
         Map<UUID, Account> accountsById = accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId).stream()
                 .collect(Collectors.toMap(Account::getId, Function.identity()));
-        Map<UUID, String> tickers = instruments.tickers(userId);
+        Map<UUID, InstrumentView> views = instruments.views(userId);
         Map<UUID, CurrentPrice> currentPrices = prices.currentPrices(userId);
+        Map<PositionPlan.Key, PositionPlan> plansByKey = plans.findByUserId(userId).stream().collect(Collectors.toMap(
+                plan -> new PositionPlan.Key(plan.getAccountId(), plan.getInstrumentId()), Function.identity()));
 
         record Holding(UUID accountId, UUID instrumentId) {
         }
@@ -113,9 +164,11 @@ class PositionService {
         return trades.entrySet().stream()
                 .map(entry -> {
                     Account account = accountsById.get(entry.getKey().accountId());
-                    return new Position(account, tickers.get(entry.getKey().instrumentId()),
+                    UUID instrumentId = entry.getKey().instrumentId();
+                    return new Position(account, views.get(instrumentId),
                             PositionCalculator.calculate(entry.getValue(), account.getCostMethod()),
-                            Optional.ofNullable(currentPrices.get(entry.getKey().instrumentId())));
+                            Optional.ofNullable(currentPrices.get(instrumentId)),
+                            Optional.ofNullable(plansByKey.get(new PositionPlan.Key(account.getId(), instrumentId))));
                 })
                 .sorted(Comparator.comparing(Position::ticker).thenComparing(position -> position.account().getName()))
                 .toList();

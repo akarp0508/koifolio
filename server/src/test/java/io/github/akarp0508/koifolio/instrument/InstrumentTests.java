@@ -2,7 +2,7 @@ package io.github.akarp0508.koifolio.instrument;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -93,7 +93,7 @@ class InstrumentTests {
         String id = addedId();
 
         add(bob, "{\"ticker\":\"PAS\"}").andExpect(status().isCreated());
-        as(bob, patch("/api/v1/instruments/" + id).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"x\"}"))
+        as(bob, put("/api/v1/instruments/" + id).contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"x\"}"))
                 .andExpect(status().isNotFound());
         as(bob, delete("/api/v1/instruments/" + id)).andExpect(status().isNotFound());
 
@@ -101,10 +101,55 @@ class InstrumentTests {
     }
 
     @Test
+    void storesWhatTheUserKnowsAboutACompany() throws Exception {
+        String json = """
+                {"ticker":"PAS","name":"Passus","sector":"IT","risk":3,"thesis":"Growing demand","analysis":"# PAS"}""";
+
+        String body = add(anna, json).andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+
+        as(anna, get("/api/v1/instruments/" + JsonPath.<String>read(body, "$.id")))
+                .andExpect(jsonPath("$.sector").value("IT"))
+                .andExpect(jsonPath("$.risk").value(3))
+                .andExpect(jsonPath("$.thesis").value("Growing demand"))
+                .andExpect(jsonPath("$.analysis").value("# PAS"));
+    }
+
+    @Test
+    void aFullUpdateClearsWhatIsLeftOut() throws Exception {
+        String body = add(anna, "{\"ticker\":\"PAS\",\"risk\":3,\"sector\":\"IT\"}")
+                .andReturn().getResponse().getContentAsString();
+
+        as(anna, put("/api/v1/instruments/" + JsonPath.<String>read(body, "$.id"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"Passus\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.risk").doesNotExist())
+                .andExpect(jsonPath("$.sector").value(""));
+    }
+
+    @Test
+    void riskMustBeOneToFive() throws Exception {
+        add(anna, "{\"ticker\":\"PAS\",\"risk\":6}").andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("risk must be between 1 and 5"));
+        add(anna, "{\"ticker\":\"PAS\",\"risk\":0}").andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void aRemovedInstrumentCanStillBeReadAndEdited() throws Exception {
+        String id = addedId();
+        as(anna, delete("/api/v1/instruments/" + id)).andExpect(status().isNoContent());
+
+        as(anna, get("/api/v1/instruments/" + id)).andExpect(status().isOk());
+        as(anna, put("/api/v1/instruments/" + id).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Still held\"}")).andExpect(status().isOk());
+        as(anna, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
     void renames() throws Exception {
         String id = addedId();
 
-        as(anna, patch("/api/v1/instruments/" + id).contentType(MediaType.APPLICATION_JSON)
+        as(anna, put("/api/v1/instruments/" + id).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"Passus SA\"}")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("Passus SA"))
                 .andExpect(jsonPath("$.ticker").value("PAS"));
