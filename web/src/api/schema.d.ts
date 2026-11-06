@@ -323,7 +323,7 @@ export interface paths {
         };
         /**
          * List your positions, by ticker
-         * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows.
+         * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows. Weights are shares of the value, cash included.
          */
         get: operations["list_4"];
         put?: never;
@@ -733,6 +733,8 @@ export interface components {
             instrumentTags?: string[];
             positionTags?: string[];
             inBase?: components["schemas"]["InBase"];
+            weight?: string;
+            portfolioWeight?: string;
         };
         HistoryPoint: {
             /** Format: date */

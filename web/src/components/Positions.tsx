@@ -96,6 +96,7 @@ export function Positions() {
                 <th className="number">Avg cost</th>
                 <th className="number">Price</th>
                 <th className="number">Value</th>
+                <th className="number" title="Share of the account and of everything, cash included">Weight</th>
                 <th className="number">P/L</th>
                 <th className="number">Realized</th>
               </tr>
@@ -127,6 +128,12 @@ export function Positions() {
                   <td className="number">
                     {position.value ? `${formatAmount(position.value)} ${position.currency}` : '—'}
                     {position.currencyMismatch && <span className="not-in-balance">priced in {position.priceCurrency}</span>}
+                  </td>
+                  <td className="number">
+                    {position.weight ? `${position.weight}%` : '—'}
+                    {position.portfolioWeight && (
+                      <span className="not-in-balance">{position.portfolioWeight}% of all</span>
+                    )}
                   </td>
                   <td className={`number ${gainClass(position.unrealizedGain)}`}>
                     {position.unrealizedGain ? formatGain(position.unrealizedGain) : '—'}
