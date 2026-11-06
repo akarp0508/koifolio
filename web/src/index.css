@@ -817,3 +817,20 @@ tr.clickable a {
 .suggestion .modal-actions {
   margin-top: 0.4rem;
 }
+
+/* Tax */
+
+.tax-group {
+  margin-bottom: 1rem;
+}
+
+.notice {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--warning);
+  border-radius: 6px;
+}
+
+.tile-link {
+  color: inherit;
+  text-decoration: none;
+}

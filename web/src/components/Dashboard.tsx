@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Dashboard as DashboardData, DashboardSlice, PeriodChange, PortfolioHistory, Position, Settings } from '../api/client'
+import type { Account, Dashboard as DashboardData, DashboardSlice, PeriodChange, PortfolioHistory, Position, Settings, TaxEstimate } from '../api/client'
 import { formatAmount, formatGain, gainClass } from '../format'
 import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
@@ -30,6 +30,12 @@ function gainNote(dashboard: DashboardData) {
     ? `currency ${formatGain(dashboard.currencyGain)}`
     : undefined
   return [percent, currency].filter(Boolean).join(' · ') || undefined
+}
+
+function taxNote(tax: TaxEstimate) {
+  const unset = tax.unsetAccounts?.length ?? 0
+  const sold = tax.totalIfSoldToday && `${formatGain(tax.totalIfSoldToday)} if sold today`
+  return unset > 0 ? `${sold} · ${unset} without a rate` : sold
 }
 
 function Tile({ label, children, note, tone = '' }: {
@@ -89,6 +95,7 @@ export function Dashboard() {
   const [instrumentTags, setInstrumentTags] = useState<string[]>([])
   const [positionTags, setPositionTags] = useState<string[]>([])
   const [history, setHistory] = useState<PortfolioHistory | null>(null)
+  const [tax, setTax] = useState<TaxEstimate | null>(null)
   const [range, setRange] = useState<Range>('1Y')
   const [error, setError] = useState<ApiError | null>(null)
 
@@ -108,8 +115,9 @@ export function Dashboard() {
   }, [fetchDashboard])
 
   useEffect(() => {
-    Promise.all([api.listAccounts(), api.listPositions(), api.settings()])
-      .then(([accountList, positionList, settingsData]) => {
+    Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax()])
+      .then(([accountList, positionList, settingsData, taxData]) => {
+        setTax(taxData)
         setAccounts(accountList)
         setPositions(positionList)
         setSettings(settingsData)
@@ -187,6 +195,11 @@ export function Dashboard() {
               {formatGain(dashboard.unrealizedGain)} {currency}
             </Tile>
             <Tile label="Realized" tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>
+            {tax && (
+              <Tile label={`Est. tax ${tax.year}`} note={taxNote(tax)}>
+                <a className="tile-link" href="#tax">{formatAmount(tax.totalTax ?? '')} {tax.currency}</a>
+              </Tile>
+            )}
             <Tile label="Cash" note={filteredByTags ? 'not filtered by tags' : undefined}>
               {dashboard.cash ? `${formatAmount(dashboard.cash)} ${currency}` : '—'}
             </Tile>

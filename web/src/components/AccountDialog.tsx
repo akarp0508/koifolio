@@ -8,6 +8,10 @@ import { Modal } from './Modal'
 
 const COMMON_CURRENCIES = ['PLN', 'USD', 'EUR', 'GBP', 'CHF']
 
+function taxChoiceOf(rate?: string) {
+  return rate === undefined ? '' : rate === '19' || rate === '0' ? rate : 'custom'
+}
+
 export function AccountDialog({ account, onSaved, onClose }: {
   account: Account | null
   onSaved: () => void
@@ -18,6 +22,8 @@ export function AccountDialog({ account, onSaved, onClose }: {
   const [currency, setCurrency] = useState(account?.currency ?? 'PLN')
   const [balance, setBalance] = useState(account?.balance ?? '')
   const [costMethod, setCostMethod] = useState<CostMethod>(account?.costMethod ?? 'average')
+  const [taxChoice, setTaxChoice] = useState(() => taxChoiceOf(account?.taxRate))
+  const [customRate, setCustomRate] = useState(account?.taxRate ?? '')
   const [error, setError] = useState<ApiError | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -26,11 +32,12 @@ export function AccountDialog({ account, onSaved, onClose }: {
     setBusy(true)
     setError(null)
     const amount = normalizeAmount(balance) || undefined
+    const taxRate = taxChoice === 'custom' ? normalizeAmount(customRate) : taxChoice || undefined
     try {
       if (account) {
-        await api.updateAccount(account.id, { name, description, balance: amount, costMethod })
+        await api.updateAccount(account.id, { name, description, balance: amount, costMethod, taxRate, clearTaxRate: !taxRate })
       } else {
-        await api.createAccount({ name, description, currency, balance: amount, costMethod })
+        await api.createAccount({ name, description, currency, balance: amount, costMethod, taxRate })
       }
       onSaved()
     } catch (e) {
@@ -93,6 +100,29 @@ export function AccountDialog({ account, onSaved, onClose }: {
             <option value="fifo">FIFO (oldest shares sold first)</option>
           </select>
         </label>
+        <div className="field-row even">
+          <label className="field">
+            <span>Tax</span>
+            <select value={taxChoice} aria-invalid={fieldErrors.taxRate !== undefined}
+                    onChange={(e) => setTaxChoice(e.target.value)}>
+              <option value="">Not set</option>
+              <option value="19">Regular (19%)</option>
+              <option value="0">Tax free (0%)</option>
+              <option value="custom">Custom…</option>
+            </select>
+            {taxChoice !== 'custom' && fieldErrors.taxRate && <small className="field-error">{fieldErrors.taxRate}</small>}
+          </label>
+          {taxChoice === 'custom' && (
+            <Field
+              label="Rate (%)"
+              inputMode="decimal"
+              required
+              value={customRate}
+              error={fieldErrors.taxRate}
+              onChange={(e) => setCustomRate(e.target.value)}
+            />
+          )}
+        </div>
         {error && !shownInline && <p className="error" role="alert">{error.message}</p>}
         <div className="modal-actions">
           <button type="button" onClick={onClose}>Cancel</button>

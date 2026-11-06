@@ -22,6 +22,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 11. **Portfolio chart** (done): value over time, 1D to 1Y changes, gain and loss colours, and FX history.
 12. **Splits** (done): split transactions, with past values corrected, and detected splits suggested on the dashboard.
 13. **Purchase-date FX** (done): cost and realized gains at each trade's rate, currency gain shown separately, and the rate date as a setting.
+14. **Tax estimates** (done): a rate per account, a yearly estimate page and a dashboard tile.
 
 ## Current focus: extending the site
 
@@ -32,7 +33,6 @@ Rough priorities, to be picked one batch at a time:
 **Numbers you can trust**
 
 - **Spin-offs:** moving part of the cost to a new instrument
-- **Tax estimates** per account. An early version is on the `domain-replay-wip` branch
 
 **Promised features**
 

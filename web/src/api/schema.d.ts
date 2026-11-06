@@ -274,6 +274,26 @@ export interface paths {
         patch: operations["update_3"];
         trace?: never;
     };
+    "/api/v1/tax": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An estimate of tax on sales for one year
+         * @description In the base currency. Accounts with the same rate add up, so losses offset gains between them. Losses aren't carried between years, and dividends aren't included. Not tax advice.
+         */
+        get: operations["estimate"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/split-suggestions": {
         parameters: {
             query?: never;
@@ -590,6 +610,8 @@ export interface components {
              * @enum {string}
              */
             costMethod?: "average" | "fifo";
+            /** @description In percent, e.g. 19. Left unset, the account is left out of tax estimates */
+            taxRate?: string;
         };
         AccountResponse: {
             /** Format: uuid */
@@ -603,6 +625,8 @@ export interface components {
             balanceSetOn?: string;
             /** @enum {string} */
             costMethod?: "average" | "fifo";
+            /** @description In percent; left out if not set */
+            taxRate?: string;
         };
         SettingsRequest: {
             /** @example PLN */
@@ -623,6 +647,42 @@ export interface components {
             balance?: string;
             /** @enum {string} */
             costMethod?: "average" | "fifo";
+            /** @description In percent, e.g. 19. Left unset, the account is left out of tax estimates */
+            taxRate?: string;
+            /** @description Back to not set */
+            clearTaxRate?: boolean;
+        };
+        AccountLine: {
+            /** Format: uuid */
+            accountId?: string;
+            name?: string;
+            realized?: string;
+        };
+        OpenGain: {
+            /** Format: uuid */
+            accountId?: string;
+            accountName?: string;
+            ticker?: string;
+            gain?: string;
+        };
+        TaxGroup: {
+            ratePercent?: string;
+            realized?: string;
+            tax?: string;
+            unrealized?: string;
+            ifSoldToday?: string;
+            accounts?: components["schemas"]["AccountLine"][];
+        };
+        TaxResponse: {
+            currency?: string;
+            /** Format: int32 */
+            year?: number;
+            years?: number[];
+            totalTax?: string;
+            totalIfSoldToday?: string;
+            groups?: components["schemas"]["TaxGroup"][];
+            unsetAccounts?: string[];
+            openPositions?: components["schemas"]["OpenGain"][];
         };
         SuggestionResponse: {
             /** Format: uuid */
@@ -1259,6 +1319,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["AccountResponse"];
+                };
+            };
+        };
+    };
+    estimate: {
+        parameters: {
+            query?: {
+                year?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TaxResponse"];
                 };
             };
         };

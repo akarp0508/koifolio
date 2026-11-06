@@ -6,6 +6,7 @@ import { Dashboard } from './components/Dashboard'
 import { Instruments } from './components/Instruments'
 import { Login } from './components/Login'
 import { Positions } from './components/Positions'
+import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
 
@@ -24,6 +25,7 @@ const PAGES = [
   { hash: '#transactions', label: 'Transactions', Page: Transactions },
   { hash: '#positions', label: 'Positions', Page: Positions },
   { hash: '#instruments', label: 'Instruments', Page: Instruments },
+  { hash: '#tax', label: 'Tax', Page: Tax },
 ]
 
 function useHash() {

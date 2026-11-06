@@ -69,6 +69,7 @@ Implemented. Each account belongs to one user; another user's account returns `4
 
 - `balance` defaults to 0 and may be negative. It's returned as a string, with the currency's decimal places. More decimals than the currency has gives `400 invalid_amount`.
 - `currency` is a real ISO code in capitals, otherwise `400`. It can't be changed after creation.
+- `taxRate` is in percent, and left out if not set, which isn't the same as 0. Send `clearTaxRate: true` to unset it.
 - `balanceSetOn` is the last day the balance was changed by hand. Transactions don't move it.
 - Optimistic locking (`version`) and archiving come later.
 
@@ -252,6 +253,19 @@ History response:
 - Positions without prices or any rate are left out.
 
 Planned: realized gains and tax per year, income per year.
+
+## Tax
+
+Implemented. An estimate of tax on sales, in the base currency. Not tax advice.
+
+| Request | Purpose |
+|---|---|
+| `GET /tax` | This year, or `?year=` |
+
+- Accounts with the same `taxRate` add up per calendar year, so losses offset gains between them. Losses aren't carried between years.
+- `totalTax` is tax on that year's sales. `totalIfSoldToday` is the extra tax if everything open were sold now, after this year's realized gains, and it can be negative. It's left out for past years.
+- `unsetAccounts` names accounts with something to tax but no rate, which aren't counted.
+- Cost and proceeds use each trade's rate, per `costFxRule`. Dividends aren't included.
 
 ## Split suggestions
 

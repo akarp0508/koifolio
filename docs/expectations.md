@@ -11,7 +11,7 @@ Last reviewed: 2026-11-06.
 | **Analysis lives next to the numbers.** Each company has notes plus structured fields, in one place with its figures | ✅ Delivered: company details, per-account plans |
 | **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | ⏸ Deferred on purpose: the site comes first. See [mcp.md](mcp.md) |
 | **Your data is never locked in.** Plain-text export/import, optional git backup | ❌ Not built, so this isn't true yet. See [export-format.md](export-format.md) |
-| **Multiple accounts,** viewed separately or together | ✅ Delivered, with tax settings still to come |
+| **Multiple accounts,** viewed separately or together | ✅ Delivered |
 | **Your rules, checked automatically,** like "max 20% in one company" or "~50% in low-risk" | ❌ Not built. The data it needs now exists |
 | **Self-hosted and always on,** on a Raspberry Pi over Tailscale | ⏸ Deferred on purpose: runs on the desktop for now |
 | **Universal:** any broker, exchange, country or tax system | 🟡 The model is universal, but prices and FX cover only what bankier and NBP do |
@@ -26,7 +26,7 @@ Last reviewed: 2026-11-06.
 | Value history | ✅ Done, with backfill built in |
 | Average and FIFO cost per account | ✅ Done |
 | Bonds: one generic model, Polish series as presets | ❌ Not built |
-| Tax estimates per account | ❌ Not built; an early version is on the `domain-replay-wip` branch |
+| Tax estimates per account | ✅ Done, as an estimate on sales |
 | Splits | ✅ Done; spin-offs aren't |
 | Purchase-date FX, with currency gains separated | ✅ Done |
 | Editing transactions without losing history | ❌ Edits are in place until the audit log exists |

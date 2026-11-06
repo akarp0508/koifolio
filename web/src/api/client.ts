@@ -16,6 +16,7 @@ export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
   'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
 export type Settings = Required<Schemas['SettingsResponse']>
+export type TaxEstimate = Schemas['TaxResponse']
 export type SplitSuggestion = Schemas['SuggestionResponse']
 export type PortfolioHistory = Required<Schemas['PortfolioHistoryResponse']>
 export type PortfolioPoint = NonNullable<Schemas['PortfolioHistoryResponse']['points']>[number]
@@ -145,6 +146,7 @@ export const api = {
   splitSuggestions: () => request<SplitSuggestion[]>('GET', '/split-suggestions'),
   applySplit: (id: string) => request<void>('POST', `/split-suggestions/${id}/apply`),
   dismissSplit: (id: string) => request<void>('POST', `/split-suggestions/${id}/dismiss`),
+  tax: (year?: number) => request<TaxEstimate>('GET', year ? `/tax?year=${year}` : '/tax'),
   settings: () => request<Settings>('GET', '/settings'),
   updateSettings: (changes: Schemas['SettingsRequest']) => request<Settings>('PATCH', '/settings', changes),
   refreshPrices: () => request<void>('POST', '/prices/refresh'),
