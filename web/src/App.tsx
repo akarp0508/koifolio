@@ -3,6 +3,7 @@ import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
 import { Login } from './components/Login'
+import { Logo } from './components/Logo'
 import { Portfolio } from './components/Portfolio'
 import { Profile } from './components/Profile'
 import { Review } from './components/Review'
@@ -109,7 +110,7 @@ function App() {
   return (
     <div className="layout">
       <nav className="sidebar">
-        <strong className="brand"><img src="/favicon.svg" alt="" />koifolio</strong>
+        <strong className="brand"><Logo />koifolio</strong>
         {MAIN_PAGES.map((page) => (
           <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} main />
         ))}
