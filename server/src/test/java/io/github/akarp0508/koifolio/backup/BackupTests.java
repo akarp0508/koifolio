@@ -110,6 +110,7 @@ class BackupTests {
         transaction("{" + pln + "\"type\":\"fee\",\"amount\":\"1\"}");
         transaction("{" + pln + "\"type\":\"withdrawal\",\"amount\":\"10\"}");
         transaction("{\"accountId\":\"%s\",\"date\":\"2026-03-01\",\"affectsBalance\":false,\"type\":\"split\",\"ticker\":\"PAS\",\"splitFrom\":\"1\",\"splitTo\":\"10\"}".formatted(ike));
+        transaction("{\"accountId\":\"%s\",\"date\":\"2026-03-02\",\"affectsBalance\":false,\"type\":\"spinoff\",\"ticker\":\"NEWCO\",\"parentTicker\":\"PAS\",\"quantity\":\"3\",\"costShare\":\"12.5\"}".formatted(ike));
         transaction("{" + account.formatted(usd, "false") + "\"type\":\"buy\",\"ticker\":\"GONE\",\"quantity\":\"1\",\"price\":\"5\"}");
 
         String pas = jdbc.sql("SELECT id::text FROM instruments WHERE ticker = 'PAS' AND user_id = (SELECT id FROM users WHERE username = 'anna')")
@@ -191,8 +192,8 @@ class BackupTests {
 
         restore(bob, exported).andExpect(status().isOk())
                 .andExpect(jsonPath("$.accounts").value(2))
-                .andExpect(jsonPath("$.transactions").value(8))
-                .andExpect(jsonPath("$.companies").value(3))
+                .andExpect(jsonPath("$.transactions").value(9))
+                .andExpect(jsonPath("$.companies").value(4))
                 .andExpect(jsonPath("$.plans").value(1))
                 .andExpect(jsonPath("$.rules").value(2));
 

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { api } from '../api/client'
 import type { Account, Transaction } from '../api/client'
-import { TYPE_LABELS, details, transactionAmount } from '../transactions'
+import { TYPE_LABELS, details, movesNoCash, transactionAmount } from '../transactions'
 import { ConfirmDialog } from './ConfirmDialog'
 import { TransactionDialog } from './TransactionDialog'
 import { t } from '../i18n'
@@ -56,7 +56,7 @@ export function TransactionTable({ transactions, accounts, onChanged }: {
               </td>
               <td className={transaction.affectsBalance ? 'number' : 'number backfill'}>
                 {transactionAmount(transaction)}
-                {!transaction.affectsBalance && transaction.type !== 'split' && (
+                {!transaction.affectsBalance && !movesNoCash(transaction.type) && (
                   <span className="not-in-balance">{t('not in balance')}</span>
                 )}
               </td>

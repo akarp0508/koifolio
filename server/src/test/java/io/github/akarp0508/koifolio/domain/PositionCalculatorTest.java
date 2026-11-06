@@ -199,4 +199,28 @@ class PositionCalculatorTest {
     void freeSharesLowerTheAverage() {
         assertThat(average(buy("10", "100"), buy("10", "0")).averageCost()).isEqualByComparingTo("50");
     }
+
+    @Test
+    void aSpinOffTakesAShareOfTheCostAndLeavesTheShares() {
+        PositionResult result = PositionCalculator.calculate(List.of(buy("10", "100"), Trade.spinOff(new BigDecimal("25"))), CostMethod.AVERAGE);
+
+        assertThat(result.quantity()).isEqualByComparingTo("10");
+        assertThat(result.cost()).isEqualByComparingTo("750");
+    }
+
+    @Test
+    void aSpinOffReducesEveryFifoLotSoLaterSalesGainMore() {
+        PositionResult result = fifo(buy("1", "100"), buy("1", "200"), Trade.spinOff(new BigDecimal("50")), sell("1", "100"));
+
+        assertThat(result.realizedGain()).isEqualByComparingTo("50");
+        assertThat(result.cost()).isEqualByComparingTo("100");
+    }
+
+    @Test
+    void theSpunOffCostIsTheShareOfWhatIsStillHeld() {
+        List<Trade> trades = List.of(buy("10", "100"), sell("5", "150"));
+
+        assertThat(PositionCalculator.spunOffCost(trades, CostMethod.AVERAGE, new BigDecimal("10"))).isEqualByComparingTo("50");
+        assertThat(PositionCalculator.spunOffCost(List.of(), CostMethod.AVERAGE, new BigDecimal("10"))).isEqualByComparingTo("0");
+    }
 }

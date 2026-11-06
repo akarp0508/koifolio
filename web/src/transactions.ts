@@ -11,6 +11,7 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   interest: t('Interest'),
   fee: t('Fee'),
   split: t('Split'),
+  spinoff: t('Spin-off'),
 }
 
 export const TYPES = Object.keys(TYPE_LABELS) as TransactionType[]
@@ -35,6 +36,14 @@ export function details(transaction: Transaction) {
   if (transaction.type === 'split') {
     return t('{ticker} {to} for {from}', { ticker: transaction.ticker ?? '', to: transaction.splitTo ?? '', from: transaction.splitFrom ?? '' })
   }
+  if (transaction.type === 'spinoff') {
+    return t('{quantity} {ticker} from {parent}, {share}% of its cost', {
+      quantity: transaction.quantity ?? '',
+      ticker: transaction.ticker ?? '',
+      parent: transaction.parentTicker ?? '',
+      share: transaction.costShare ?? '',
+    })
+  }
   if (isTrade(transaction.type)) {
     return `${transaction.quantity} ${transaction.ticker} @ ${formatAmount(transaction.price ?? '')}`
   }
@@ -52,9 +61,13 @@ export function tickerOptions(instruments: Instrument[], current: string) {
   return onList ? listed : [{ value: current, label: current }, ...listed]
 }
 
-/** A split moves no money, so it has no amount to show. */
+/** Splits and spin-offs move no money, so they have no amount to show. */
+export function movesNoCash(type: TransactionType) {
+  return type === 'split' || type === 'spinoff'
+}
+
 export function transactionAmount(transaction: Transaction) {
-  return transaction.type === 'split' ? '—' : `${signedAmount(transaction.cashEffect)} ${transaction.currency}`
+  return movesNoCash(transaction.type) ? '—' : `${signedAmount(transaction.cashEffect)} ${transaction.currency}`
 }
 
 export function signedAmount(cashEffect: string) {

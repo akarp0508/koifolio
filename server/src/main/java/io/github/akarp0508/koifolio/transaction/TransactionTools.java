@@ -35,11 +35,13 @@ class TransactionTools {
             approves or rejects it. Check list_transactions first so nothing is entered twice. Amounts are in the account's \
             currency. Numbers are sent as text, like "12.50". buy and sell need ticker, quantity and price. dividend needs ticker and gross amount, and should have \
             withheldTax. interest is what a broker or bank pays on cash, so not a deposit: it needs the gross amount, and \
-            should have withheldTax. deposit, withdrawal and fee need amount. split needs ticker, splitFrom and splitTo.""",
+            should have withheldTax. deposit, withdrawal and fee need amount. split needs ticker, splitFrom and splitTo. spinoff is for shares of a \
+            new company received from one already held, with no cash: ticker is the new company, and it needs parentTicker, \
+            quantity and costShare, the percent of the parent's cost that moves across.""",
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
     TransactionResponse addTransaction(McpTransportContext context,
                                        @McpToolParam(description = "Account id from list_accounts") UUID account,
-                                       @McpToolParam(description = "One of deposit, withdrawal, buy, sell, dividend, interest, fee, split") String type,
+                                       @McpToolParam(description = "One of deposit, withdrawal, buy, sell, dividend, interest, fee, split, spinoff") String type,
                                        @McpToolParam(description = "As YYYY-MM-DD") LocalDate date,
                                        @McpToolParam(description = """
                                                Whether this moves the account's cash balance. Use false for history from \
@@ -52,6 +54,8 @@ class TransactionTools {
                                        @McpToolParam(required = false, description = "Tax withheld from a dividend or interest") String withheldTax,
                                        @McpToolParam(required = false, description = "Old shares in a split") String splitFrom,
                                        @McpToolParam(required = false, description = "New shares for that many old ones") String splitTo,
+                                       @McpToolParam(required = false, description = "The company a spin-off came from") String parentTicker,
+                                       @McpToolParam(required = false, description = "Percent of the parent's cost a spin-off moves") String costShare,
                                        @McpToolParam(required = false, description = "Why, in the user's words, if they gave a reason") String note,
                                        @McpToolParam(required = false, description = """
                                                Go ahead if this takes the balance below zero. Otherwise it's refused, so \
@@ -61,7 +65,8 @@ class TransactionTools {
                 ticker, ToolArguments.decimal("quantity", quantity), ToolArguments.decimal("price", price),
                 ToolArguments.decimal("fee", fee), ToolArguments.decimal("amount", amount),
                 ToolArguments.decimal("withheldTax", withheldTax), ToolArguments.decimal("splitFrom", splitFrom),
-                ToolArguments.decimal("splitTo", splitTo), note, affectsBalance, allowNegativeBalance);
+                ToolArguments.decimal("splitTo", splitTo), parentTicker, ToolArguments.decimal("costShare", costShare), note,
+                affectsBalance, allowNegativeBalance);
         checker.check(request);
         return TransactionResponse.of(transactions.create(caller.userId(), request, caller.actor()));
     }
@@ -76,6 +81,8 @@ class TransactionTools {
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String withheldTax,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String splitFrom,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String splitTo,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String parentTicker,
+                              @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String costShare,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) String note,
                               @Schema(requiredMode = Schema.RequiredMode.NOT_REQUIRED) Boolean allowNegativeBalance) {
     }
@@ -110,7 +117,8 @@ class TransactionTools {
                 row.ticker(), ToolArguments.decimal("quantity", row.quantity()), ToolArguments.decimal("price", row.price()),
                 ToolArguments.decimal("fee", row.fee()), ToolArguments.decimal("amount", row.amount()),
                 ToolArguments.decimal("withheldTax", row.withheldTax()), ToolArguments.decimal("splitFrom", row.splitFrom()),
-                ToolArguments.decimal("splitTo", row.splitTo()), row.note(), row.affectsBalance(), row.allowNegativeBalance());
+                ToolArguments.decimal("splitTo", row.splitTo()), row.parentTicker(),
+                ToolArguments.decimal("costShare", row.costShare()), row.note(), row.affectsBalance(), row.allowNegativeBalance());
     }
 
     @McpTool(name = "update_transaction", description = """
@@ -120,7 +128,7 @@ class TransactionTools {
             annotations = @McpTool.McpAnnotations(readOnlyHint = false, destructiveHint = false))
     ReviewService.Proposed updateTransaction(McpTransportContext context,
                                              @McpToolParam(description = "Transaction id from list_transactions") UUID id,
-                                             @McpToolParam(required = false, description = "One of deposit, withdrawal, buy, sell, dividend, interest, fee, split") String type,
+                                             @McpToolParam(required = false, description = "One of deposit, withdrawal, buy, sell, dividend, interest, fee, split, spinoff") String type,
                                              @McpToolParam(required = false, description = "As YYYY-MM-DD") LocalDate date,
                                              @McpToolParam(required = false, description = "Ticker") String ticker,
                                              @McpToolParam(required = false, description = "Shares") String quantity,
@@ -130,6 +138,8 @@ class TransactionTools {
                                              @McpToolParam(required = false, description = "Tax withheld from a dividend or interest") String withheldTax,
                                              @McpToolParam(required = false, description = "Old shares in a split") String splitFrom,
                                              @McpToolParam(required = false, description = "New shares for that many old ones") String splitTo,
+                                             @McpToolParam(required = false, description = "The company a spin-off came from") String parentTicker,
+                                             @McpToolParam(required = false, description = "Percent of the parent's cost a spin-off moves") String costShare,
                                              @McpToolParam(required = false, description = "Why, in the user's words. Empty text removes it") String note,
                                              @McpToolParam(required = false, description = "Whether this moves the account's cash balance") Boolean affectsBalance) {
         AgentCaller caller = AgentCaller.of(context).require(AgentScope.TRANSACTIONS_WRITE);
@@ -137,7 +147,8 @@ class TransactionTools {
                 type == null ? null : ToolArguments.choice(TransactionType.class, "type", type), date, ticker,
                 ToolArguments.decimal("quantity", quantity), ToolArguments.decimal("price", price), ToolArguments.decimal("fee", fee),
                 ToolArguments.decimal("amount", amount), ToolArguments.decimal("withheldTax", withheldTax),
-                ToolArguments.decimal("splitFrom", splitFrom), ToolArguments.decimal("splitTo", splitTo), note, affectsBalance));
+                ToolArguments.decimal("splitFrom", splitFrom), ToolArguments.decimal("splitTo", splitTo), parentTicker,
+                ToolArguments.decimal("costShare", costShare), note, affectsBalance));
     }
 
     @McpTool(name = "delete_transaction", description = """

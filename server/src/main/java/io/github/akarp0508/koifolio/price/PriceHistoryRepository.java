@@ -17,7 +17,8 @@ interface PriceHistoryRepository extends JpaRepository<PriceHistory, String> {
             from Transaction t, io.github.akarp0508.koifolio.instrument.Instrument i
             where t.instrumentId = i.id and i.quoteSymbol is not null
                 and t.type in (io.github.akarp0508.koifolio.transaction.TransactionType.BUY,
-                               io.github.akarp0508.koifolio.transaction.TransactionType.SELL)
+                               io.github.akarp0508.koifolio.transaction.TransactionType.SELL,
+                               io.github.akarp0508.koifolio.transaction.TransactionType.SPINOFF)
             group by i.quoteSymbol, i.quoteIsin
             order by i.quoteSymbol""")
     List<Needed> findNeeded();
@@ -25,6 +26,7 @@ interface PriceHistoryRepository extends JpaRepository<PriceHistory, String> {
     @Query("""
             select min(t.date) from Transaction t
             where t.type in (io.github.akarp0508.koifolio.transaction.TransactionType.BUY,
-                             io.github.akarp0508.koifolio.transaction.TransactionType.SELL)""")
+                             io.github.akarp0508.koifolio.transaction.TransactionType.SELL,
+                             io.github.akarp0508.koifolio.transaction.TransactionType.SPINOFF)""")
     LocalDate findEarliestTrade();
 }

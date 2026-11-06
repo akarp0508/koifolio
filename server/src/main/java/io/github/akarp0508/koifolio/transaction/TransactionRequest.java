@@ -18,10 +18,10 @@ record TransactionRequest(
         UUID accountId,
         @NotNull TransactionType type,
         @NotNull @Schema(example = "2026-03-12") LocalDate date,
-        @Schema(description = "buy, sell, dividend", example = "PAS")
+        @Schema(description = "buy, sell, dividend, split, and the new company in a spinoff", example = "PAS")
         @Pattern(regexp = "\\s*[A-Za-z0-9.\\-]{1,20}\\s*", message = "must be up to 20 letters, digits, dots or dashes")
         String ticker,
-        @Schema(type = "string", description = "buy, sell", example = "10")
+        @Schema(type = "string", description = "buy, sell, and the new shares received in a spinoff", example = "10")
         @Digits(integer = 15, fraction = 8, message = "must have at most 15 digits and 8 decimal places")
         BigDecimal quantity,
         @Schema(type = "string", description = "buy, sell. Per share, in the account's currency", example = "120.00")
@@ -42,6 +42,12 @@ record TransactionRequest(
         @Schema(type = "string", description = "split. New shares for that many old ones", example = "10")
         @Digits(integer = 10, fraction = 8, message = "must have at most 10 digits and 8 decimal places")
         BigDecimal splitTo,
+        @Schema(description = "spinoff. The company it came from", example = "PAS")
+        @Pattern(regexp = "\\s*[A-Za-z0-9.\\-]{1,20}\\s*", message = "must be up to 20 letters, digits, dots or dashes")
+        String parentTicker,
+        @Schema(type = "string", description = "spinoff. Percent of the parent's cost moved to the new company", example = "12.5")
+        @Digits(integer = 3, fraction = 4, message = "must have at most 4 decimal places")
+        BigDecimal costShare,
         @Size(max = 2000, message = "must be at most 2000 characters")
         @Schema(description = "Why, in your words. Any type can have one", example = "Bought after the Q3 results")
         String note,

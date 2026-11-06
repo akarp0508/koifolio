@@ -401,7 +401,7 @@ public class PositionService {
         String base = user.getBaseCurrency();
         List<DatedTrade> converted = new ArrayList<>();
         for (AccountTrade trade : trades) {
-            if (trade.trade().side() == Trade.Side.SPLIT) {
+            if (!trade.trade().hasMoney()) {
                 converted.add(new DatedTrade(trade.date(), trade.trade()));
                 continue;
             }

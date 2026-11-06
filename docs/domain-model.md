@@ -39,7 +39,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 ## Planned
 
-**More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend, interest, fee and split. Still to come: `SpinOff` (moves a fraction of the cost to the new instrument), `CurrencyExchange`.
+**More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend, interest, fee, split and spin-off, which moves a share of the parent's cost to the new company. Still to come: `CurrencyExchange`.
 
 **Bonds.** Polish retail bonds that capitalise yearly: TOS (3 years), ROS (6), EDO (10) and ROD (12). Each purchase is its own lot, because interest accrues from the purchase date. Value per bond is `base × (1 + rate × days / days in that year)`, rounded to the grosz, where `base` is 100 multiplied up by each finished year without rounding. That's tested against all 1,461 daily values of four Ministry of Finance tables. Older issue letters say the base is rounded, but the published tables only match if it isn't. Rates are entered, one per year, because nothing fetches them. COI, ROR and DOR pay interest out and OTS runs for months, so they aren't covered. A generic model for any bond, with presets, is still the long-term direction.
 

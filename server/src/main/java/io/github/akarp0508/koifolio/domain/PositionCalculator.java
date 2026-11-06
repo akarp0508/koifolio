@@ -14,6 +14,8 @@ public final class PositionCalculator {
 
     static final MathContext PRECISION = MathContext.DECIMAL128;
 
+    private static final BigDecimal HUNDRED = new BigDecimal("100");
+
     private PositionCalculator() {
     }
 
@@ -29,6 +31,15 @@ public final class PositionCalculator {
         }
     }
 
+    /**
+     * What a spin-off takes from the parent's cost.
+     *
+     * @param trades the parent's trades before it, oldest first
+     */
+    public static BigDecimal spunOffCost(List<Trade> trades, CostMethod method, BigDecimal costSharePercent) {
+        return calculate(trades, method).cost().multiply(costSharePercent, PRECISION).divide(HUNDRED, PRECISION);
+    }
+
     /** @param trades oldest first */
     public static PositionResult calculate(List<Trade> trades, CostMethod method) {
         Deque<Lot> lots = new ArrayDeque<>();
@@ -40,6 +51,13 @@ public final class PositionCalculator {
                 List<Lot> split = lots.stream().map(lot -> new Lot(trade.applySplit(lot.quantity()), lot.cost())).toList();
                 lots.clear();
                 lots.addAll(split);
+                continue;
+            }
+            if (trade.side() == Trade.Side.SPIN_OFF) {
+                BigDecimal kept = BigDecimal.ONE.subtract(trade.costShare().divide(HUNDRED, PRECISION), PRECISION);
+                List<Lot> reduced = lots.stream().map(lot -> new Lot(lot.quantity(), lot.cost().multiply(kept, PRECISION))).toList();
+                lots.clear();
+                lots.addAll(reduced);
                 continue;
             }
             BigDecimal value = trade.quantity().multiply(trade.price(), PRECISION);

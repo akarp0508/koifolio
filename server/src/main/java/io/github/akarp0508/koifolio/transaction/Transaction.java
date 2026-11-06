@@ -57,6 +57,14 @@ public class Transaction {
     @Column(name = "split_to", precision = 18, scale = 8)
     private BigDecimal splitTo;
 
+    /** The company a spin-off came from. */
+    @Column(name = "parent_instrument_id")
+    private UUID parentInstrumentId;
+
+    /** The percent of the parent's cost a spin-off moved here. */
+    @Column(name = "cost_share", precision = 7, scale = 4)
+    private BigDecimal costShare;
+
     private String note;
 
     /** What this transaction does to cash: negative for a buy, for example. */
@@ -134,10 +142,12 @@ public class Transaction {
         return createdBy;
     }
 
-    void apply(TransactionValues values, UUID instrumentId) {
+    void apply(TransactionValues values, UUID instrumentId, UUID parentInstrumentId) {
         type = values.type();
         date = values.date();
         this.instrumentId = instrumentId;
+        this.parentInstrumentId = parentInstrumentId;
+        costShare = values.costShare();
         quantity = values.quantity();
         price = values.price();
         fee = values.fee();
@@ -177,6 +187,14 @@ public class Transaction {
 
     UUID getInstrumentId() {
         return instrumentId;
+    }
+
+    UUID getParentInstrumentId() {
+        return parentInstrumentId;
+    }
+
+    BigDecimal getCostShare() {
+        return costShare;
     }
 
     BigDecimal getQuantity() {

@@ -27,7 +27,7 @@ Last reviewed: 2026-11-06.
 | Average and FIFO cost per account | ✅ Done |
 | Bonds: one generic model, Polish series as presets | 🟡 Polish TOS, ROS, EDO and ROD are built, without redemption. COI, ROR, DOR and OTS aren't |
 | Tax estimates per account | ✅ Done, as an estimate on sales and dividends |
-| Splits | ✅ Done; spin-offs aren't |
+| Splits and spin-offs | ✅ Done |
 | Purchase-date FX, with currency gains separated | ✅ Done |
 | Editing transactions without losing history | ✅ The change log keeps old values, and deletes are soft |
 | Manual prices | ❌ Not built |

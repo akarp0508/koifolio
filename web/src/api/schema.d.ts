@@ -840,19 +840,19 @@ export interface components {
              */
             accountId?: string;
             /** @enum {string} */
-            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split" | "interest";
+            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split" | "interest" | "spinoff";
             /**
              * Format: date
              * @example 2026-03-12
              */
             date: string;
             /**
-             * @description buy, sell, dividend
+             * @description buy, sell, dividend, split, and the new company in a spinoff
              * @example PAS
              */
             ticker?: string;
             /**
-             * @description buy, sell
+             * @description buy, sell, and the new shares received in a spinoff
              * @example 10
              */
             quantity?: string;
@@ -887,6 +887,16 @@ export interface components {
              */
             splitTo?: string;
             /**
+             * @description spinoff. The company it came from
+             * @example PAS
+             */
+            parentTicker?: string;
+            /**
+             * @description spinoff. Percent of the parent's cost moved to the new company
+             * @example 12.5
+             */
+            costShare?: string;
+            /**
              * @description Why, in your words. Any type can have one
              * @example Bought after the Q3 results
              */
@@ -902,7 +912,7 @@ export interface components {
             /** Format: uuid */
             accountId?: string;
             /** @enum {string} */
-            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split" | "interest";
+            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split" | "interest" | "spinoff";
             /** Format: date */
             date?: string;
             currency?: string;
@@ -914,6 +924,8 @@ export interface components {
             withheldTax?: string;
             splitFrom?: string;
             splitTo?: string;
+            parentTicker?: string;
+            costShare?: string;
             note?: string;
             cashEffect?: string;
             affectsBalance?: boolean;

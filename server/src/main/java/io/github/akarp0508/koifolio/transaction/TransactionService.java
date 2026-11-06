@@ -9,7 +9,9 @@ import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.domain.CostMethod;
 import io.github.akarp0508.koifolio.domain.Dividend;
+import io.github.akarp0508.koifolio.domain.PositionCalculator;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import java.math.BigDecimal;
@@ -29,6 +31,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -64,7 +67,7 @@ public class TransactionService {
         this.instruments = instruments;
     }
 
-    record Listed(Transaction transaction, String currency, String ticker, boolean oversold) {
+    record Listed(Transaction transaction, String currency, String ticker, String parentTicker, boolean oversold) {
     }
 
     /** One row of an import. @param added empty if this row was refused, or none were added */
@@ -78,14 +81,15 @@ public class TransactionService {
     /** A transaction for backup, with no ids of its own. */
     public record Exported(UUID accountId, TransactionType type, LocalDate date, String ticker, BigDecimal quantity,
                            BigDecimal price, BigDecimal fee, BigDecimal amount, BigDecimal withheldTax,
-                           BigDecimal splitFrom, BigDecimal splitTo, String note, boolean affectsBalance, Instant createdAt,
-                           String createdBy, boolean unvalidated) {
+                           BigDecimal splitFrom, BigDecimal splitTo, String parentTicker, BigDecimal costShare, String note,
+                           boolean affectsBalance, Instant createdAt, String createdBy, boolean unvalidated) {
     }
 
     /** Changes to a transaction, with only the given fields set. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     public record Edit(TransactionType type, LocalDate date, String ticker, BigDecimal quantity, BigDecimal price, BigDecimal fee,
-                       BigDecimal amount, BigDecimal withheldTax, BigDecimal splitFrom, BigDecimal splitTo, String note, Boolean affectsBalance) {
+                       BigDecimal amount, BigDecimal withheldTax, BigDecimal splitFrom, BigDecimal splitTo, String parentTicker,
+                       BigDecimal costShare, String note, Boolean affectsBalance) {
     }
 
     /** Oldest first. */
@@ -96,7 +100,8 @@ public class TransactionService {
         return transactions.findByUserId(userId).stream().sorted(HISTORY_ORDER)
                 .map(t -> new Exported(t.getAccountId(), t.getType(), t.getDate(), tickers.get(t.getInstrumentId()),
                         t.getQuantity(), t.getPrice(), t.getFee(), t.getAmount(), t.getWithheldTax(), t.getSplitFrom(),
-                        t.getSplitTo(), t.getNote(), t.isAffectsBalance(), t.getCreatedAt(), t.getCreatedBy(), t.isUnvalidated()))
+                        t.getSplitTo(), tickers.get(t.getParentInstrumentId()), t.getCostShare(), t.getNote(), t.isAffectsBalance(),
+                        t.getCreatedAt(), t.getCreatedBy(), t.isUnvalidated()))
                 .toList();
     }
 
@@ -106,12 +111,12 @@ public class TransactionService {
         Account account = accounts.findByIdAndUserId(exported.accountId(), userId).orElseThrow();
         TransactionRequest request = new TransactionRequest(exported.accountId(), exported.type(), exported.date(),
                 exported.ticker(), exported.quantity(), exported.price(), exported.fee(), exported.amount(),
-                exported.withheldTax(), exported.splitFrom(), exported.splitTo(), exported.note(), exported.affectsBalance(), true);
+                exported.withheldTax(), exported.splitFrom(), exported.splitTo(), exported.parentTicker(), exported.costShare(),
+                exported.note(), exported.affectsBalance(), true);
         checker.check(request);
         TransactionValues values = validate(request, account.getCurrency());
         Transaction transaction = new Transaction(userId, account.getId());
-        transaction.apply(values, instrumentFor(userId, values));
-        transaction.setNote(request.note());
+        fill(userId, transaction, values, request);
         transaction.setCreatedAt(exported.createdAt());
         transaction.addedBy(exported.createdBy(), exported.unvalidated());
         transactions.save(transaction);
@@ -134,7 +139,8 @@ public class TransactionService {
                 .filter(transaction -> !onlyUnvalidated || transaction.isUnvalidated())
                 .sorted(HISTORY_ORDER.reversed())
                 .map(transaction -> new Listed(transaction, currencies.get(transaction.getAccountId()),
-                        tickers.get(transaction.getInstrumentId()), oversold.contains(transaction.getId())))
+                        tickers.get(transaction.getInstrumentId()), tickers.get(transaction.getParentInstrumentId()),
+                        oversold.contains(transaction.getId())))
                 .toList();
     }
 
@@ -181,8 +187,7 @@ public class TransactionService {
         TransactionValues values = validate(request, account.getCurrency());
         Transaction transaction = new Transaction(userId, account.getId());
         BigDecimal balanceBefore = account.getBalance();
-        transaction.apply(values, instrumentFor(userId, values));
-        transaction.setNote(request.note());
+        fill(userId, transaction, values, request);
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
         if (actor.isAgent()) {
@@ -203,8 +208,7 @@ public class TransactionService {
         TransactionValues values = validate(request, account.getCurrency());
         BigDecimal balanceBefore = account.getBalance();
         account.adjustBalance(transaction.balanceEffect().negate());
-        transaction.apply(values, instrumentFor(userId, values));
-        transaction.setNote(request.note());
+        fill(userId, transaction, values, request);
         account.adjustBalance(transaction.balanceEffect());
         requireAcceptableBalance(account, balanceBefore, request);
         Listed saved = listed(userId, transaction);
@@ -232,16 +236,19 @@ public class TransactionService {
     @Transactional
     public void revertEdit(UUID userId, UUID id, Edit before) {
         applyEdit(userId, id, new Edit(before.type(), before.date(), before.ticker(), before.quantity(), before.price(), before.fee(),
-                before.amount(), before.withheldTax(), before.splitFrom(), before.splitTo(), first(before.note(), ""),
-                before.affectsBalance()), Actor.USER);
+                before.amount(), before.withheldTax(), before.splitFrom(), before.splitTo(), before.parentTicker(), before.costShare(),
+                first(before.note(), ""), before.affectsBalance()), Actor.USER);
     }
 
     private TransactionRequest merged(UUID userId, Transaction t, Edit edit) {
+        Map<UUID, String> tickers = instruments.tickers(userId);
         return new TransactionRequest(null, first(edit.type(), t.getType()), first(edit.date(), t.getDate()),
-                first(edit.ticker(), instruments.tickers(userId).get(t.getInstrumentId())), first(edit.quantity(), t.getQuantity()),
+                first(edit.ticker(), tickers.get(t.getInstrumentId())), first(edit.quantity(), t.getQuantity()),
                 first(edit.price(), t.getPrice()), first(edit.fee(), t.getFee()), first(edit.amount(), t.getAmount()),
                 first(edit.withheldTax(), t.getWithheldTax()), first(edit.splitFrom(), t.getSplitFrom()),
-                first(edit.splitTo(), t.getSplitTo()), first(edit.note(), t.getNote()), first(edit.affectsBalance(), t.isAffectsBalance()), true);
+                first(edit.splitTo(), t.getSplitTo()), first(edit.parentTicker(), tickers.get(t.getParentInstrumentId())),
+                first(edit.costShare(), t.getCostShare()), first(edit.note(), t.getNote()),
+                first(edit.affectsBalance(), t.isAffectsBalance()), true);
     }
 
     private static <T> T first(T value, T fallback) {
@@ -385,6 +392,8 @@ public class TransactionService {
         values.put("withheldTax", t.getWithheldTax());
         values.put("splitFrom", t.getSplitFrom());
         values.put("splitTo", t.getSplitTo());
+        values.put("parentTicker", listed.parentTicker());
+        values.put("costShare", t.getCostShare());
         values.put("note", t.getNote());
         values.put("cashEffect", t.getCashEffect());
         values.put("affectsBalance", t.isAffectsBalance());
@@ -398,18 +407,43 @@ public class TransactionService {
     @Transactional
     public void addSplit(UUID userId, UUID accountId, String ticker, LocalDate date, BigDecimal from, BigDecimal to) {
         create(userId, new TransactionRequest(accountId, TransactionType.SPLIT, date, ticker, null, null, null, null, null,
-                from, to, null, false, null), Actor.USER);
+                from, to, null, null, null, false, null), Actor.USER);
     }
 
-    /** Every buy, sell and split, oldest first. */
+    /**
+     * Every buy, sell, split and spin-off, oldest first. A spin-off is two trades: the parent loses a share of
+     * its cost, worked out from what came before it, and the new company buys in at exactly that cost.
+     */
     @Transactional(readOnly = true)
     public List<AccountTrade> tradesOldestFirst(UUID userId) {
-        return transactions.findByUserId(userId).stream()
+        record Holding(UUID account, UUID instrument) {
+        }
+
+        Map<UUID, CostMethod> methods = accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId).stream()
+                .collect(Collectors.toMap(Account::getId, Account::getCostMethod));
+        Map<Holding, List<Trade>> sofar = new HashMap<>();
+        List<AccountTrade> trades = new ArrayList<>();
+        BiConsumer<Transaction, Map.Entry<UUID, Trade>> add = (transaction, entry) -> {
+            sofar.computeIfAbsent(new Holding(transaction.getAccountId(), entry.getKey()), key -> new ArrayList<>()).add(entry.getValue());
+            trades.add(new AccountTrade(transaction.getAccountId(), entry.getKey(), transaction.getDate(), entry.getValue()));
+        };
+        transactions.findByUserId(userId).stream()
                 .filter(transaction -> transaction.getInstrumentId() != null && transaction.getType() != TransactionType.DIVIDEND)
                 .sorted(HISTORY_ORDER)
-                .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(),
-                        transaction.getDate(), trade(transaction)))
-                .toList();
+                .forEach(transaction -> {
+                    if (transaction.getType() != TransactionType.SPINOFF) {
+                        add.accept(transaction, Map.entry(transaction.getInstrumentId(), trade(transaction)));
+                        return;
+                    }
+                    UUID parent = transaction.getParentInstrumentId();
+                    BigDecimal cost = PositionCalculator.spunOffCost(
+                            sofar.getOrDefault(new Holding(transaction.getAccountId(), parent), List.of()),
+                            methods.get(transaction.getAccountId()), transaction.getCostShare());
+                    add.accept(transaction, Map.entry(parent, Trade.spinOff(transaction.getCostShare())));
+                    add.accept(transaction, Map.entry(transaction.getInstrumentId(), new Trade(Trade.Side.BUY, transaction.getQuantity(),
+                            cost.divide(transaction.getQuantity(), MathContext.DECIMAL128), BigDecimal.ZERO)));
+                });
+        return trades;
     }
 
     /** Cash entering or leaving an account, signed. */
@@ -468,8 +502,9 @@ public class TransactionService {
     private Listed listed(UUID userId, Transaction transaction) {
         transactions.flush();
         boolean oversold = oversold(transactions.findByUserId(userId)).contains(transaction.getId());
-        return new Listed(transaction, currencies(userId).get(transaction.getAccountId()),
-                instruments.tickers(userId).get(transaction.getInstrumentId()), oversold);
+        Map<UUID, String> tickers = instruments.tickers(userId);
+        return new Listed(transaction, currencies(userId).get(transaction.getAccountId()), tickers.get(transaction.getInstrumentId()),
+                tickers.get(transaction.getParentInstrumentId()), oversold);
     }
 
     private Transaction find(UUID userId, UUID id) {
@@ -482,8 +517,10 @@ public class TransactionService {
                 new ApiException(HttpStatus.NOT_FOUND, "account_not_found", "Account not found"));
     }
 
-    private UUID instrumentFor(UUID userId, TransactionValues values) {
-        return values.ticker() == null ? null : instruments.useTicker(userId, values.ticker());
+    private void fill(UUID userId, Transaction transaction, TransactionValues values, TransactionRequest request) {
+        transaction.apply(values, values.ticker() == null ? null : instruments.useTicker(userId, values.ticker()),
+                values.parentTicker() == null ? null : instruments.useTicker(userId, values.parentTicker()));
+        transaction.setNote(request.note());
     }
 
     /** Only a change that lowers the balance below zero asks, so an already negative account doesn't nag. */
@@ -513,7 +550,7 @@ public class TransactionService {
         Set<UUID> oversold = new HashSet<>();
         all.stream().sorted(HISTORY_ORDER).forEach(transaction -> {
             Holding holding = new Holding(transaction.getAccountId(), transaction.getInstrumentId());
-            if (transaction.getType() == TransactionType.BUY) {
+            if (transaction.getType() == TransactionType.BUY || transaction.getType() == TransactionType.SPINOFF) {
                 held.merge(holding, transaction.getQuantity(), BigDecimal::add);
             } else if (transaction.getType() == TransactionType.SPLIT) {
                 held.computeIfPresent(holding, (key, shares) -> shares.multiply(transaction.getSplitTo())
@@ -537,6 +574,7 @@ public class TransactionService {
             case INTEREST -> interest(request, currency, errors);
             case DEPOSIT, WITHDRAWAL, FEE -> cash(request, currency, errors);
             case SPLIT -> split(request, errors);
+            case SPINOFF -> spinOff(request, errors);
         };
         if (!errors.isEmpty()) {
             throw new FieldValidationException(errors);
@@ -617,6 +655,32 @@ public class TransactionService {
         }
         return new TransactionValues(request.type(), request.date(), ticker, null, null, null, null, null,
                 BigDecimal.ZERO, false, from, to);
+    }
+
+    /** Shares arrive with no money, so like a split it never touches the balance. */
+    private static TransactionValues spinOff(TransactionRequest request, Map<String, String> errors) {
+        String ticker = ticker(request, errors);
+        BigDecimal quantity = requirePositive("quantity", request.quantity(), errors);
+        String parent = null;
+        if (request.parentTicker() == null) {
+            errors.put("parentTicker", "must not be null");
+        } else {
+            parent = InstrumentService.normalizeTicker(request.parentTicker());
+            if (parent.equals(ticker)) {
+                errors.put("parentTicker", "must differ from the new company");
+            }
+        }
+        BigDecimal costShare = request.costShare();
+        if (costShare == null) {
+            errors.put("costShare", "must not be null");
+        } else if (costShare.signum() < 0 || costShare.compareTo(new BigDecimal("100")) > 0) {
+            errors.put("costShare", "must be between 0 and 100");
+        }
+        if (!errors.isEmpty()) {
+            return null;
+        }
+        return new TransactionValues(request.type(), request.date(), ticker, quantity, null, null, null, null,
+                BigDecimal.ZERO, false, null, null, parent, costShare);
     }
 
     private static String ticker(TransactionRequest request, Map<String, String> errors) {

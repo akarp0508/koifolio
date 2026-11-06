@@ -3,7 +3,7 @@ import type { FormEvent } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Instrument, Transaction, TransactionInput, TransactionType } from '../api/client'
 import { normalizeAmount } from '../format'
-import { TYPES, TYPE_LABELS, defaultAffectsBalance, isTrade, tickerOptions, today } from '../transactions'
+import { TYPES, TYPE_LABELS, defaultAffectsBalance, isTrade, movesNoCash, tickerOptions, today } from '../transactions'
 import { Field } from './Field'
 import { Modal } from './Modal'
 import { t } from '../i18n'
@@ -31,6 +31,8 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
   const [withheldTax, setWithheldTax] = useState(transaction?.withheldTax ?? '')
   const [splitFrom, setSplitFrom] = useState(transaction?.splitFrom ?? '1')
   const [splitTo, setSplitTo] = useState(transaction?.splitTo ?? '')
+  const [parentTicker, setParentTicker] = useState(transaction?.parentTicker ?? '')
+  const [costShare, setCostShare] = useState(transaction?.costShare ?? '')
   const [note, setNote] = useState(transaction?.note ?? '')
   // null until decided by hand, so the default can follow the date
   const [chosenAffectsBalance, setChosenAffectsBalance] = useState<boolean | null>(transaction?.affectsBalance ?? null)
@@ -54,6 +56,8 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
   const income = dividend || type === 'interest'
   const trade = isTrade(type)
   const split = type === 'split'
+  const spinOff = type === 'spinoff'
+  const noCash = movesNoCash(type)
 
   async function save(allowNegativeBalance: boolean) {
     setBusy(true)
@@ -63,14 +67,16 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
       accountId,
       type,
       date,
-      ticker: trade || dividend || split ? ticker : undefined,
-      quantity: trade ? normalizeAmount(quantity) : undefined,
+      ticker: trade || dividend || noCash ? ticker : undefined,
+      quantity: trade || spinOff ? normalizeAmount(quantity) : undefined,
       price: trade ? normalizeAmount(price) : undefined,
       fee: trade ? optionalAmount(fee) : undefined,
-      amount: trade || split ? undefined : normalizeAmount(amount),
+      amount: trade || noCash ? undefined : normalizeAmount(amount),
       withheldTax: income ? optionalAmount(withheldTax) : undefined,
       splitFrom: split ? normalizeAmount(splitFrom) : undefined,
       splitTo: split ? normalizeAmount(splitTo) : undefined,
+      parentTicker: spinOff ? parentTicker : undefined,
+      costShare: spinOff ? normalizeAmount(costShare) : undefined,
       note,
       affectsBalance,
       allowNegativeBalance,
@@ -127,7 +133,20 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
           error={fieldErrors.date}
           onChange={(e) => setDate(e.target.value)}
         />
-        {(trade || dividend || split) && (typingTicker || instruments?.length === 0 ? (
+        {spinOff && (
+          <label className="field">
+            <span>{t('Company it came from')}</span>
+            <select required disabled={instruments === null} value={parentTicker} aria-invalid={fieldErrors.parentTicker !== undefined}
+                    onChange={(e) => setParentTicker(e.target.value)}>
+              <option value="" disabled>{instruments === null ? t('Loading…') : t('Choose…')}</option>
+              {tickerOptions(instruments ?? [], parentTicker).map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            {fieldErrors.parentTicker && <small className="field-error">{fieldErrors.parentTicker}</small>}
+          </label>
+        )}
+        {(trade || dividend || noCash) && (typingTicker || instruments?.length === 0 ? (
           <>
             <Field
               label={t('Ticker')}
@@ -200,6 +219,27 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
             />
           </>
         )}
+        {spinOff && (
+          <div className="field-row even">
+            <Field
+              label={t('Shares received')}
+              inputMode="decimal"
+              required
+              value={quantity}
+              error={fieldErrors.quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+            />
+            <Field
+              label={t('Share of cost moved (%)')}
+              inputMode="decimal"
+              placeholder="12.5"
+              required
+              value={costShare}
+              error={fieldErrors.costShare}
+              onChange={(e) => setCostShare(e.target.value)}
+            />
+          </div>
+        )}
         {split && (
           <div className="field-row even">
             <Field
@@ -221,7 +261,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
             />
           </div>
         )}
-        {!trade && !split && (
+        {!trade && !noCash && (
           <Field
             label={`${income ? t('Gross amount') : t('Amount')} (${currency})`}
             inputMode="decimal"
@@ -246,7 +286,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
           <textarea rows={2} maxLength={2000} value={note} onChange={(e) => setNote(e.target.value)} />
           {fieldErrors.note && <small className="field-error">{fieldErrors.note}</small>}
         </label>
-        {!split && (
+        {!noCash && (
           <label className="check">
             <input
               type="checkbox"
@@ -256,7 +296,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, ini
             <span>{t('Update account balance')}</span>
           </label>
         )}
-        {!split && !suggested && chosenAffectsBalance === null && (
+        {!noCash && !suggested && chosenAffectsBalance === null && (
           <small className="check-hint">{t('Off: dated before the balance was set on {date}', { date: balanceSetOn })}</small>
         )}
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}

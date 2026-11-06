@@ -105,6 +105,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `buy` | `ticker`, `quantity`, `price`, `fee` (optional) | −(quantity × price + fee) |
 | `sell` | `ticker`, `quantity`, `price`, `fee` (optional) | quantity × price − fee |
 | `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
+| `spinoff` | `ticker` (the new company), `parentTicker`, `quantity` (shares received), `costShare` (percent of the parent's cost moved) | none; never touches the balance |
 | `interest` | `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
 | `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
@@ -112,6 +113,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 - `GET /transactions?unvalidated=true` lists what agents added and you haven't reviewed. `POST /transactions/{id}/approve` clears the mark. `POST /transactions/{id}/reject` removes one and undoes its effect on the balance. Either returns `409` if it isn't waiting.
 - `DELETE /transactions/{id}` removes it from every number and undoes its effect on the balance, but keeps it in the database.
 - Cash effects are rounded to the currency's decimals.
+- A `spinoff` moves `costShare` percent of the parent's cost at that date to the new company. Shares of the parent stay as they are. In an account in another currency, the base-currency cost on the new company uses the rate at the spin-off's date.
 - `oversold` marks a sale of more than was held at that point, per account and ticker. It's a warning, and it clears once the history adds up.
 - A change that takes the balance below zero returns `409 negative_balance`, with the resulting balance in `detail`, and saves nothing. Sending `allowNegativeBalance: true` goes ahead. Changes that don't lower the balance, and transactions with `affectsBalance` off, never ask.
 - A transaction or balance past 15 digits returns `400` (`amount_out_of_range`, `balance_out_of_range`).

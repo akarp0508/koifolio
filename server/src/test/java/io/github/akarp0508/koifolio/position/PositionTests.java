@@ -218,6 +218,56 @@ class PositionTests {
                 .andExpect(jsonPath("$[0].cost").value("5000.00"));
     }
 
+    private ResultActions spinOff(String body) throws Exception {
+        return as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(
+                "{\"accountId\":\"%s\",\"type\":\"spinoff\",\"date\":\"2026-02-01\",\"affectsBalance\":true,%s}".formatted(account, body)));
+    }
+
+    @Test
+    void aSpinOffMovesCostToTheNewCompanyWithoutCash() throws Exception {
+        trade(account, "buy", "2026-01-01", "PAS", "10", "100");
+        String balance = JsonPath.read(as(anna, get("/api/v1/accounts/" + account)).andReturn().getResponse().getContentAsString(), "$.balance");
+
+        spinOff("\"ticker\":\"new\",\"parentTicker\":\"pas\",\"quantity\":\"4\",\"costShare\":\"25\"")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.ticker").value("NEW"))
+                .andExpect(jsonPath("$.parentTicker").value("PAS"))
+                .andExpect(jsonPath("$.costShare").value("25"))
+                .andExpect(jsonPath("$.cashEffect").value("0.00"))
+                .andExpect(jsonPath("$.affectsBalance").value(false));
+
+        as(anna, get("/api/v1/positions"))
+                .andExpect(jsonPath("$[?(@.ticker == 'PAS')].quantity").value("10"))
+                .andExpect(jsonPath("$[?(@.ticker == 'PAS')].cost").value("750.00"))
+                .andExpect(jsonPath("$[?(@.ticker == 'NEW')].quantity").value("4"))
+                .andExpect(jsonPath("$[?(@.ticker == 'NEW')].cost").value("250.00"))
+                .andExpect(jsonPath("$[?(@.ticker == 'NEW')].averageCost").value("62.50"));
+        as(anna, get("/api/v1/accounts/" + account)).andExpect(jsonPath("$.balance").value(balance));
+    }
+
+    @Test
+    void sellingTheNewCompanyDoesntReadAsOversold() throws Exception {
+        trade(account, "buy", "2026-01-01", "PAS", "10", "100");
+        spinOff("\"ticker\":\"NEW\",\"parentTicker\":\"PAS\",\"quantity\":\"4\",\"costShare\":\"25\"").andExpect(status().isCreated());
+
+        trade(account, "sell", "2026-03-01", "NEW", "4", "70");
+
+        as(anna, get("/api/v1/transactions"))
+                .andExpect(jsonPath("$[0].oversold").value(false));
+        as(anna, get("/api/v1/positions").param("closed", "true"))
+                .andExpect(jsonPath("$[?(@.ticker == 'NEW')].realizedGain").value("30.00"));
+    }
+
+    @Test
+    void aSpinOffNeedsItsPartsAndAParentThatDiffers() throws Exception {
+        spinOff("\"ticker\":\"NEW\"")
+                .andExpect(status().isBadRequest());
+        spinOff("\"ticker\":\"NEW\",\"parentTicker\":\"new\",\"quantity\":\"4\",\"costShare\":\"25\"")
+                .andExpect(status().isBadRequest());
+        spinOff("\"ticker\":\"NEW\",\"parentTicker\":\"PAS\",\"quantity\":\"4\",\"costShare\":\"101\"")
+                .andExpect(status().isBadRequest());
+    }
+
     @Test
     void needsAToken() throws Exception {
         mvc.perform(get("/api/v1/positions")).andExpect(status().isUnauthorized());

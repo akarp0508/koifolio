@@ -66,7 +66,7 @@ public final class PositionHistory {
         }
         TreeMap<LocalDate, BigDecimal> prices = new TreeMap<>();
         LocalDate firstClose = closes.isEmpty() ? LocalDate.MAX : closes.getFirst().date();
-        trades.stream().filter(trade -> trade.date().isBefore(firstClose))
+        trades.stream().filter(trade -> trade.date().isBefore(firstClose) && trade.trade().hasMoney())
                 .forEach(trade -> prices.put(trade.date(), trade.trade().price()));
         List<DailyClose> filled = new ArrayList<>();
         prices.forEach((date, price) -> filled.add(new DailyClose(date, price)));

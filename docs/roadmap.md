@@ -40,10 +40,6 @@ We're building a website only for now. Deployment and MCP wait until later, and 
 
 Rough priorities, to be picked one batch at a time:
 
-**Numbers you can trust**
-
-- **Spin-offs:** moving part of the cost to a new instrument
-
 **Promised features**
 
 
