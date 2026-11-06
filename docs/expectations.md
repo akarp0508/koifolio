@@ -12,7 +12,7 @@ Last reviewed: 2026-11-06.
 | **Agents are first-class users.** An MCP server gives agents the same calculations as the UI, with every change checked and recorded | ⏸ Deferred on purpose: the site comes first. See [mcp.md](mcp.md) |
 | **Your data is never locked in.** Plain-text export/import, optional git backup | ❌ Not built, so this isn't true yet. See [export-format.md](export-format.md) |
 | **Multiple accounts,** viewed separately or together | ✅ Delivered |
-| **Your rules, checked automatically,** like "max 20% in one company" or "~50% in low-risk" | ❌ Not built. The data it needs now exists |
+| **Your rules, checked automatically,** like "max 20% in one company" or "~50% in low-risk" | ✅ Done |
 | **Self-hosted and always on,** on a Raspberry Pi over Tailscale | ⏸ Deferred on purpose: runs on the desktop for now |
 | **Universal:** any broker, exchange, country or tax system | 🟡 The model is universal, but prices and FX cover only what bankier and NBP do |
 
@@ -21,7 +21,7 @@ Last reviewed: 2026-11-06.
 | Feature | Status |
 |---|---|
 | Transactions, positions, P/L, weights | ✅ Done |
-| Dashboard | ✅ Done, apart from rule status |
+| Dashboard | ✅ Done |
 | Automatic prices, FX | ✅ Done, for the covered markets |
 | Value history | ✅ Done, with backfill built in |
 | Average and FIFO cost per account | ✅ Done |

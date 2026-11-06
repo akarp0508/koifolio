@@ -290,13 +290,31 @@ Implemented. When past closes change by one ratio, the app suggests a split. Not
 
 ## Rules
 
+Implemented.
+
 | Request | Purpose |
 |---|---|
 | `GET /rules` | List |
 | `POST /rules` | Create |
 | `PUT /rules/{id}` | Edit |
 | `DELETE /rules/{id}` | Delete |
-| `GET /rules/check` | Results: passed, actual, limit |
+| `GET /rules/check` | Each rule with `passed`, `actual`, `breaches` and `unpriced` |
+
+```json
+{
+  "rule": {"id": "…", "type": "max_position_weight", "limitPercent": "20"},
+  "passed": false,
+  "actual": "23.1",
+  "breaches": [{"ticker": "PAS", "weight": "23.1"}],
+  "unpriced": 0
+}
+```
+
+- Types are `max_position_weight`, and `min_low_risk_weight`, which needs `maxRisk`, the highest risk that counts as low.
+- Leaving out `accountId` covers everything. A company in two accounts then counts as one, in the base currency. A rule on one account uses that account's currency.
+- Weights are of the value plus cash. Cash counts as low risk, a position's risk is its plan's if set, and positions with no risk don't count as low.
+- `actual` is left out when there's no positive total to check, and the rule passes.
+- `unpriced` counts open positions left out, lacking a price or a rate.
 
 ## Prices
 

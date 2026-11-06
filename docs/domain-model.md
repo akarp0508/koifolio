@@ -17,6 +17,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 | `TaxEstimate` | Groups accounts by rate, and splits realized gains by year |
 | `Weights` | Each value's percent of a total that includes cash |
 | `CompanyTotal` | Adds up one company across accounts |
+| `RuleCheck` | Checks a maximum per company, or a minimum in low risk |
 
 ## Calculation rules
 
@@ -42,4 +43,4 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 **Bonds.** One generic model, so any bond works given its parameters: nominal, term, period, a fixed, indexed (CPI + margin) or floating (reference rate + margin) coupon, capitalized or paid interest, and an early redemption fee. Each purchase is its own lot, because interest accrues from the purchase date. Polish retail series (OTS, ROR, DOR, TOS, COI, EDO, ROS, ROD) ship as presets. Exact rules (rounding, fee limits, which CPI month applies) must be verified against official data and tested against published values before presets ship.
 
-**Rules.** `MaxPositionWeight` and `MinLowRiskWeight`, each for one account or all. Low-risk weight counts positions at or below a risk level, plus cash.
+**Rules.** A maximum weight per company or a minimum low-risk weight, each for one account or all. Low-risk weight counts positions at or below a risk level, plus cash. Positions with no risk set don't count as low.

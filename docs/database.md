@@ -25,7 +25,7 @@ position_plans      account_id, instrument_id, user_id, plan, risk, target_price
 instrument_tags     instrument_id, tag
 position_tags       account_id, instrument_id, tag
 
-rules               id, user_id, type, account_id (null = all), params (jsonb), created_at
+rules               id, user_id, account_id (null = all), type, limit_percent, max_risk, created_at
 
 portfolio_snapshots user_id, account_id, date, value, cost, cash, currency
                     PK (user_id, account_id, date)
