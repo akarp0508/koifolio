@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Transaction } from './api/client'
-import { defaultAffectsBalance, details, instrumentLabel, signedAmount, tickerOptions, today } from './transactions'
+import { defaultAffectsBalance, details, instrumentLabel, signedAmount, tickerOptions, today, transactionAmount } from './transactions'
 
 const THIN = ' '
 
@@ -43,6 +43,10 @@ describe('details', () => {
     expect(details({ ...base, type: 'dividend', ticker: 'PAS', amount: '50.00' })).toBe('PAS')
   })
 
+  it('describes a split', () => {
+    expect(details({ ...base, type: 'split', ticker: 'DNP', splitFrom: '1', splitTo: '10' })).toBe('DNP 10 for 1')
+  })
+
   it('is empty for cash', () => {
     expect(details({ ...base, type: 'deposit', amount: '50.00' })).toBe('')
   })
@@ -65,6 +69,16 @@ describe('tickerOptions', () => {
 
   it('keeps a ticker that is no longer on the list', () => {
     expect(tickerOptions(instruments, 'OLD').map((option) => option.value)).toEqual(['OLD', 'PAS', 'XTB'])
+  })
+})
+
+describe('transactionAmount', () => {
+  it('shows money with its currency', () => {
+    expect(transactionAmount({ ...base, type: 'deposit', cashEffect: '50.00' })).toBe('+50.00 PLN')
+  })
+
+  it('has none for a split', () => {
+    expect(transactionAmount({ ...base, type: 'split' })).toBe('—')
   })
 })
 

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ApiError, api } from '../api/client'
 import type { Account, Transaction } from '../api/client'
-import { TYPE_LABELS, details, signedAmount } from '../transactions'
+import { TYPE_LABELS, details, transactionAmount } from '../transactions'
 import { ConfirmDialog } from './ConfirmDialog'
 import { TransactionDialog } from './TransactionDialog'
 
@@ -93,8 +93,10 @@ export function Transactions() {
                     )}
                   </td>
                   <td className={transaction.affectsBalance ? 'number' : 'number backfill'}>
-                    {signedAmount(transaction.cashEffect)} {transaction.currency}
-                    {!transaction.affectsBalance && <span className="not-in-balance">not in balance</span>}
+                    {transactionAmount(transaction)}
+                    {!transaction.affectsBalance && transaction.type !== 'split' && (
+                      <span className="not-in-balance">not in balance</span>
+                    )}
                   </td>
                   <td className="actions">
                     <button className="icon" aria-label="Edit transaction" title="Edit"

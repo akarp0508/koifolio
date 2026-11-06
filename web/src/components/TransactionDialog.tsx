@@ -26,6 +26,8 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
   const [fee, setFee] = useState(transaction?.fee ?? '')
   const [amount, setAmount] = useState(transaction?.amount ?? '')
   const [withheldTax, setWithheldTax] = useState(transaction?.withheldTax ?? '')
+  const [splitFrom, setSplitFrom] = useState(transaction?.splitFrom ?? '1')
+  const [splitTo, setSplitTo] = useState(transaction?.splitTo ?? '')
   // null until decided by hand, so the default can follow the date
   const [chosenAffectsBalance, setChosenAffectsBalance] = useState<boolean | null>(transaction?.affectsBalance ?? null)
   const [instruments, setInstruments] = useState<Instrument[] | null>(null)
@@ -46,6 +48,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
   const affectsBalance = chosenAffectsBalance ?? suggested
   const dividend = type === 'dividend'
   const trade = isTrade(type)
+  const split = type === 'split'
 
   async function save(allowNegativeBalance: boolean) {
     setBusy(true)
@@ -55,12 +58,14 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
       accountId,
       type,
       date,
-      ticker: trade || dividend ? ticker : undefined,
+      ticker: trade || dividend || split ? ticker : undefined,
       quantity: trade ? normalizeAmount(quantity) : undefined,
       price: trade ? normalizeAmount(price) : undefined,
       fee: trade ? optionalAmount(fee) : undefined,
-      amount: trade ? undefined : normalizeAmount(amount),
+      amount: trade || split ? undefined : normalizeAmount(amount),
       withheldTax: dividend ? optionalAmount(withheldTax) : undefined,
+      splitFrom: split ? normalizeAmount(splitFrom) : undefined,
+      splitTo: split ? normalizeAmount(splitTo) : undefined,
       affectsBalance,
       allowNegativeBalance,
     }
@@ -116,7 +121,7 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
           error={fieldErrors.date}
           onChange={(e) => setDate(e.target.value)}
         />
-        {(trade || dividend) && (typingTicker || instruments?.length === 0 ? (
+        {(trade || dividend || split) && (typingTicker || instruments?.length === 0 ? (
           <>
             <Field
               label="Ticker"
@@ -189,7 +194,28 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
             />
           </>
         )}
-        {!trade && (
+        {split && (
+          <div className="field-row even">
+            <Field
+              label="New shares"
+              inputMode="decimal"
+              placeholder="10"
+              required
+              value={splitTo}
+              error={fieldErrors.splitTo}
+              onChange={(e) => setSplitTo(e.target.value)}
+            />
+            <Field
+              label="For every old shares"
+              inputMode="decimal"
+              required
+              value={splitFrom}
+              error={fieldErrors.splitFrom}
+              onChange={(e) => setSplitFrom(e.target.value)}
+            />
+          </div>
+        )}
+        {!trade && !split && (
           <Field
             label={`${dividend ? 'Gross amount' : 'Amount'} (${currency})`}
             inputMode="decimal"
@@ -209,15 +235,17 @@ export function TransactionDialog({ transaction, accounts, initialAccountId, onS
             onChange={(e) => setWithheldTax(e.target.value)}
           />
         )}
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={affectsBalance}
-            onChange={(e) => setChosenAffectsBalance(e.target.checked)}
-          />
-          <span>Update account balance</span>
-        </label>
-        {!suggested && chosenAffectsBalance === null && (
+        {!split && (
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={affectsBalance}
+              onChange={(e) => setChosenAffectsBalance(e.target.checked)}
+            />
+            <span>Update account balance</span>
+          </label>
+        )}
+        {!split && !suggested && chosenAffectsBalance === null && (
           <small className="check-hint">Off: dated before the balance was set on {balanceSetOn}</small>
         )}
         {error && Object.keys(fieldErrors).length === 0 && <p className="error" role="alert">{error.message}</p>}

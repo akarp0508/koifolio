@@ -8,6 +8,7 @@ export const TYPE_LABELS: Record<TransactionType, string> = {
   sell: 'Sell',
   dividend: 'Dividend',
   fee: 'Fee',
+  split: 'Split',
 }
 
 export const TYPES = Object.keys(TYPE_LABELS) as TransactionType[]
@@ -29,6 +30,9 @@ export function defaultAffectsBalance(date: string, balanceSetOn: string) {
 }
 
 export function details(transaction: Transaction) {
+  if (transaction.type === 'split') {
+    return `${transaction.ticker} ${transaction.splitTo} for ${transaction.splitFrom}`
+  }
   if (isTrade(transaction.type)) {
     return `${transaction.quantity} ${transaction.ticker} @ ${formatAmount(transaction.price ?? '')}`
   }
@@ -44,6 +48,11 @@ export function tickerOptions(instruments: Instrument[], current: string) {
   const listed = instruments.map((instrument) => ({ value: instrument.ticker, label: instrumentLabel(instrument) }))
   const onList = current === '' || instruments.some((instrument) => instrument.ticker === current)
   return onList ? listed : [{ value: current, label: current }, ...listed]
+}
+
+/** A split moves no money, so it has no amount to show. */
+export function transactionAmount(transaction: Transaction) {
+  return transaction.type === 'split' ? '—' : `${signedAmount(transaction.cashEffect)} ${transaction.currency}`
 }
 
 export function signedAmount(cashEffect: string) {

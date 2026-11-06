@@ -18,6 +18,8 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 **Cost.** Buy fees raise cost, and sell fees reduce proceeds. Cost stays in the account's currency.
 
+**Splits.** A split multiplies every lot's quantity and leaves its cost alone, so FIFO lots stay apart. Closes are split-adjusted by the source, so `PositionHistory` scales a close up by every split dated after it, giving what the shares really traded at.
+
 **Oversold sales.** A sale past the shares on record counts only the shares with a known cost, and the position is marked incomplete. Invalid history never blocks: backfill can arrive in any order.
 
 **Order.** Trades replay by date, then by when they were entered.
@@ -30,7 +32,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 ## Planned
 
-**More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend and fee. Still to come: `Split` (quantity × ratio, total cost unchanged), `SpinOff` (moves a fraction of the cost to the new instrument), `Interest`, `CurrencyExchange`, `BondBuy` and `BondRedeem`.
+**More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend, fee and split. Still to come: `SpinOff` (moves a fraction of the cost to the new instrument), `Interest`, `CurrencyExchange`, `BondBuy` and `BondRedeem`.
 
 **Tax.** Set per account, with a method and a rate. Unrealized is gain × rate per position, with no tax on losses. Realized is summed per calendar year and account, with losses offsetting gains in that year, and no carry-forward. The cost FX date is a setting: the last rate before the transaction by default (the Polish tax rule), or the transaction date. An early version is on the `domain-replay-wip` branch.
 

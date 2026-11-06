@@ -27,6 +27,7 @@ Last reviewed: 2026-11-06.
 | Average and FIFO cost per account | ✅ Done |
 | Bonds: one generic model, Polish series as presets | ❌ Not built |
 | Tax estimates per account | ❌ Not built; an early version is on the `domain-replay-wip` branch |
+| Splits | ✅ Done; spin-offs aren't |
 | Purchase-date FX, with currency gains separated | ❌ Not built |
 | Editing transactions without losing history | ❌ Edits are in place until the audit log exists |
 | Manual prices | ❌ Not built |

@@ -39,7 +39,7 @@ Implemented in `BankierQuoteProvider`. Checked live on 2026-11-06.
 
 Rows are `[time, open, high, low, close]`. Foreign responses nest them in `data[0]`.
 
-- **History is split-adjusted:** Apple shows about $109 for August 2020, a quarter of what it traded at before its 4:1 split.
+- **History is split-adjusted:** Apple shows about $109 for August 2020, a quarter of what it traded at before its 4:1 split, and Dino Polska shows no jump at its 1:10 split on 2025-07-31. Older Polish history has some unexplained large moves, such as CD Projekt in 2002. Closes are not adjusted for dividends. Position history scales closes back up using the split transactions you enter.
 - **Today's row is unfinished,** so only earlier days are stored.
 
 ## Not usable

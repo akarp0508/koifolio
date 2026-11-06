@@ -20,6 +20,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 9. **Company details and plans** (done): sector, risk, thesis and analysis per company, and a plan with target, stop and risk per account.
 10. **Dashboard** (done): home page with totals in a base currency, sector and risk breakdowns, an attention list, and filters by account and two kinds of tags. NBP rates.
 11. **Portfolio chart** (done): value over time, 1D to 1Y changes, gain and loss colours, and FX history.
+12. **Splits** (done): split transactions, with past values corrected.
 
 ## Current focus: extending the site
 
@@ -29,7 +30,7 @@ Rough priorities, to be picked one batch at a time:
 
 **Numbers you can trust**
 
-- **Split transactions,** and spin-offs: price history is split-adjusted, so a position held through a split shows wrong past values until splits can be entered
+- **Spin-offs:** moving part of the cost to a new instrument
 - **Purchase-date FX:** cost at the rate of each buy, currency gains shown separately, and the cost FX setting
 - **Tax estimates** per account. An early version is on the `domain-replay-wip` branch
 

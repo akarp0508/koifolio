@@ -102,6 +102,7 @@ Implemented. Each belongs to one user and one account. Amounts are in the accoun
 | `buy` | `ticker`, `quantity`, `price`, `fee` (optional) | −(quantity × price + fee) |
 | `sell` | `ticker`, `quantity`, `price`, `fee` (optional) | quantity × price − fee |
 | `dividend` | `ticker`, `amount` (gross), `withheldTax` (optional) | amount − withheld tax |
+| `split` | `ticker`, `splitFrom`, `splitTo`: `splitTo` new shares for every `splitFrom` old ones | none; never touches the balance |
 
 - Every type also needs `date` and `affectsBalance`. Responses add `id`, `currency`, `cashEffect` and `oversold`, and leave out fields the type doesn't use.
 - Cash effects are rounded to the currency's decimals.

@@ -362,7 +362,7 @@ export interface components {
              */
             accountId?: string;
             /** @enum {string} */
-            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee";
+            type: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split";
             /**
              * Format: date
              * @example 2026-03-12
@@ -398,7 +398,17 @@ export interface components {
              * @example 0
              */
             withheldTax?: string;
-            /** @description Whether this changes the account balance. Off for backfilled history. */
+            /**
+             * @description split. Old shares
+             * @example 1
+             */
+            splitFrom?: string;
+            /**
+             * @description split. New shares for that many old ones
+             * @example 10
+             */
+            splitTo?: string;
+            /** @description Whether this changes the account balance. Off for backfilled history. A split never does. */
             affectsBalance: boolean;
             /** @description Go ahead even if this takes the balance below zero. Without it, that returns 409. */
             allowNegativeBalance?: boolean;
@@ -409,7 +419,7 @@ export interface components {
             /** Format: uuid */
             accountId?: string;
             /** @enum {string} */
-            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee";
+            type?: "deposit" | "withdrawal" | "buy" | "sell" | "dividend" | "fee" | "split";
             /** Format: date */
             date?: string;
             currency?: string;
@@ -419,6 +429,8 @@ export interface components {
             fee?: string;
             amount?: string;
             withheldTax?: string;
+            splitFrom?: string;
+            splitTo?: string;
             cashEffect?: string;
             affectsBalance?: boolean;
             oversold?: boolean;
