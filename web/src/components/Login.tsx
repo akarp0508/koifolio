@@ -37,6 +37,7 @@ export function Login({ onLogin }: { onLogin: () => void }) {
   return (
     <main className="login">
       <form className="login-card" onSubmit={submit}>
+        <img className="login-logo" src="/favicon.svg" alt="" />
         <h1>koifolio</h1>
         <Field
           label="Username"

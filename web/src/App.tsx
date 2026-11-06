@@ -109,7 +109,7 @@ function App() {
   return (
     <div className="layout">
       <nav className="sidebar">
-        <strong className="brand">koifolio</strong>
+        <strong className="brand"><img src="/favicon.svg" alt="" />koifolio</strong>
         {MAIN_PAGES.map((page) => (
           <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} main />
         ))}

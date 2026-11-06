@@ -1,17 +1,19 @@
+/* Colours are from koibranding: ink #111318, lime #c6f432, orange #ff5a1f, paper #f4efe6.
+   Lime and orange can't be read on paper, so light mode darkens them for text and fills with ink. */
 :root {
   color-scheme: light dark;
-  --bg: #ffffff;
-  --surface: #f6f6f5;
-  --border: #e4e4e2;
-  --text: #1c1c1a;
-  --muted: #6b6b66;
-  --accent: #c2410c;
-  --on-accent: #ffffff;
-  --danger: #b91c1c;
-  --on-danger: #ffffff;
-  --warning: #b45309;
-  --gain: #15803d;
-  --loss: #b91c1c;
+  --bg: #f4efe6;
+  --surface: #fbf8f2;
+  --border: #ddd5c6;
+  --text: #111318;
+  --muted: #5e5a50;
+  --accent: #111318;
+  --on-accent: #c6f432;
+  --danger: #b83a0b;
+  --on-danger: #fbf8f2;
+  --warning: #8a5a00;
+  --gain: #4b7000;
+  --loss: #b83a0b;
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   font-size: 15px;
   line-height: 1.5;
@@ -19,18 +21,18 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #161615;
-    --surface: #1f1f1d;
-    --border: #33332f;
-    --text: #ededea;
-    --muted: #a0a09a;
-    --accent: #fb923c;
-    --on-accent: #1c1c1a;
-    --danger: #f87171;
-    --on-danger: #1c1c1a;
+    --bg: #111318;
+    --surface: #1a1d24;
+    --border: #2e323c;
+    --text: #f4efe6;
+    --muted: #a8a79f;
+    --accent: #c6f432;
+    --on-accent: #111318;
+    --danger: #ff5a1f;
+    --on-danger: #111318;
     --warning: #fbbf24;
-    --gain: #4ade80;
-    --loss: #f87171;
+    --gain: #c6f432;
+    --loss: #ff5a1f;
   }
 }
 
@@ -40,18 +42,18 @@
 
 :root[data-theme='dark'] {
   color-scheme: dark;
-  --bg: #161615;
-  --surface: #1f1f1d;
-  --border: #33332f;
-  --text: #ededea;
-  --muted: #a0a09a;
-  --accent: #fb923c;
-  --on-accent: #1c1c1a;
-  --danger: #f87171;
-  --on-danger: #1c1c1a;
+  --bg: #111318;
+  --surface: #1a1d24;
+  --border: #2e323c;
+  --text: #f4efe6;
+  --muted: #a8a79f;
+  --accent: #c6f432;
+  --on-accent: #111318;
+  --danger: #ff5a1f;
+  --on-danger: #111318;
   --warning: #fbbf24;
-  --gain: #4ade80;
-  --loss: #f87171;
+  --gain: #c6f432;
+  --loss: #ff5a1f;
 }
 
 * {
@@ -229,6 +231,13 @@ button.icon {
   border-radius: 10px;
 }
 
+.login-logo {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.75rem;
+}
+
 .login-card h1 {
   margin-bottom: 1.5rem;
   text-align: center;
@@ -257,9 +266,17 @@ button.icon {
 }
 
 .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-bottom: 1.25rem;
   padding: 0 0.6rem;
   font-size: 1.1rem;
+}
+
+.brand img {
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .nav-item {
