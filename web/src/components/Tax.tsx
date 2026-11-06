@@ -153,7 +153,7 @@ export function Tax() {
                   <tbody>
                     {estimate.openPositions?.map((position) => (
                       <tr key={`${position.accountId}-${position.ticker}`}>
-                        <td><a href={`#companies/${position.instrumentId}/${position.accountId}`}>{position.ticker}</a></td>
+                        <td>{position.instrumentId ? <a href={`#companies/${position.instrumentId}/${position.accountId}`}>{position.ticker}</a> : <a href="#bonds">{position.ticker}</a>}</td>
                         <td>{position.accountName}</td>
                         <td className={`number ${gainClass(position.gain)}`}>{formatGain(position.gain ?? '')} {currency}</td>
                       </tr>

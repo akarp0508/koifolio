@@ -220,6 +220,11 @@ export function Portfolio() {
             >
               {formatGain(dashboard.dividends)} {currency}
             </Tile>
+            {gainClass(dashboard.bondsValue) && (
+              <Tile label="Bonds" note={`interest ${formatGain(dashboard.bondsGain)}`}>
+                <a className="tile-link" href="#bonds">{formatAmount(dashboard.bondsValue)} {currency}</a>
+              </Tile>
+            )}
             {tax && (
               <Tile label={`Est. tax ${tax.year}`} note={taxNote(tax)}>
                 <a className="tile-link" href="#tax">{formatAmount(tax.totalTax ?? '')} {tax.currency}</a>

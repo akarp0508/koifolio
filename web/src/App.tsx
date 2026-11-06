@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
+import { Bonds } from './components/Bonds'
 import { Login } from './components/Login'
 import { Logo } from './components/Logo'
 import { Portfolio } from './components/Portfolio'
@@ -26,6 +27,7 @@ const MAIN_PAGES = [
 
 const OTHER_PAGES = [
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
+  { hash: '#bonds', label: 'Bonds', Page: Bonds },
   { hash: '#rules', label: 'Rules', Page: Rules },
   { hash: '#review', label: 'Review', Page: Review },
   { hash: '#tax', label: 'Tax', Page: Tax },

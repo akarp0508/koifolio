@@ -95,6 +95,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bonds/{id}/rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a bond's yearly rates
+         * @description For bonds whose rate is set again each year.
+         */
+        put: operations["setRates"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/transactions": {
         parameters: {
             query?: never;
@@ -369,6 +389,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bonds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your Polish retail bonds, valued today
+         * @description TOS, ROS, EDO and ROD. Value follows the Ministry of Finance's interest tables. ifRedeemedToday takes off the early redemption fee, which never exceeds the interest earned, and tax isn't taken off.
+         */
+        get: operations["list_3"];
+        put?: never;
+        /**
+         * Add a bond purchase
+         * @description With affectsBalance on, the cost of 100 PLN a bond comes out of the account's cash. Accrual starts on purchaseDate. Give one rate for a TOS, and each year's rate so far for the others.
+         */
+        post: operations["create_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/register": {
         parameters: {
             query?: never;
@@ -411,13 +455,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your agent tokens */
-        get: operations["list_3"];
+        get: operations["list_4"];
         put?: never;
         /**
          * Create a token for an agent
          * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without scopes it can also propose transactions, company changes and new accounts for your review, but not rules.
          */
-        post: operations["create_3"];
+        post: operations["create_4"];
         delete?: never;
         options?: never;
         head?: never;
@@ -432,13 +476,13 @@ export interface paths {
             cookie?: never;
         };
         /** List your accounts */
-        get: operations["list_4"];
+        get: operations["list_5"];
         put?: never;
         /**
          * Create an account
          * @description The balance defaults to 0. The currency can't be changed later.
          */
-        post: operations["create_4"];
+        post: operations["create_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -522,7 +566,7 @@ export interface paths {
          * Splits spotted in your stocks that you haven't entered
          * @description The date is the first day seen after the split, so it can be a few days late.
          */
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -602,7 +646,7 @@ export interface paths {
          * List your positions, by ticker
          * @description Worked out from buys and sells, using each account's cost method. Fully sold positions are left out unless closed is on. An incomplete one always shows. Weights are shares of the value, cash included.
          */
-        get: operations["list_6"];
+        get: operations["list_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -697,7 +741,7 @@ export interface paths {
         };
         /**
          * Portfolio value over time, and changes over 1D to 1Y
-         * @description Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax withheld.
+         * @description Same filters as the dashboard, positions and bonds. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax withheld.
          */
         get: operations["history_1"];
         put?: never;
@@ -740,6 +784,26 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bonds/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a bond purchase
+         * @description For a mistake, or once it's redeemed. With affectsBalance on, the cost goes back to the account's cash.
+         */
+        delete: operations["delete_4"];
         options?: never;
         head?: never;
         patch?: never;
@@ -933,6 +997,9 @@ export interface components {
             analysis?: string;
             tags?: string[];
         };
+        BondRatesRequest: {
+            rates: number[];
+        };
         DecidedResponse: {
             /** Format: int32 */
             transactions?: number;
@@ -963,6 +1030,51 @@ export interface components {
             plans?: number;
             /** Format: int32 */
             rules?: number;
+        };
+        BondRequest: {
+            /** @example TOS0828 */
+            series: string;
+            /** Format: uuid */
+            accountId: string;
+            /**
+             * Format: int32
+             * @description Bonds, each 100 PLN
+             * @example 400
+             */
+            quantity: number;
+            /**
+             * Format: date
+             * @example 2025-08-14
+             */
+            purchaseDate: string;
+            /** @description In percent, one per year so far */
+            rates: number[];
+            /** @description Per bond. Only a TOS can leave it out */
+            earlyFee?: string;
+            affectsBalance: boolean;
+        };
+        BondResponse: {
+            /** Format: uuid */
+            id?: string;
+            /** Format: uuid */
+            accountId?: string;
+            accountName?: string;
+            series?: string;
+            kind?: string;
+            /** Format: int32 */
+            quantity?: number;
+            /** Format: date */
+            purchaseDate?: string;
+            /** Format: date */
+            maturityDate?: string;
+            rates?: string[];
+            earlyFee?: string;
+            cost?: string;
+            value?: string;
+            interest?: string;
+            ifRedeemedToday?: string;
+            matured?: boolean;
+            rateAssumed?: boolean;
         };
         RegisterRequest: {
             username: string;
@@ -1246,6 +1358,8 @@ export interface components {
             realizedGain?: string;
             dividends?: string;
             dividendsWithheld?: string;
+            bondsValue?: string;
+            bondsGain?: string;
             cash?: string;
             bySector?: components["schemas"]["SliceResponse"][];
             byRisk?: components["schemas"]["SliceResponse"][];
@@ -1520,6 +1634,30 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    setRates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BondRatesRequest"];
+            };
+        };
         responses: {
             /** @description No Content */
             204: {
@@ -1900,6 +2038,50 @@ export interface operations {
             };
         };
     };
+    list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BondResponse"][];
+                };
+            };
+        };
+    };
+    create_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BondRequest"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["BondResponse"];
+                };
+            };
+        };
+    };
     register: {
         parameters: {
             query?: never;
@@ -1948,7 +2130,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1968,7 +2150,7 @@ export interface operations {
             };
         };
     };
-    create_3: {
+    create_4: {
         parameters: {
             query?: never;
             header?: never;
@@ -1992,7 +2174,7 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -2012,7 +2194,7 @@ export interface operations {
             };
         };
     };
-    create_4: {
+    create_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -2170,7 +2352,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -2250,7 +2432,7 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    list_7: {
         parameters: {
             query?: {
                 account?: string;
@@ -2428,6 +2610,26 @@ export interface operations {
                 content: {
                     "*/*": components["schemas"]["AuditEntryResponse"][];
                 };
+            };
+        };
+    };
+    delete_4: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

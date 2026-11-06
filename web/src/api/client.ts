@@ -14,7 +14,7 @@ export type Instrument = Schemas['InstrumentResponse'] & Required<Pick<Schemas['
 export type InstrumentInput = Schemas['UpdateInstrumentRequest']
 export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
-  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced' | 'unvalidated' | 'pendingChanges'>>
+  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced' | 'unvalidated' | 'pendingChanges' | 'bondsValue' | 'bondsGain'>>
 export type Settings = Required<Schemas['SettingsResponse']>
 export type RestoredData = Required<Schemas['RestoredResponse']>
 export type Rule = Schemas['RuleResponse'] & Required<Pick<Schemas['RuleResponse'], 'id' | 'type' | 'limitPercent'>>
@@ -22,6 +22,7 @@ export type RuleInput = Schemas['RuleRequest']
 export type AgentToken = Schemas['AgentTokenResponse'] & Required<Pick<Schemas['AgentTokenResponse'], 'id' | 'name'>>
 export type AgentScope = NonNullable<Schemas['AgentTokenResponse']['scopes']>[number]
 export type AuditEntry = Schemas['AuditEntryResponse']
+export type Bond = Schemas['BondResponse']
 export type PendingChange = Schemas['PendingChangeResponse']
 export type NewAgentToken = Required<Pick<Schemas['CreatedAgentTokenResponse'], 'secret'>> & { token: AgentToken }
 export type RuleResult = Omit<Required<Schemas['RuleCheckResponse']>, 'actual' | 'rule'> & { actual?: string; rule: Rule }
@@ -168,6 +169,9 @@ export const api = {
   listAgentTokens: () => request<AgentToken[]>('GET', '/agent-tokens'),
   createAgentToken: (input: Schemas['AgentTokenRequest']) => request<NewAgentToken>('POST', '/agent-tokens', input),
   revokeAgentToken: (id: string) => request<void>('DELETE', `/agent-tokens/${id}`),
+  bonds: () => request<Bond[]>('GET', '/bonds'),
+  createBond: (input: Schemas['BondRequest']) => request<Bond>('POST', '/bonds', input),
+  deleteBond: (id: string) => request<void>('DELETE', `/bonds/${id}`),
   listRules: () => request<Rule[]>('GET', '/rules'),
   createRule: (input: RuleInput) => request<Rule>('POST', '/rules', input),
   updateRule: (id: string, input: RuleInput) => request<Rule>('PUT', `/rules/${id}`, input),
