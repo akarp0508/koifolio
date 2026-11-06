@@ -70,7 +70,7 @@ class AccountController {
     AccountResponse update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                            @Valid @RequestBody UpdateAccountRequest request) {
         return AccountResponse.of(accounts.update(userId(jwt), id, request.name(), request.description(),
-                request.balance(), request.costMethod(), request.taxRate(), Boolean.TRUE.equals(request.clearTaxRate())));
+                request.balance(), request.costMethod(), request.taxRate(), Boolean.TRUE.equals(request.clearTaxRate()), Actor.USER));
     }
 
     @DeleteMapping("/{id}")

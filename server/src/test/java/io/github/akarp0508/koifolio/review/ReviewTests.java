@@ -524,4 +524,164 @@ class ReviewTests {
 
         as(bob, post("/api/v1/review/log/" + lastAgentChange() + "/revert")).andExpect(status().isNotFound());
     }
+
+    private String agentDeposit(String account, String amount) throws Exception {
+        String added = call(claude, "add_transaction",
+                "{\"account\":\"%s\",\"type\":\"deposit\",\"date\":\"2026-03-12\",\"affectsBalance\":true,\"amount\":\"%s\"}"
+                        .formatted(account, amount));
+        return JsonPath.read(added, "$.id");
+    }
+
+    private String balanceOf(String account) throws Exception {
+        return JsonPath.read(body(get("/api/v1/accounts/" + account)), "$.balance");
+    }
+
+    @Test
+    void aTransactionEditWaitsThenAppliesOverTheCurrentValues() throws Exception {
+        String account = account();
+        String id = agentDeposit(account, "100");
+        as(anna, post("/api/v1/transactions/" + id + "/approve")).andExpect(status().isOk());
+
+        call(claude, "update_transaction", "{\"id\":\"%s\",\"amount\":\"150\"}".formatted(id));
+
+        assertThat(balanceOf(account)).isEqualTo("200.00");
+        as(anna, get("/api/v1/review/changes"))
+                .andExpect(jsonPath("$[0].summary").value("Change deposit on 2026-03-12: amount"))
+                .andExpect(jsonPath("$[0].current.amount").value(100.0))
+                .andExpect(jsonPath("$[0].proposed.amount").value(150));
+
+        approveNext();
+
+        assertThat(balanceOf(account)).isEqualTo("250.00");
+        as(anna, get("/api/v1/transactions/" + id))
+                .andExpect(jsonPath("$.amount").value("150.00"))
+                .andExpect(jsonPath("$.date").value("2026-03-12"))
+                .andExpect(jsonPath("$.unvalidated").value(false));
+        assertThat(lastAgentChange()).isNotNull();
+    }
+
+    @Test
+    void aBadTransactionEditIsRefusedWhenProposed() throws Exception {
+        String id = agentDeposit(account(), "100");
+
+        assertThat(toolError("update_transaction", "{\"id\":\"%s\",\"amount\":\"-5\"}".formatted(id))).contains("amount");
+        assertThat(toolError("update_transaction", "{\"id\":\"%s\"}".formatted(id))).contains("at least one field");
+        assertThat(toolError("update_transaction", "{\"id\":\"%s\",\"type\":\"buy\"}".formatted(id))).contains("ticker");
+        as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(1));
+    }
+
+    @Test
+    void revertPutsATransactionBackWithItsBalance() throws Exception {
+        String account = account();
+        String id = agentDeposit(account, "100");
+        call(claude, "update_transaction", "{\"id\":\"%s\",\"amount\":\"150\"}".formatted(id));
+        approveNext();
+
+        as(anna, post("/api/v1/review/log/" + lastAgentChange() + "/revert")).andExpect(status().isNoContent());
+
+        assertThat(balanceOf(account)).isEqualTo("200.00");
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(jsonPath("$.amount").value("100.00"));
+    }
+
+    @Test
+    void aTransactionDeleteWaitsAndCanBeReverted() throws Exception {
+        String account = account();
+        String id = agentDeposit(account, "100");
+        as(anna, post("/api/v1/transactions/" + id + "/approve")).andExpect(status().isOk());
+
+        call(claude, "delete_transaction", "{\"id\":\"%s\"}".formatted(id));
+
+        assertThat(balanceOf(account)).isEqualTo("200.00");
+        as(anna, get("/api/v1/review/changes")).andExpect(jsonPath("$[0].current.amount").value(100.0));
+
+        approveNext();
+
+        assertThat(balanceOf(account)).isEqualTo("100.00");
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(status().isNotFound());
+
+        as(anna, post("/api/v1/review/log/" + lastAgentChange() + "/revert")).andExpect(status().isNoContent());
+
+        assertThat(balanceOf(account)).isEqualTo("200.00");
+        as(anna, get("/api/v1/transactions/" + id)).andExpect(jsonPath("$.amount").value("100.00"));
+    }
+
+    @Test
+    void approveAllHandlesADeleteOfAWaitingTransaction() throws Exception {
+        String account = account();
+        String id = agentDeposit(account, "100");
+        call(claude, "delete_transaction", "{\"id\":\"%s\"}".formatted(id));
+
+        as(anna, post("/api/v1/review/approve-all"))
+                .andExpect(jsonPath("$.changes").value(1))
+                .andExpect(jsonPath("$.transactions").value(0));
+
+        assertThat(balanceOf(account)).isEqualTo("100.00");
+    }
+
+    @Test
+    void anAgentCantTouchAnotherUsersTransaction() throws Exception {
+        String account = account();
+        String id = JsonPath.read(as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(
+                "{\"accountId\":\"%s\",\"type\":\"deposit\",\"date\":\"2026-03-12\",\"amount\":\"10\",\"affectsBalance\":true}".formatted(account)))
+                .andReturn().getResponse().getContentAsString(), "$.id");
+        String other = bobsAgent();
+
+        assertThat(toolError(other, "delete_transaction", "{\"id\":\"%s\"}".formatted(id))).contains("not found");
+    }
+
+    @Test
+    void anAccountEditWaitsAndAppliesOnlyWhatWasProposed() throws Exception {
+        String account = account();
+
+        call(claude, "update_account", "{\"id\":\"%s\",\"description\":\"Long term\",\"taxRate\":\"19\"}".formatted(account));
+
+        as(anna, get("/api/v1/accounts/" + account)).andExpect(jsonPath("$.taxRate").doesNotExist());
+        approveNext();
+
+        as(anna, get("/api/v1/accounts/" + account))
+                .andExpect(jsonPath("$.description").value("Long term"))
+                .andExpect(jsonPath("$.taxRate").value("19"));
+    }
+
+    @Test
+    void revertingABalanceEditKeepsTransactionsMadeSince() throws Exception {
+        String account = account();
+        call(claude, "update_account", "{\"id\":\"%s\",\"balance\":\"500\"}".formatted(account));
+        approveNext();
+        String edit = lastAgentChange();
+        agentDeposit(account, "100");
+
+        as(anna, post("/api/v1/review/log/" + edit + "/revert")).andExpect(status().isNoContent());
+
+        assertThat(balanceOf(account)).isEqualTo("200.00");
+    }
+
+    @Test
+    void aBadAccountEditIsRefusedWhenProposed() throws Exception {
+        String account = account();
+
+        assertThat(toolError("update_account", "{\"id\":\"%s\",\"balance\":\"1.234\"}".formatted(account))).contains("decimal places");
+        assertThat(toolError("update_account", "{\"id\":\"%s\"}".formatted(account))).contains("at least one field");
+    }
+
+    private String bobsAgent() throws Exception {
+        String body = as(bob, post("/api/v1/agent-tokens").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"Other\",\"scopes\":[\"transactions:write\"]}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return JsonPath.read(body, "$.secret");
+    }
+
+    private String toolError(String tool, String arguments) throws Exception {
+        return toolError(claude, tool, arguments);
+    }
+
+    private String toolError(String token, String tool, String arguments) throws Exception {
+        String json = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"%s\",\"arguments\":%s}}"
+                .formatted(tool, arguments);
+        String body = as(token, post("/mcp").contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON, MediaType.TEXT_EVENT_STREAM).content(json))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(JsonPath.<Boolean>read(body, "$.result.isError")).as(body).isTrue();
+        return JsonPath.read(body, "$.result.content[0].text");
+    }
 }

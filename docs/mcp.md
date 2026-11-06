@@ -25,8 +25,8 @@ Set per token when it's created. Every token can read, and tokens created before
 | Scope | Allows | Default |
 |---|---|---|
 | `analysis:write` | Proposing company changes | on |
-| `transactions:write` | Adding transactions, marked unvalidated | on |
-| `accounts:write` | Proposing new accounts | on |
+| `transactions:write` | Adding transactions, marked unvalidated, and proposing edits and deletions | on |
+| `accounts:write` | Proposing new accounts and account edits | on |
 | `rules:write` | Proposing rule changes | off |
 
 Scopes can't be changed later, so an older token needs replacing to get a new one. A token without the scope gets a tool error. Every tool still shows in the list.
@@ -48,12 +48,15 @@ Scopes can't be changed later, so an older token needs replacing to get a new on
 | `list_bonds` | | read |
 | `update_company` | `ticker`, `name?`, `sector?`, `risk?`, `thesis?`, `analysis?`, `tags?` | analysis:write |
 | `add_transaction` | `account`, `type`, `date`, `affectsBalance`, then the fields of `POST /transactions` | transactions:write |
+| `update_transaction` | `id`, then any fields of `add_transaction` | transactions:write |
+| `delete_transaction` | `id` | transactions:write |
 | `create_account` | `name`, `currency`, `balance?`, `description?`, `costMethod?`, `taxRate?` | accounts:write |
+| `update_account` | `id`, `name?`, `description?`, `balance?`, `costMethod?`, `taxRate?`, `clearTaxRate?` | accounts:write |
 | `add_bond` | `series`, `account`, `quantity`, `purchaseDate`, `rates`, `affectsBalance`, `earlyFee?` | transactions:write |
 | `save_rule` | `type`, `limitPercent`, `id?`, `account?`, `maxRisk?` | rules:write |
 | `delete_rule` | `id` | rules:write |
 
-Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company` proposes only the fields it's given, and adds the company if it's new. Agents can't edit or delete transactions: a wrong one is rejected and entered again. They can't change plans, or edit or delete accounts.
+Money and other decimals are sent as text, as in the REST API, so they never pass through a floating-point number. `update_company`, `update_transaction` and `update_account` propose only the fields they're given, and `update_company` adds the company if it's new. Agents can't change plans or delete accounts.
 
 Account descriptions are included in `list_accounts`, so agents can use the notes you keep there.
 
@@ -64,9 +67,9 @@ Agents can't change anything you can't see and undo.
 | What the agent does | When it applies | How you undo it |
 |---|---|---|
 | `add_transaction` | At once, marked unvalidated | Reject it, or delete it from Activity once approved |
-| `update_company`, `create_account`, `add_bond`, `save_rule`, `delete_rule` | Only when you approve it | Reject it, or Revert it from the change log once approved |
+| `update_company`, `update_transaction`, `delete_transaction`, `create_account`, `update_account`, `add_bond`, `save_rule`, `delete_rule` | Only when you approve it | Reject it, or Revert it from the change log once approved |
 
-**Approve all** and **Reject all** cover both, for one agent or everyone. Approving a company change applies its fields over whatever the company holds by then, so edits made in the meantime survive. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too. An approved account can only be reverted while it has no transactions, because deleting it erases them.
+**Approve all** and **Reject all** cover both, for one agent or everyone. Approving a company, transaction or account edit applies its fields over whatever is there by then, so edits made in the meantime survive. A transaction edit can take the balance below zero once approved, and approving an account's balance sets it to that amount. Reverting a balance edit takes back only that edit, so transactions since then still count. Revert puts back everything from before the change, in full, and warns first if the same thing has changed since, because those later changes would go too. An approved account can only be reverted while it has no transactions, because deleting it erases them.
 
 ### Unvalidated transactions
 

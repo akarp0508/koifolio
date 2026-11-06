@@ -320,7 +320,7 @@ class BackupTests {
     @Test
     void aRestoreDropsChangesWaitingForReview() throws Exception {
         jdbc.sql("""
-                INSERT INTO pending_changes (id, user_id, agent_name, kind, rule_id, changes, summary, created_at)
+                INSERT INTO pending_changes (id, user_id, agent_name, kind, target_id, changes, summary, created_at)
                 SELECT gen_random_uuid(), id, 'Claude', 'RULE_DELETE', gen_random_uuid(), '{}', 'Remove rule', now()
                 FROM users WHERE username = 'anna'""").update();
 

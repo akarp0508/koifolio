@@ -171,7 +171,7 @@ export function Review() {
 
       {waiting && (
         <>
-          <p className="muted">{t('Transactions from agents count straight away, until you reject them. Company, rule and account changes apply only once you approve them, and can still be reverted from the change log.')}</p>
+          <p className="muted">{t('New transactions from agents count straight away, until you reject them. Their other changes apply only once you approve them, and can still be reverted from the change log.')}</p>
 
           {total === 0 && <p className="muted">{t('Nothing is waiting for review.')}</p>}
 
@@ -258,7 +258,7 @@ export function Review() {
       {rejectingAll && (
         <ConfirmDialog
           title={shownAgent ? t('Reject {count} from {name}?', { count: total, name: shownAgent }) : t('Reject {count}?', { count: total })}
-          message={t('Rejected transactions come out of all your numbers, and company and rule changes are dropped.')}
+          message={t('Rejected transactions come out of all your numbers, and other changes are dropped.')}
           action={t('Reject all')}
           onConfirm={() => api.rejectAll(shownAgent || undefined)}
           onDone={() => {

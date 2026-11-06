@@ -25,7 +25,7 @@ import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Keeps agents under the user's control. Company and rule edits wait here until approved, and a change
+ * Keeps agents under the user's control. Their edits wait here until approved, and a change
  * that was approved can still be reverted from the change log.
  */
 @Service
@@ -59,10 +59,13 @@ public class ReviewService {
         RULE,
         RULE_DELETE,
         ACCOUNT,
-        BOND
+        ACCOUNT_UPDATE,
+        BOND,
+        TRANSACTION_UPDATE,
+        TRANSACTION_DELETE
     }
 
-    record Pending(UUID id, String agent, Kind kind, String ticker, UUID ruleId, String summary, Map<String, Object> changes,
+    record Pending(UUID id, String agent, Kind kind, String ticker, UUID targetId, String summary, Map<String, Object> changes,
                    Instant createdAt) {
     }
 
@@ -101,6 +104,27 @@ public class ReviewService {
     }
 
     @Transactional
+    public Proposed proposeAccountUpdate(UUID userId, String agent, UUID id, AccountService.Edit edit) {
+        accounts.check(userId, id, edit);
+        Map<String, Object> changes = requireChanges(edit);
+        return propose(userId, agent, Kind.ACCOUNT_UPDATE, null, id, changes,
+                "Change account %s: %s".formatted(accounts.values(userId, id).get("name"), String.join(", ", changes.keySet())));
+    }
+
+    @Transactional
+    public Proposed proposeTransactionUpdate(UUID userId, String agent, UUID id, TransactionService.Edit edit) {
+        transactions.check(userId, id, edit);
+        Map<String, Object> changes = requireChanges(edit);
+        return propose(userId, agent, Kind.TRANSACTION_UPDATE, null, id, changes,
+                "Change %s: %s".formatted(transactions.describe(userId, id), String.join(", ", changes.keySet())));
+    }
+
+    @Transactional
+    public Proposed proposeTransactionDelete(UUID userId, String agent, UUID id) {
+        return propose(userId, agent, Kind.TRANSACTION_DELETE, null, id, Map.of(), "Delete " + transactions.describe(userId, id));
+    }
+
+    @Transactional
     public Proposed proposeBond(UUID userId, String agent, BondService.Input input) {
         bonds.check(userId, input);
         return propose(userId, agent, Kind.BOND, null, null, json.convertValue(input, MAP),
@@ -113,13 +137,21 @@ public class ReviewService {
                 "Remove rule " + RuleService.describe(rules.get(userId, id)));
     }
 
-    private Proposed propose(UUID userId, String agent, Kind kind, String ticker, UUID ruleId, Map<String, Object> changes,
+    private Map<String, Object> requireChanges(Object edit) {
+        Map<String, Object> changes = json.convertValue(edit, MAP);
+        if (changes.isEmpty()) {
+            throw new ApiException(HttpStatus.BAD_REQUEST, "nothing_to_change", "Give at least one field to change");
+        }
+        return changes;
+    }
+
+    private Proposed propose(UUID userId, String agent, Kind kind, String ticker, UUID targetId, Map<String, Object> changes,
                              String summary) {
         UUID id = UUID.randomUUID();
         jdbc.sql("""
-                INSERT INTO pending_changes (id, user_id, agent_name, kind, ticker, rule_id, changes, summary, created_at)
+                INSERT INTO pending_changes (id, user_id, agent_name, kind, ticker, target_id, changes, summary, created_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, ?, ?)""")
-                .params(id, userId, agent, kind.name(), ticker, ruleId, json.writeValueAsString(changes), summary,
+                .params(id, userId, agent, kind.name(), ticker, targetId, json.writeValueAsString(changes), summary,
                         Timestamp.from(Instant.now()))
                 .update();
         auditLog.record(userId, Actor.agent(agent), new AuditLog.Change(PROPOSAL, id, "propose", "Proposed: " + summary, null, changes));
@@ -147,16 +179,21 @@ public class ReviewService {
     @Transactional(readOnly = true)
     Map<String, Object> current(UUID userId, Pending pending) {
         return switch (pending.kind()) {
-            case COMPANY -> instruments.details(userId, pending.ticker()).map(details -> {
-                Map<String, Object> all = json.convertValue(details, MAP);
-                Map<String, Object> touched = new LinkedHashMap<>();
-                pending.changes().keySet().forEach(field -> touched.put(field, all.get(field)));
-                return touched;
-            }).orElse(Map.of());
-            case RULE, RULE_DELETE -> pending.ruleId() == null ? Map.of()
-                    : rules.lookUp(userId, pending.ruleId()).<Map<String, Object>>map(input -> json.convertValue(input, MAP)).orElse(Map.of());
+            case COMPANY -> instruments.details(userId, pending.ticker())
+                    .map(details -> touched(pending, json.convertValue(details, MAP))).orElse(Map.of());
+            case RULE, RULE_DELETE -> pending.targetId() == null ? Map.of()
+                    : rules.lookUp(userId, pending.targetId()).<Map<String, Object>>map(input -> json.convertValue(input, MAP)).orElse(Map.of());
+            case ACCOUNT_UPDATE -> touched(pending, accounts.values(userId, pending.targetId()));
+            case TRANSACTION_UPDATE -> touched(pending, transactions.values(userId, pending.targetId()));
+            case TRANSACTION_DELETE -> transactions.values(userId, pending.targetId());
             case ACCOUNT, BOND -> Map.of();
         };
+    }
+
+    private static Map<String, Object> touched(Pending pending, Map<String, Object> all) {
+        Map<String, Object> touched = new LinkedHashMap<>();
+        pending.changes().keySet().forEach(field -> touched.put(field, all.get(field)));
+        return touched;
     }
 
     @Transactional
@@ -196,14 +233,17 @@ public class ReviewService {
             case COMPANY -> instruments.applyEdit(userId, pending.ticker(), convert(pending.changes(), InstrumentService.Edit.class), agent);
             case RULE -> {
                 RuleService.Input input = convert(pending.changes(), RuleService.Input.class);
-                if (pending.ruleId() == null) {
+                if (pending.targetId() == null) {
                     rules.create(userId, input, agent);
                 } else {
-                    rules.update(userId, pending.ruleId(), input, agent);
+                    rules.update(userId, pending.targetId(), input, agent);
                 }
             }
-            case RULE_DELETE -> rules.delete(userId, pending.ruleId(), agent);
+            case RULE_DELETE -> rules.delete(userId, pending.targetId(), agent);
             case ACCOUNT -> accounts.create(userId, convert(pending.changes(), AccountService.Input.class), agent);
+            case ACCOUNT_UPDATE -> accounts.applyEdit(userId, pending.targetId(), convert(pending.changes(), AccountService.Edit.class), agent);
+            case TRANSACTION_UPDATE -> transactions.applyEdit(userId, pending.targetId(), convert(pending.changes(), TransactionService.Edit.class), agent);
+            case TRANSACTION_DELETE -> transactions.delete(userId, pending.targetId(), agent);
             case BOND -> bonds.create(userId, convert(pending.changes(), BondService.Input.class), agent);
         }
         decide(userId, pending, "approve", "Approved: ");
@@ -252,7 +292,21 @@ public class ReviewService {
                     rules.update(userId, entry.entityId(), convert(entry.before(), RuleService.Input.class), Actor.USER);
                 }
             }
-            case "account" -> accounts.deleteUnused(userId, entry.entityId());
+            case "account" -> {
+                if (added) {
+                    accounts.deleteUnused(userId, entry.entityId());
+                } else {
+                    accounts.revertEdit(userId, entry.entityId(), convert(entry.before(), AccountService.Edit.class),
+                            convert(entry.after(), AccountService.Edit.class));
+                }
+            }
+            case "transaction" -> {
+                if (removed) {
+                    transactions.undelete(userId, entry.entityId());
+                } else {
+                    transactions.applyEdit(userId, entry.entityId(), convert(entry.before(), TransactionService.Edit.class), Actor.USER);
+                }
+            }
             case "bond" -> bonds.delete(userId, entry.entityId(), Actor.USER);
             default -> throw new IllegalStateException(entry.entityType());
         }
@@ -269,7 +323,7 @@ public class ReviewService {
 
     private Pending pending(ResultSet row, int number) throws SQLException {
         return new Pending(row.getObject("id", UUID.class), row.getString("agent_name"), Kind.valueOf(row.getString("kind")),
-                row.getString("ticker"), row.getObject("rule_id", UUID.class), row.getString("summary"),
+                row.getString("ticker"), row.getObject("target_id", UUID.class), row.getString("summary"),
                 json.readerFor(MAP).with(DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS).readValue(row.getString("changes")),
                 row.getTimestamp("created_at").toInstant());
     }

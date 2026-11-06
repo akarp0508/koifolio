@@ -36,7 +36,8 @@ class McpTests {
 
     private static final List<String> READ_TOOLS = List.of("list_accounts", "get_portfolio", "get_history", "get_positions",
             "get_plan", "get_company", "list_transactions", "check_rules", "get_tax", "list_pending_changes", "list_bonds");
-    private static final List<String> WRITE_TOOLS = List.of("add_transaction", "update_company", "save_rule", "delete_rule", "create_account", "add_bond");
+    private static final List<String> WRITE_TOOLS = List.of("add_transaction", "update_company", "save_rule", "delete_rule", "create_account", "add_bond",
+            "update_transaction", "delete_transaction", "update_account");
 
     @Autowired
     private MockMvc mvc;

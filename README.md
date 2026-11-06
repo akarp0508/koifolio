@@ -37,7 +37,7 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.
 - **Rules** — define rules, see pass/fail.
 - **MCP server** for agents, with audit log.
-- **Review** — agent transactions count straight away, marked unvalidated, and agent company and rule changes wait until approved. You approve, reject or revert them on one page, next to a log of what changed.
+- **Review** — agent transactions count straight away, marked unvalidated, and their other changes wait until approved. You approve, reject or revert them on one page, next to a log of what changed.
 - **Login** — local user accounts with open registration, password, JWT access tokens.
 - **PL / EN** interface, **light / dark** theme (follows system by default).
 

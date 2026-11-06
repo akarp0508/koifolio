@@ -212,7 +212,7 @@ export const pl: Record<string, string> = {
   'Reject {count} from {name}?': 'Odrzucić pozycje od {name}: {count}?',
   'Reject {count}?': 'Odrzucić pozycje: {count}?',
   'Reject {name}': 'Odrzuć: {name}',
-  'Rejected transactions come out of all your numbers, and company and rule changes are dropped.': 'Odrzucone transakcje znikną ze wszystkich wyliczeń, a zmiany spółek i reguł przepadną.',
+  'Rejected transactions come out of all your numbers, and other changes are dropped.': 'Odrzucone transakcje znikną ze wszystkich wyliczeń, a pozostałe zmiany przepadną.',
   Remove: 'Usuń',
   'Remove {name}': 'Usuń {name}',
   'Remove {name}?': 'Usunąć {name}?',
@@ -277,8 +277,8 @@ export const pl: Record<string, string> = {
   'Trade date': 'Data transakcji',
   Trades: 'Transakcje',
   'Transactions belong to an account.': 'Transakcje należą do konta.',
-  'Transactions from agents count straight away, until you reject them. Company, rule and account changes apply only once you approve them, and can still be reverted from the change log.':
-    'Transakcje od agentów liczą się od razu, dopóki ich nie odrzucisz. Zmiany spółek, reguł i kont działają dopiero po zatwierdzeniu i nadal można je cofnąć z dziennika zmian.',
+  'New transactions from agents count straight away, until you reject them. Their other changes apply only once you approve them, and can still be reverted from the change log.':
+    'Nowe transakcje od agentów liczą się od razu, dopóki ich nie odrzucisz. Pozostałe zmiany działają dopiero po zatwierdzeniu i nadal można je cofnąć z dziennika zmian.',
   'Try again': 'Spróbuj ponownie',
   Type: 'Typ',
   'Update account balance': 'Zaktualizuj saldo konta',

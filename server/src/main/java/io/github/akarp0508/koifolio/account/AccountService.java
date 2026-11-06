@@ -50,6 +50,12 @@ public class AccountService {
                         BigDecimal taxRate) {
     }
 
+    /** Changes to an account, with only the given fields set. @param clearTaxRate back to not set */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Edit(String name, String description, BigDecimal balance, CostMethod costMethod, BigDecimal taxRate,
+                       Boolean clearTaxRate) {
+    }
+
     @Transactional(readOnly = true)
     List<Account> list(UUID userId) {
         requireUser(userId);
@@ -65,6 +71,23 @@ public class AccountService {
     /** Refuses what {@link #create} would, so a proposal fails early instead of at approval. */
     public void check(Input input) {
         requireFits(input.balance() == null ? BigDecimal.ZERO : input.balance(), parseCurrency(input.currency()));
+    }
+
+    /** Refuses what {@link #applyEdit} would, so a proposal fails early instead of at approval. */
+    @Transactional(readOnly = true)
+    public void check(UUID userId, UUID id, Edit edit) {
+        requireUser(userId);
+        Account account = find(userId, id);
+        if (edit.balance() != null) {
+            requireFits(edit.balance(), Currency.getInstance(account.getCurrency()));
+        }
+    }
+
+    /** The account's values, as they'd show in the change log. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> values(UUID userId, UUID id) {
+        requireUser(userId);
+        return snapshot(find(userId, id));
     }
 
     @Transactional
@@ -92,8 +115,24 @@ public class AccountService {
     }
 
     @Transactional
+    public void applyEdit(UUID userId, UUID id, Edit edit, Actor actor) {
+        update(userId, id, edit.name(), edit.description(), edit.balance(), edit.costMethod(), edit.taxRate(),
+                Boolean.TRUE.equals(edit.clearTaxRate()), actor);
+    }
+
+    /** Takes back only what the edit did to the balance, so transactions since then still count. */
+    @Transactional
+    public void revertEdit(UUID userId, UUID id, Edit before, Edit after) {
+        requireUser(userId);
+        Account account = accounts.findForUpdate(id, userId).orElseThrow(AccountService::notFound);
+        BigDecimal balance = account.getBalance().add(before.balance()).subtract(after.balance());
+        update(userId, id, before.name(), before.description(), balance, before.costMethod(), before.taxRate(),
+                before.taxRate() == null, Actor.USER);
+    }
+
+    @Transactional
     Account update(UUID userId, UUID id, String name, String description, BigDecimal balance, CostMethod costMethod,
-                   BigDecimal taxRate, boolean clearTaxRate) {
+                   BigDecimal taxRate, boolean clearTaxRate, Actor actor) {
         requireUser(userId);
         Account account = accounts.findForUpdate(id, userId).orElseThrow(AccountService::notFound);
         Map<String, Object> before = snapshot(account);
@@ -117,7 +156,7 @@ public class AccountService {
         }
         Map<String, Object> after = snapshot(account);
         if (!after.equals(before)) {
-            log(userId, Actor.USER, account, "update", "Changed account " + account.getName(), before, after);
+            log(userId, actor, account, "update", "Changed account " + account.getName(), before, after);
         }
         return account;
     }

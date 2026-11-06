@@ -1,5 +1,6 @@
 package io.github.akarp0508.koifolio.transaction;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.FieldValidationException;
 import io.github.akarp0508.koifolio.RequestChecker;
@@ -67,6 +68,12 @@ public class TransactionService {
                            BigDecimal price, BigDecimal fee, BigDecimal amount, BigDecimal withheldTax,
                            BigDecimal splitFrom, BigDecimal splitTo, boolean affectsBalance, Instant createdAt,
                            String createdBy, boolean unvalidated) {
+    }
+
+    /** Changes to a transaction, with only the given fields set. */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public record Edit(TransactionType type, LocalDate date, String ticker, BigDecimal quantity, BigDecimal price, BigDecimal fee,
+                       BigDecimal amount, BigDecimal withheldTax, BigDecimal splitFrom, BigDecimal splitTo, Boolean affectsBalance) {
     }
 
     /** Oldest first. */
@@ -162,10 +169,72 @@ public class TransactionService {
         return saved;
     }
 
+    /** Refuses what {@link #applyEdit} would, so a proposal fails early instead of at approval. */
+    @Transactional(readOnly = true)
+    public void check(UUID userId, UUID id, Edit edit) {
+        authService.currentUser(userId);
+        Transaction transaction = find(userId, id);
+        TransactionRequest request = merged(userId, transaction, edit);
+        checker.check(request);
+        validate(request, currencies(userId).get(transaction.getAccountId()));
+    }
+
+    /** Applies the fields over what the transaction holds by then. The user has approved it, so a negative balance is allowed. */
     @Transactional
-    void delete(UUID userId, UUID id, Actor actor) {
+    public void applyEdit(UUID userId, UUID id, Edit edit, Actor actor) {
+        update(userId, id, merged(userId, find(userId, id), edit), actor);
+    }
+
+    private TransactionRequest merged(UUID userId, Transaction t, Edit edit) {
+        return new TransactionRequest(null, first(edit.type(), t.getType()), first(edit.date(), t.getDate()),
+                first(edit.ticker(), instruments.tickers(userId).get(t.getInstrumentId())), first(edit.quantity(), t.getQuantity()),
+                first(edit.price(), t.getPrice()), first(edit.fee(), t.getFee()), first(edit.amount(), t.getAmount()),
+                first(edit.withheldTax(), t.getWithheldTax()), first(edit.splitFrom(), t.getSplitFrom()),
+                first(edit.splitTo(), t.getSplitTo()), first(edit.affectsBalance(), t.isAffectsBalance()), true);
+    }
+
+    private static <T> T first(T value, T fallback) {
+        return value == null ? fallback : value;
+    }
+
+    /** The transaction's values, as they'd show in the change log. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> values(UUID userId, UUID id) {
+        authService.currentUser(userId);
+        return snapshot(listed(userId, find(userId, id)));
+    }
+
+    /** Names a transaction in a summary, like "buy PAS on 2026-03-12". */
+    @Transactional(readOnly = true)
+    public String describe(UUID userId, UUID id) {
+        authService.currentUser(userId);
+        Transaction transaction = find(userId, id);
+        return description(transaction, instruments.tickers(userId).get(transaction.getInstrumentId()));
+    }
+
+    private static String description(Transaction transaction, Object ticker) {
+        return "%s%s on %s".formatted(transaction.getType().name().toLowerCase(Locale.ROOT), ticker == null ? "" : " " + ticker,
+                transaction.getDate());
+    }
+
+    @Transactional
+    public void delete(UUID userId, UUID id, Actor actor) {
         authService.currentUser(userId);
         remove(userId, find(userId, id), actor, "delete", "Deleted");
+    }
+
+    /** Brings a deleted transaction back, and its effect on the balance with it. */
+    @Transactional
+    public void undelete(UUID userId, UUID id) {
+        authService.currentUser(userId);
+        if (transactions.undelete(id, userId) == 0) {
+            throw new ApiException(HttpStatus.CONFLICT, "transaction_not_deleted", "This transaction isn't deleted");
+        }
+        Transaction transaction = find(userId, id);
+        Account account = lockAccount(userId, transaction.getAccountId());
+        account.adjustBalance(transaction.balanceEffect());
+        requireBalanceInRange(account);
+        log(userId, Actor.USER, transaction, "update", "Restored", null, snapshot(listed(userId, transaction)));
     }
 
     /** Clears the mark. The transaction already counts, so nothing else changes. */
@@ -243,9 +312,7 @@ public class TransactionService {
     private void log(UUID userId, Actor actor, Transaction transaction, String action, String verb, Map<String, Object> before,
                      Map<String, Object> after) {
         Map<String, Object> values = after == null ? before : after;
-        String ticker = values.get("ticker") == null ? "" : " " + values.get("ticker");
-        String summary = "%s %s%s on %s".formatted(verb, transaction.getType().name().toLowerCase(Locale.ROOT), ticker,
-                transaction.getDate());
+        String summary = verb + " " + description(transaction, values.get("ticker"));
         auditLog.record(userId, actor, new AuditLog.Change("transaction", transaction.getId(), action, summary, before, after));
     }
 
