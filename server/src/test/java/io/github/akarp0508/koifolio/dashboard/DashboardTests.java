@@ -179,7 +179,10 @@ class DashboardTests {
         jdbc.sql("INSERT INTO daily_closes VALUES ('PAS', '2026-01-02', 100)").update();
         dividend(ike, "PAS", "2026-01-02", "100", "19");
 
-        as(anna, get("/api/v1/dashboard/history")).andExpect(jsonPath("$.points[0].gain").value("81.00"));
+        as(anna, get("/api/v1/dashboard/history"))
+                .andExpect(jsonPath("$.points[0].date").value("2026-01-01"))
+                .andExpect(jsonPath("$.points[0].gain").value("0.00"))
+                .andExpect(jsonPath("$.points[1].gain").value("81.00"));
     }
 
     @Test

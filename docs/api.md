@@ -268,6 +268,8 @@ History response:
 
 Dividends are net of tax withheld, each at the rate of the day `costFxRule` picks, and the history's `gain` and period changes include them from the day they're paid. Holdings have `dividends` too.
 
+The history holds positions, bonds and cash, without cash while a company or tags filter the view. Past cash is today's balance with everything since taken back out, including transactions that left the balance alone, and an account never goes below zero. Cash counts in both `value` and `cost`, so it never changes `gain`. Days without a close use a position's trade prices, unless it has a split, and `pricesLoading` counts positions still waiting for closes.
+
 Planned: realized gains and tax per year, income per year.
 
 ## Tax

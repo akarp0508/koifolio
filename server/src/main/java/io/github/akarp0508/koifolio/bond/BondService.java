@@ -63,10 +63,11 @@ public class BondService {
      * @param value at today's accrued interest, as the official tables give it
      * @param ifRedeemedToday after the early redemption fee, which doesn't apply from maturity
      * @param rateAssumed a year has no rate yet, so the last known one stands in
+     * @param affectsBalance the purchase came out of the account's cash here
      */
     public record Valued(UUID id, Account account, String series, String kind, int quantity, LocalDate purchaseDate,
                          LocalDate maturity, List<BigDecimal> rates, BigDecimal earlyFee, BigDecimal cost, BigDecimal value,
-                         BigDecimal ifRedeemedToday, boolean matured, boolean rateAssumed) {
+                         BigDecimal ifRedeemedToday, boolean matured, boolean rateAssumed, boolean affectsBalance) {
 
         public BigDecimal interest() {
             return value.subtract(cost);
@@ -100,7 +101,7 @@ public class BondService {
         int yearsHeld = (int) Math.min(java.time.temporal.ChronoUnit.YEARS.between(lot.getPurchaseDate(), today), kind.termYears - 1L);
         return new Valued(lot.getId(), account, lot.getSeries(), kind.name(), lot.getQuantity(), lot.getPurchaseDate(), maturity,
                 lot.getRates(), lot.getEarlyFee(), BondValue.NOMINAL.multiply(quantity), perBond.multiply(quantity),
-                redeemed.multiply(quantity), matured, !kind.fixedRate && lot.getRates().size() <= yearsHeld);
+                redeemed.multiply(quantity), matured, !kind.fixedRate && lot.getRates().size() <= yearsHeld, lot.isAffectsBalance());
     }
 
     /** What's held per account today, in PLN. */

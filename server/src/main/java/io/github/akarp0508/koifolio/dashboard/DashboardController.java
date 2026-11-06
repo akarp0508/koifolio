@@ -50,9 +50,10 @@ class DashboardController {
 
     @GetMapping("/history")
     @Operation(summary = "Portfolio value over time, and changes over 1D to 1Y", description = """
-            Same filters as the dashboard, positions and bonds. Each day uses that day's FX rates. A change is \
-            what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax \
-            withheld.""")
+            Same filters as the dashboard, with positions, bonds and cash, and no cash while a company or tags filter \
+            the view. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't \
+            count as profit, and dividends do, net of tax withheld. Past cash is worked back from today's balance. Days \
+            without a close use the position's trade prices, and pricesLoading counts positions still waiting for closes.""")
     PortfolioHistoryResponse history(@AuthenticationPrincipal Jwt jwt,
                             @RequestParam(required = false) UUID account,
                             @RequestParam(required = false) UUID instrument,
@@ -62,7 +63,9 @@ class DashboardController {
         return PortfolioHistoryResponse.of(dashboards.history(UUID.fromString(jwt.getSubject()), filter));
     }
 
-    record PortfolioHistoryResponse(String currency, List<PortfolioHistoryPoint> points, List<PortfolioChangeResponse> changes) {
+    /** @param pricesLoading positions whose past closes are still being fetched, shown at their trade prices until then */
+    record PortfolioHistoryResponse(String currency, List<PortfolioHistoryPoint> points, List<PortfolioChangeResponse> changes,
+                                    int pricesLoading) {
 
         static PortfolioHistoryResponse of(DashboardService.History history) {
             String currency = history.currency();
@@ -72,7 +75,7 @@ class DashboardController {
                             DashboardResponse.money(point.gain(), currency))).toList(),
                     history.changes().stream().map(change -> new PortfolioChangeResponse(change.period(),
                             DashboardResponse.money(change.change(), currency),
-                            change.percent().map(DashboardResponse::percent).orElse(null))).toList());
+                            change.percent().map(DashboardResponse::percent).orElse(null))).toList(), history.pricesLoading());
         }
     }
 

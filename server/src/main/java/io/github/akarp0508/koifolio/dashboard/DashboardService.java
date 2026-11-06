@@ -22,12 +22,14 @@ import java.math.MathContext;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -212,8 +214,12 @@ class DashboardService {
                 filter.account() == null ? weight.ofPortfolio() : weight.ofAccount());
     }
 
-    /** Totals over time, each day at that day's rate. */
-    record History(String currency, List<PortfolioHistory.Point> points, List<PortfolioHistory.Change> changes) {
+    /**
+     * Totals over time, each day at that day's rate.
+     *
+     * @param pricesLoading positions whose past closes are still being fetched, shown at their trade prices until then
+     */
+    record History(String currency, List<PortfolioHistory.Point> points, List<PortfolioHistory.Change> changes, int pricesLoading) {
     }
 
     @Transactional(readOnly = true)
@@ -241,7 +247,38 @@ class DashboardService {
                             .toList()));
         }
         List<PortfolioHistory.Point> totals = PortfolioHistory.withDividends(PortfolioHistory.total(all), dividends);
-        return new History(base, totals, PortfolioHistory.changes(totals, today));
+        if (!filter.excludesCash()) {
+            totals = PortfolioHistory.withCash(totals, cashOn(userId, filter, rates, base));
+        }
+        return new History(base, totals, PortfolioHistory.changes(totals, today), positions.awaitingCloses(userId, matching));
+    }
+
+    /**
+     * What the accounts held on a day: today's balance with everything since taken back out. A balance typed in
+     * by hand may not have a deposit behind it, so an account never goes below zero here.
+     */
+    private Function<LocalDate, BigDecimal> cashOn(UUID userId, Filter filter, FxService.History rates, String base) {
+        Map<UUID, List<TransactionService.CashMove>> moves = new HashMap<>();
+        transactions.cashMoves(userId).forEach(move -> moves.computeIfAbsent(move.accountId(), id -> new ArrayList<>()).add(move));
+        bonds.list(userId).stream().filter(BondService.Valued::affectsBalance).forEach(bond ->
+                moves.computeIfAbsent(bond.account().getId(), id -> new ArrayList<>())
+                        .add(new TransactionService.CashMove(bond.account().getId(), bond.purchaseDate(), bond.cost().negate())));
+        List<Account> shown = accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId).stream()
+                .filter(account -> filter.account() == null || account.getId().equals(filter.account()))
+                .toList();
+        return date -> {
+            BigDecimal total = BigDecimal.ZERO;
+            for (Account account : shown) {
+                BigDecimal then = account.getBalance();
+                for (TransactionService.CashMove move : moves.getOrDefault(account.getId(), List.of())) {
+                    if (move.date().isAfter(date)) {
+                        then = then.subtract(move.amount(), MathContext.DECIMAL128);
+                    }
+                }
+                total = add(total, rates.convert(then.max(BigDecimal.ZERO), account.getCurrency(), base, date).orElse(BigDecimal.ZERO));
+            }
+            return total;
+        };
     }
 
     private BigDecimal cash(UUID userId, Filter filter, FxService.Rates rates, String base) {

@@ -246,4 +246,119 @@ class DashboardHistoryTests {
                 .andExpect(jsonPath("$.points.length()").value(0))
                 .andExpect(jsonPath("$.changes.length()").value(0));
     }
+
+    private void transaction(String json) throws Exception {
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(json)).andExpect(status().isCreated());
+    }
+
+    private void deposit(String account, int daysAgo, String amount) throws Exception {
+        transaction("""
+                {"accountId":"%s","type":"deposit","date":"%s","amount":"%s","affectsBalance":true}"""
+                .formatted(account, TODAY.minusDays(daysAgo), amount));
+    }
+
+    private void sell(String account, String ticker, int daysAgo, String quantity, String price) throws Exception {
+        transaction("""
+                {"accountId":"%s","type":"sell","date":"%s","ticker":"%s","quantity":"%s","price":"%s","affectsBalance":true}"""
+                .formatted(account, TODAY.minusDays(daysAgo), ticker, quantity, price));
+    }
+
+    @Test
+    void aHoldingWithNoPriceSourceFollowsItsTrades() throws Exception {
+        buy(pln, "ETF", 5, "10", "100");
+        sell(pln, "ETF", 2, "10", "110");
+
+        history().andExpect(jsonPath("$.pricesLoading").value(0))
+                .andExpect(jsonPath("$.points[0].value").value("1000.00"))
+                .andExpect(jsonPath("$.points[1].value").value("1100.00"))
+                .andExpect(jsonPath("$.points[1].gain").value("100.00"));
+    }
+
+    @Test
+    void anImportWithoutOldPricesShowsNoCliff() throws Exception {
+        buy(pln, "PAS", 30, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 1, "120");
+        close("PAS", 0, "120");
+
+        history().andExpect(jsonPath("$.pricesLoading").value(1))
+                .andExpect(jsonPath("$.points[0].date").value(TODAY.minusDays(30).toString()))
+                .andExpect(jsonPath("$.points[0].value").value("1000.00"));
+    }
+
+    @Test
+    void closesReachingTheFirstTradeLoadNothing() throws Exception {
+        buy(pln, "PAS", 3, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 2, "100");
+
+        history().andExpect(jsonPath("$.pricesLoading").value(0));
+    }
+
+    @Test
+    void cashIsPartOfTheChartButNotTheGain() throws Exception {
+        deposit(pln, 5, "2000");
+        buy(pln, "PAS", 3, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 3, "100");
+        close("PAS", 2, "100");
+        close("PAS", 0, "110");
+        jdbc.sql("INSERT INTO quotes VALUES ('PAS', 110, now(), now())").update();
+
+        // Still 2000 in cash after a backfilled buy that left the balance alone
+        as(anna, get("/api/v1/dashboard")).andExpect(jsonPath("$.value").value("3100.00"));
+        history().andExpect(jsonPath("$.points[-1].value").value("3100.00"))
+                .andExpect(jsonPath("$.points[-1].gain").value("100.00"));
+    }
+
+    @Test
+    void cashFollowsDepositsAndSales() throws Exception {
+        deposit(pln, 5, "1000");
+        transaction("""
+                {"accountId":"%s","type":"buy","date":"%s","ticker":"PAS","quantity":"10","price":"100","affectsBalance":true}"""
+                .formatted(pln, TODAY.minusDays(3)));
+        sell(pln, "PAS", 1, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 3, "100");
+        close("PAS", 2, "100");
+        close("PAS", 1, "100");
+
+        // Buying and selling at the same price moves money around but changes nothing
+        history().andExpect(jsonPath("$.points[0].value").value("1000.00"))
+                .andExpect(jsonPath("$.points[1].value").value("1000.00"))
+                .andExpect(jsonPath("$.points[2].value").value("1000.00"));
+    }
+
+    @Test
+    void depositsDontCountAsGain() throws Exception {
+        buy(pln, "PAS", 3, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 3, "100");
+        close("PAS", 1, "100");
+        deposit(pln, 2, "5000");
+
+        history().andExpect(jsonPath("$.points[-1].gain").value("0.00"));
+    }
+
+    @Test
+    void aCompanyFilterLeavesCashOut() throws Exception {
+        deposit(pln, 5, "2000");
+        buy(pln, "PAS", 3, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 3, "100");
+        String instrument = jdbc.sql("SELECT id FROM instruments WHERE ticker = 'PAS'").query(String.class).single();
+
+        history("instrument", instrument).andExpect(jsonPath("$.points[-1].value").value("1000.00"));
+    }
+
+    @Test
+    void cashNeverGoesBelowZero() throws Exception {
+        deposit(pln, 1, "100");
+        buy(pln, "PAS", 3, "10", "100");
+        priced("PAS", "PLN");
+        close("PAS", 3, "100");
+
+        // Before the deposit this account's cash would work out negative
+        history().andExpect(jsonPath("$.points[0].value").value("1000.00"));
+    }
 }

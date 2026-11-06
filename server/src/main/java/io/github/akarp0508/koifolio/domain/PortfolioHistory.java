@@ -9,6 +9,7 @@ import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 /**
  * Adds positions up over time. Markets close on different days, so a position keeps its last known
@@ -87,6 +88,20 @@ public final class PortfolioHistory {
                 .map(point -> new Point(point.date(), point.value(), point.cost(), point.realized().add(
                         Dividend.total(dividends.stream().filter(paid -> !paid.date().isAfter(point.date())).toList(), Dividend::net),
                         PositionCalculator.PRECISION)))
+                .toList();
+    }
+
+    /**
+     * Adds what was in the accounts each day, to value and to cost alike. Cash isn't a gain, so the gain and
+     * the changes stay as they were, and paying in doesn't count as profit.
+     */
+    public static List<Point> withCash(List<Point> points, Function<LocalDate, BigDecimal> cash) {
+        return points.stream()
+                .map(point -> {
+                    BigDecimal held = cash.apply(point.date());
+                    return new Point(point.date(), point.value().add(held, PositionCalculator.PRECISION),
+                            point.cost().add(held, PositionCalculator.PRECISION), point.realized());
+                })
                 .toList();
     }
 

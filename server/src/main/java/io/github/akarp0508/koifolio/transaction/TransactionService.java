@@ -290,6 +290,21 @@ public class TransactionService {
                 .toList();
     }
 
+    /** Cash entering or leaving an account, signed. */
+    public record CashMove(UUID accountId, LocalDate date, BigDecimal amount) {
+    }
+
+    /**
+     * Every transaction's effect on cash, even those that didn't change the balance. Those are history the
+     * balance already includes, so they matter when working out what it was.
+     */
+    @Transactional(readOnly = true)
+    public List<CashMove> cashMoves(UUID userId) {
+        return transactions.findByUserId(userId).stream()
+                .map(transaction -> new CashMove(transaction.getAccountId(), transaction.getDate(), transaction.getCashEffect()))
+                .toList();
+    }
+
     /** Every dividend, oldest first. */
     @Transactional(readOnly = true)
     public List<AccountDividend> dividendsOldestFirst(UUID userId) {

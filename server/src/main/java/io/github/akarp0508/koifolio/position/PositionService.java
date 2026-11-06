@@ -53,6 +53,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PositionService {
 
+    /** Markets close for long weekends, so a first close a few days after the first trade is normal. */
+    private static final int LOADING_GRACE_DAYS = 7;
+
     private final AuthService authService;
     private final AccountRepository accounts;
     private final TransactionService transactions;
@@ -302,7 +305,7 @@ public class PositionService {
 
     /**
      * Each position's daily points in the base currency: trades at their own date's rate, closes at
-     * each day's. Positions with no prices or no rates are left out.
+     * each day's. Days without a close use the position's trade prices. Positions with no rates are left out.
      */
     @Transactional(readOnly = true)
     public List<PointsOf> points(UUID userId, List<Position> positions, FxService.History rates) {
@@ -315,25 +318,45 @@ public class PositionService {
         for (Position position : positions) {
             UUID instrumentId = position.instrument().id();
             QuoteRef ref = refs.get(instrumentId);
-            if (ref == null) {
-                continue;
-            }
             List<AccountTrade> trades = allTrades.stream()
                     .filter(trade -> trade.accountId().equals(position.account().getId())
                             && trade.instrumentId().equals(instrumentId))
                     .toList();
             Optional<List<DatedTrade>> tradesInBase = inBase(trades, position.account().getCurrency(), user, rates);
-            Optional<List<DailyClose>> closes = converted(closes(ref, current.get(instrumentId)), ref.currency(),
-                    user.getBaseCurrency(), rates);
+            Optional<List<DailyClose>> closes = ref == null ? Optional.of(List.of())
+                    : converted(closes(ref, current.get(instrumentId)), ref.currency(), user.getBaseCurrency(), rates);
             if (tradesInBase.isPresent() && closes.isPresent()) {
-                series.add(new PointsOf(position, PositionHistory.calculate(tradesInBase.get(), closes.get(),
-                        position.account().getCostMethod())));
+                series.add(new PointsOf(position, PositionHistory.calculate(tradesInBase.get(),
+                        PositionHistory.withTradePrices(tradesInBase.get(), closes.get()), position.account().getCostMethod())));
             }
         }
         return series;
     }
 
     public record PointsOf(Position position, List<PositionHistory.Point> points) {
+    }
+
+    /** How many positions the price source covers but hasn't delivered closes for yet, back to their first trade. */
+    @Transactional(readOnly = true)
+    public int awaitingCloses(UUID userId, List<Position> positions) {
+        Map<UUID, QuoteRef> refs = instruments.quoteRefs(userId);
+        List<AccountTrade> allTrades = transactions.tradesOldestFirst(userId);
+        int waiting = 0;
+        for (Position position : positions) {
+            UUID instrumentId = position.instrument().id();
+            QuoteRef ref = refs.get(instrumentId);
+            Optional<LocalDate> firstTrade = allTrades.stream()
+                    .filter(trade -> trade.accountId().equals(position.account().getId()) && trade.instrumentId().equals(instrumentId))
+                    .map(AccountTrade::date).findFirst();
+            if (ref == null || firstTrade.isEmpty()) {
+                continue;
+            }
+            List<DailyClose> closes = priceHistory.closes(ref.symbol());
+            if (closes.isEmpty() || closes.getFirst().date().isAfter(firstTrade.get().plusDays(LOADING_GRACE_DAYS))) {
+                waiting++;
+            }
+        }
+        return waiting;
     }
 
     private List<DatedTrade> tradesOf(UUID userId, UUID accountId, UUID instrumentId) {

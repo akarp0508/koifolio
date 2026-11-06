@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.TreeMap;
 
 /**
  * What a position was worth on each day there's a price for. Closes are adjusted for splits, so a
@@ -49,6 +50,28 @@ public final class PositionHistory {
             }
         }
         return points;
+    }
+
+    /**
+     * Closes with the holding's own trade prices filling the days before they start, for a source that
+     * doesn't cover it or hasn't delivered yet. Trade prices aren't split-adjusted like closes are, so a
+     * holding with a split keeps its closes alone.
+     *
+     * @param trades oldest first, with prices in the same currency as the closes
+     * @param closes oldest first
+     */
+    public static List<DailyClose> withTradePrices(List<DatedTrade> trades, List<DailyClose> closes) {
+        if (trades.stream().anyMatch(trade -> trade.trade().side() == Trade.Side.SPLIT)) {
+            return closes;
+        }
+        TreeMap<LocalDate, BigDecimal> prices = new TreeMap<>();
+        LocalDate firstClose = closes.isEmpty() ? LocalDate.MAX : closes.getFirst().date();
+        trades.stream().filter(trade -> trade.date().isBefore(firstClose))
+                .forEach(trade -> prices.put(trade.date(), trade.trade().price()));
+        List<DailyClose> filled = new ArrayList<>();
+        prices.forEach((date, price) -> filled.add(new DailyClose(date, price)));
+        filled.addAll(closes);
+        return filled;
     }
 
     private static BigDecimal beforeLaterSplits(DailyClose close, List<DatedTrade> trades) {

@@ -144,7 +144,8 @@ class McpTests {
         assertThat(JsonPath.<String>read(call(token, "list_transactions", "{}"), "$[0].ticker")).isEqualTo("PAS");
         assertThat(JsonPath.<Integer>read(call(token, "check_rules", "{}"), "$.length()")).isZero();
         assertThat(JsonPath.<String>read(call(token, "get_tax", "{}"), "$.totalTax")).isEqualTo("0.00");
-        assertThat(JsonPath.<Integer>read(call(token, "get_history", "{}"), "$.points.length()")).isZero();
+        // PAS has no prices yet, so its one point comes from the buy
+        assertThat(JsonPath.<String>read(call(token, "get_history", "{}"), "$.points[0].date")).isEqualTo("2026-01-05");
     }
 
     @Test

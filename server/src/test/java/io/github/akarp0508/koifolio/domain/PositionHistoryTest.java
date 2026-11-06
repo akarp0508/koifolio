@@ -115,4 +115,47 @@ class PositionHistoryTest {
     void noClosesMeansNoPoints() {
         assertThat(history(List.of(buy(MON, "1", "1")))).isEmpty();
     }
+
+    @Test
+    void tradePricesFillTheDaysBeforeClosesStart() {
+        List<DailyClose> filled = PositionHistory.withTradePrices(List.of(buy(MON, "10", "100"), sell(TUE, "4", "110")),
+                List.of(new DailyClose(THU, new BigDecimal("120"))));
+
+        assertThat(filled).extracting(DailyClose::date).containsExactly(MON, TUE, THU);
+        assertThat(filled.get(1).close()).isEqualByComparingTo("110");
+        assertThat(filled.get(2).close()).isEqualByComparingTo("120");
+    }
+
+    @Test
+    void aHoldingWithNoClosesFollowsItsTrades() {
+        var trades = List.of(buy(MON, "10", "100"), sell(THU, "10", "110"));
+
+        List<PositionHistory.Point> points = PositionHistory.calculate(trades, PositionHistory.withTradePrices(trades, List.of()), CostMethod.AVERAGE);
+
+        assertThat(points).hasSize(2);
+        assertThat(points.get(0).value()).isEqualByComparingTo("1000");
+        assertThat(points.get(1).value()).isEqualByComparingTo("0");
+        assertThat(points.get(1).realized()).isEqualByComparingTo("100");
+    }
+
+    @Test
+    void tradesAfterClosesStartAddNothing() {
+        List<DailyClose> closes = List.of(new DailyClose(MON, new BigDecimal("100")));
+
+        assertThat(PositionHistory.withTradePrices(List.of(buy(TUE, "1", "105")), closes)).isEqualTo(closes);
+    }
+
+    @Test
+    void theLastTradeOfADaySetsItsPrice() {
+        assertThat(PositionHistory.withTradePrices(List.of(buy(MON, "1", "100"), buy(MON, "1", "103")), List.of()).getFirst().close())
+                .isEqualByComparingTo("103");
+    }
+
+    @Test
+    void aHoldingWithASplitKeepsItsClosesAlone() {
+        List<DailyClose> closes = List.of(new DailyClose(THU, new BigDecimal("12")));
+        var split = new DatedTrade(TUE, Trade.split(BigDecimal.ONE, BigDecimal.TEN));
+
+        assertThat(PositionHistory.withTradePrices(List.of(buy(MON, "1", "100"), split), closes)).isEqualTo(closes);
+    }
 }

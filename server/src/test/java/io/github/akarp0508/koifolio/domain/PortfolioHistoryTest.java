@@ -125,4 +125,15 @@ class PortfolioHistoryTest {
         assertThat(points.get(0).gain()).isEqualByComparingTo("0");
         assertThat(points.get(1).gain()).isEqualByComparingTo("0");
     }
+
+    @Test
+    void cashAddsToValueButNotToTheGain() {
+        Point point = new Point(TODAY, new BigDecimal("110"), new BigDecimal("100"), new BigDecimal("5"));
+
+        Point withCash = PortfolioHistory.withCash(List.of(point), day -> new BigDecimal("50")).getFirst();
+
+        assertThat(withCash.value()).isEqualByComparingTo("160");
+        assertThat(withCash.cost()).isEqualByComparingTo("150");
+        assertThat(withCash.gain()).isEqualByComparingTo(point.gain());
+    }
 }
