@@ -292,8 +292,10 @@ button.icon {
 }
 
 .content {
+  width: 100%;
   min-width: 0;
-  max-width: 60rem;
+  max-width: 140rem;
+  margin: 0 auto;
   padding: 1.5rem 2rem;
 }
 
@@ -649,6 +651,7 @@ tr.clickable a {
 }
 
 .markdown {
+  max-width: 55rem;
   overflow-wrap: anywhere;
 }
 
