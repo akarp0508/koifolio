@@ -81,6 +81,15 @@ public final class PortfolioHistory {
         return totals;
     }
 
+    /** Adds dividends to what was realized by each day, net of tax withheld. Prices fall by what's paid out, so the gain would dip otherwise. */
+    public static List<Point> withDividends(List<Point> points, List<Dividend> dividends) {
+        return points.stream()
+                .map(point -> new Point(point.date(), point.value(), point.cost(), point.realized().add(
+                        Dividend.total(dividends.stream().filter(paid -> !paid.date().isAfter(point.date())).toList(), Dividend::net),
+                        PositionCalculator.PRECISION)))
+                .toList();
+    }
+
     /** Periods reaching further back than the history are left out. */
     public static List<Change> changes(List<Point> points, LocalDate today) {
         List<Change> changes = new ArrayList<>();

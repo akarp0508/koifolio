@@ -51,7 +51,8 @@ class DashboardController {
     @GetMapping("/history")
     @Operation(summary = "Portfolio value over time, and changes over 1D to 1Y", description = """
             Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is \
-            what the gain moved by, so deposits and buys don't count as profit.""")
+            what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax \
+            withheld.""")
     PortfolioHistoryResponse history(@AuthenticationPrincipal Jwt jwt,
                             @RequestParam(required = false) UUID account,
                             @RequestParam(required = false) UUID instrument,
@@ -75,7 +76,7 @@ class DashboardController {
         }
     }
 
-    /** @param gain value minus cost, plus what's been realized */
+    /** @param gain value minus cost, plus what's been realized and dividends received */
     record PortfolioHistoryPoint(LocalDate date, String value, String cost, String gain) {
     }
 
@@ -87,12 +88,15 @@ class DashboardController {
     /**
      * @param cash left out while a company or tags filter the view
      * @param currencyGain the part of unrealizedGain from exchange rates, for accounts in another currency
+     * @param dividends received, net of tax withheld, each at its own date's rate
+     * @param dividendsWithheld tax withheld from them
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings per company, biggest first, with sold ones marked by held being false
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record DashboardResponse(String currency, String value, String positionsValue, String unrealizedGain,
-                             String currencyGain, String unrealizedPercent, String realizedGain, String cash, List<SliceResponse> bySector,
+                             String currencyGain, String unrealizedPercent, String realizedGain, String dividends,
+                             String dividendsWithheld, String cash, List<SliceResponse> bySector,
                              List<SliceResponse> byRisk, List<AttentionResponse> attention, int unpriced,
                              List<HoldingResponse> holdings) {
 
@@ -100,7 +104,7 @@ class DashboardController {
             String currency = d.currency();
             return new DashboardResponse(currency, money(d.value(), currency), money(d.positionsValue(), currency),
                     money(d.unrealizedGain(), currency), money(d.currencyGain(), currency), d.gainPercent().map(DashboardResponse::percent).orElse(null),
-                    money(d.realizedGain(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
+                    money(d.realizedGain(), currency), money(d.dividends(), currency), money(d.dividendsWithheld(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
                     slices(d.bySector(), currency), slices(d.byRisk(), currency),
                     d.attention().stream().map(AttentionResponse::of).toList(), d.unpriced(),
                     d.holdings().stream().map(holding -> HoldingResponse.of(holding, currency)).toList());
@@ -124,7 +128,7 @@ class DashboardController {
     /** A company's numbers, in the base currency. Value and gain are left out without a price. */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record HoldingResponse(UUID instrumentId, String ticker, boolean held, String value, String unrealizedGain,
-                           String unrealizedPercent, String realizedGain, String weight,
+                           String unrealizedPercent, String realizedGain, String dividends, String weight,
                            List<AccountHoldingResponse> accounts) {
 
         static HoldingResponse of(DashboardService.Holding holding, String currency) {
@@ -134,6 +138,7 @@ class DashboardController {
                     total.gain().map(gain -> DashboardResponse.money(gain, currency)).orElse(null),
                     total.gainPercent().map(DashboardResponse::percent).orElse(null),
                     DashboardResponse.money(total.realized(), currency),
+                    DashboardResponse.money(total.dividends(), currency),
                     total.weight().map(DashboardResponse::percent).orElse(null),
                     holding.accounts().stream().map(account -> AccountHoldingResponse.of(account, currency)).toList());
         }
@@ -145,7 +150,8 @@ class DashboardController {
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record AccountHoldingResponse(UUID accountId, String accountName, boolean closed, boolean incomplete, String value,
-                                  String unrealizedGain, String unrealizedPercent, String realizedGain, String weight) {
+                                  String unrealizedGain, String unrealizedPercent, String realizedGain, String dividends,
+                                  String weight) {
 
         static AccountHoldingResponse of(DashboardService.AccountHolding holding, String currency) {
             CompanyTotal total = holding.total();
@@ -156,6 +162,7 @@ class DashboardController {
                     total.gain().map(gain -> DashboardResponse.money(gain, currency)).orElse(null),
                     total.gainPercent().map(DashboardResponse::percent).orElse(null),
                     DashboardResponse.money(total.realized(), currency),
+                    DashboardResponse.money(total.dividends(), currency),
                     total.weight().map(DashboardResponse::percent).orElse(null));
         }
     }

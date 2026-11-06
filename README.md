@@ -29,7 +29,8 @@ koifolio keeps your transactions, accounts and company analyses in one place. Yo
 - **Current prices** — fetched every 15 minutes for GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse.
 - **Instruments** — your own list of companies with sector, risk, thesis and Markdown analysis; new tickers join it automatically.
 - **Multiple accounts** — filter by account or see everything combined, incl. bonds valued by the generic bond model (Polish series as presets).
-- **Cost basis & tax** — average/FIFO and tax rate per account, with presets.
+- **Cost basis & tax** — average/FIFO and tax rate per account, with presets, and a yearly estimate for sales and dividends.
+- **Dividend income** — counted in returns and the value chart, net of tax withheld.
 - **Dashboard** — total value, P/L, cash, rule status (pass/fail), value over time (from daily snapshots), allocation by company / sector.
 - **FX** — NBP rates, with stocks converted to their account's currency and totals to your base currency.
 - **Company notes** — edit structured fields and the Markdown analysis in the UI.

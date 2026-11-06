@@ -11,6 +11,7 @@ import java.util.Map;
 /**
  * An estimate of tax on sales, for one calendar year. Accounts with the same rate add up, so a loss
  * in one offsets a gain in another, as on a Polish PIT-38. Losses aren't carried between years.
+ * Dividends are counted apart, since losses on sales don't offset them.
  */
 public final class TaxEstimate {
 
@@ -29,6 +30,40 @@ public final class TaxEstimate {
      */
     public record Group<K>(BigDecimal ratePercent, BigDecimal realized, BigDecimal tax, BigDecimal unrealized,
                            BigDecimal ifSoldToday, List<AccountGain<K>> accounts) {
+    }
+
+    public record AccountDividends<K>(K account, BigDecimal ratePercent, List<Dividend> dividends) {
+
+        public BigDecimal gross() {
+            return Dividend.total(dividends, Dividend::gross);
+        }
+
+        public BigDecimal withheld() {
+            return Dividend.total(dividends, Dividend::withheld);
+        }
+
+        public BigDecimal taxLeft() {
+            return Dividend.total(dividends, dividend -> dividend.taxLeft(ratePercent));
+        }
+    }
+
+    public record DividendGroup<K>(BigDecimal ratePercent, BigDecimal gross, BigDecimal withheld, BigDecimal taxLeft,
+                                   List<AccountDividends<K>> accounts) {
+    }
+
+    public static <K> List<DividendGroup<K>> groupDividends(List<AccountDividends<K>> accounts) {
+        Map<BigDecimal, List<AccountDividends<K>>> byRate = new LinkedHashMap<>();
+        for (AccountDividends<K> account : accounts) {
+            byRate.computeIfAbsent(account.ratePercent().stripTrailingZeros(), rate -> new ArrayList<>()).add(account);
+        }
+
+        List<DividendGroup<K>> groups = new ArrayList<>();
+        byRate.forEach((rate, members) -> groups.add(new DividendGroup<>(rate,
+                sum(members.stream().map(AccountDividends::gross).toList()),
+                sum(members.stream().map(AccountDividends::withheld).toList()),
+                sum(members.stream().map(AccountDividends::taxLeft).toList()), members)));
+        groups.sort(Comparator.comparing(DividendGroup<K>::ratePercent, Comparator.reverseOrder()));
+        return groups;
     }
 
     public static <K> List<Group<K>> group(List<AccountGain<K>> accounts) {

@@ -165,11 +165,12 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 ```
 
 - One position per account and ticker, using the account's `costMethod`.
-- `cost` and `realizedGain` include fees. Dividends aren't part of realized gain.
+- `cost` and `realizedGain` include fees. Dividends aren't part of realized gain: `dividends` is what was received net of tax, and `dividendsWithheld` the tax taken.
+- A dividend on a ticker with no trades makes a closed position.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
 - `weight` and `portfolioWeight` are percentages of the account and of all accounts, with cash in the total, at the latest rates. They don't change with filters, and are left out without a value. Unpriced positions aren't in the total, so weights rise until they get a price.
-- `inBase` repeats cost, realized, value and gain in the base currency, with `currencyGain`, and is left out when the account already uses it.
+- `inBase` repeats cost, realized, value, gain and dividends in the base currency, with `currencyGain`, and is left out when the account already uses it.
 - Price fields are left out when there's no price, or nothing is held. A price in another currency is converted to the account's at the latest rate; without a rate, `currencyMismatch` is set and `value` and the gains are left out.
 
 | `GET /positions/{accountId}/{ticker}/details` | The company and your plan together |
@@ -223,6 +224,8 @@ Implemented.
   "currencyGain": "100.00",
   "unrealizedPercent": "42.9",
   "realizedGain": "80.00",
+  "dividends": "81.00",
+  "dividendsWithheld": "19.00",
   "cash": "1400.00",
   "bySector": [{"label": "IT", "value": "1200.00", "percent": "60.0"}, {"value": "800.00", "percent": "40.0"}],
   "byRisk": [{"label": "4-5", "value": "1800.00", "percent": "90.0"}],
@@ -261,11 +264,13 @@ History response:
 - `period` is `DAY`, `WEEK`, `MONTH`, `YEAR_TO_DATE` or `YEAR`, compared with the last point before the period starts. Periods reaching further back than the history are left out, and `percent` is of the value at the start.
 - Positions without prices or any rate are left out.
 
+Dividends are net of tax withheld, each at the rate of the day `costFxRule` picks, and the history's `gain` and period changes include them from the day they're paid. Holdings have `dividends` too.
+
 Planned: realized gains and tax per year, income per year.
 
 ## Tax
 
-Implemented. An estimate of tax on sales, in the base currency. Not tax advice.
+Implemented. An estimate of tax on sales and dividends, in the base currency. Not tax advice.
 
 | Request | Purpose |
 |---|---|
@@ -273,8 +278,9 @@ Implemented. An estimate of tax on sales, in the base currency. Not tax advice.
 
 - Accounts with the same `taxRate` add up per calendar year, so losses offset gains between them. Losses aren't carried between years.
 - `totalTax` is tax on that year's sales. `totalIfSoldToday` is the extra tax if everything open were sold now, after this year's realized gains, and it can be negative. It's left out for past years.
+- `dividendGroups` has that year's dividends per rate and account, with `gross`, `withheld` and `taxLeft`. `totalDividendTax` adds up what's left to pay. Each dividend owes its gross at the account's rate less what was withheld, never below zero, and sale losses don't offset it.
 - `unsetAccounts` names accounts with something to tax but no rate, which aren't counted.
-- Cost and proceeds use each trade's rate, per `costFxRule`. Dividends aren't included.
+- Cost, proceeds and dividends use each one's own rate, per `costFxRule`.
 
 ## Split suggestions
 

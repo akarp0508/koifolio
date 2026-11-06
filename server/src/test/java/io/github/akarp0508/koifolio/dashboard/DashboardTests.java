@@ -49,6 +49,8 @@ class DashboardTests {
         users.deleteAll();
         jdbc.sql("DELETE FROM quotes").update();
         jdbc.sql("DELETE FROM fx_rates").update();
+        jdbc.sql("DELETE FROM fx_history").update();
+        jdbc.sql("DELETE FROM daily_closes").update();
         anna = tokenFor("anna");
         bob = tokenFor("bob");
         ike = createAccount("IKE", "PLN", "1000");
@@ -118,6 +120,66 @@ class DashboardTests {
             request = request.param(params[i], params[i + 1]);
         }
         return as(anna, request);
+    }
+
+    private void dividend(String account, String ticker, String date, String gross, String withheld) throws Exception {
+        String json = """
+                {"accountId":"%s","type":"dividend","date":"%s","ticker":"%s","amount":"%s","withheldTax":"%s","affectsBalance":false}"""
+                .formatted(account, date, ticker, gross, withheld);
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    void dividendsCountNetOfTaxAndApartFromRealized() throws Exception {
+        hold(ike, "PAS", "10", "100", "120", "PLN");
+        dividend(ike, "PAS", "2026-02-02", "100", "19");
+
+        dashboard().andExpect(jsonPath("$.dividends").value("81.00"))
+                .andExpect(jsonPath("$.dividendsWithheld").value("19.00"))
+                .andExpect(jsonPath("$.realizedGain").value("0.00"))
+                .andExpect(jsonPath("$.holdings[0].dividends").value("81.00"))
+                .andExpect(jsonPath("$.holdings[0].accounts[0].dividends").value("81.00"));
+        as(anna, get("/api/v1/positions")).andExpect(jsonPath("$[0].dividends").value("81.00"))
+                .andExpect(jsonPath("$[0].dividendsWithheld").value("19.00"));
+    }
+
+    @Test
+    void aForeignDividendUsesItsOwnDatesRate() throws Exception {
+        jdbc.sql("INSERT INTO fx_history VALUES ('USD', '2026-02-01', 4)").update();
+        jdbc.sql("UPDATE fx_rates SET rate = 5 WHERE currency = 'USD'").update();
+        dividend(usd, "AAPL", "2026-02-02", "10", "0");
+
+        dashboard().andExpect(jsonPath("$.dividends").value("40.00"));
+    }
+
+    @Test
+    void aDividendWithNoTradesShowsAsNotHeld() throws Exception {
+        dividend(ike, "PAS", "2026-02-02", "100", "0");
+
+        dashboard().andExpect(jsonPath("$.dividends").value("100.00"))
+                .andExpect(jsonPath("$.holdings[0].ticker").value("PAS"))
+                .andExpect(jsonPath("$.holdings[0].held").value(false))
+                .andExpect(jsonPath("$.holdings[0].dividends").value("100.00"));
+    }
+
+    @Test
+    void dividendsFollowTheFilters() throws Exception {
+        hold(ike, "PAS", "10", "100", "120", "PLN");
+        hold(ike, "ABC", "10", "100", "120", "PLN");
+        dividend(ike, "PAS", "2026-02-02", "100", "0");
+        dividend(ike, "ABC", "2026-02-02", "30", "0");
+
+        dashboard("instrument", instrumentId("PAS")).andExpect(jsonPath("$.dividends").value("100.00"));
+    }
+
+    @Test
+    void theChartsGainIncludesDividends() throws Exception {
+        hold(ike, "PAS", "10", "100", "120", "PLN");
+        jdbc.sql("INSERT INTO daily_closes VALUES ('PAS', '2026-01-02', 100)").update();
+        dividend(ike, "PAS", "2026-01-02", "100", "19");
+
+        as(anna, get("/api/v1/dashboard/history")).andExpect(jsonPath("$.points[0].gain").value("81.00"));
     }
 
     @Test

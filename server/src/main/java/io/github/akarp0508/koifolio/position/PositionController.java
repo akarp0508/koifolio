@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.position;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
@@ -132,9 +133,11 @@ class PositionController {
      * @param cost at each purchase's rate
      * @param gain value now against that cost
      * @param currencyGain the part of the gain from exchange rates moving
+     * @param dividends net of tax withheld, each at its own date's rate
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    record InBase(String currency, String cost, String realizedGain, String value, String gain, String currencyGain) {
+    record InBase(String currency, String cost, String realizedGain, String value, String gain, String currencyGain,
+                  String dividends) {
 
         static InBase of(PositionService.Position position, Optional<Valuation> valuation) {
             String base = position.baseCurrency();
@@ -149,7 +152,8 @@ class PositionController {
                     value.map(v -> PositionResponse.money(v, base)).orElse(null),
                     value.map(v -> PositionResponse.money(v.subtract(result.cost()), base)).orElse(null),
                     value.flatMap(v -> costToday).map(today -> PositionResponse.money(today.subtract(result.cost()), base))
-                            .orElse(null));
+                            .orElse(null),
+                    PositionResponse.money(Dividend.total(position.dividendsInBase(), Dividend::net), base));
         }
     }
 
@@ -199,6 +203,8 @@ class PositionController {
      * @param signal the price is at or near the plan's target or stop
      * @param weight percent of the account, cash included; left out without a value
      * @param portfolioWeight percent of all accounts, cash included, at the latest rates
+     * @param dividends received, net of tax withheld
+     * @param dividendsWithheld tax withheld from them
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record PositionResponse(UUID accountId, String ticker, String currency, String quantity, String averageCost,
@@ -207,7 +213,7 @@ class PositionController {
                             String unrealizedGain, String unrealizedPercent, boolean currencyMismatch,
                             UUID instrumentId, String sector, Integer risk, PlanCheck.Signal signal,
                             Set<String> instrumentTags, Set<String> positionTags, InBase inBase,
-                            String weight, String portfolioWeight) {
+                            String weight, String portfolioWeight, String dividends, String dividendsWithheld) {
 
         static PositionResponse of(PositionService.Position position, PositionService.Weight weight) {
             PositionResult result = position.result();
@@ -235,7 +241,9 @@ class PositionController {
                     position.planCheck().flatMap(PlanCheck::signal).orElse(null),
                     position.instrument().details().tags(), position.tags(), InBase.of(position, valuation),
                     weight.ofAccount().map(PositionController::percent).orElse(null),
-                    weight.ofPortfolio().map(PositionController::percent).orElse(null));
+                    weight.ofPortfolio().map(PositionController::percent).orElse(null),
+                    money(Dividend.total(position.dividends(), Dividend::net), currency),
+                    money(Dividend.total(position.dividends(), Dividend::withheld), currency));
         }
 
         static String money(BigDecimal value, String currency) {

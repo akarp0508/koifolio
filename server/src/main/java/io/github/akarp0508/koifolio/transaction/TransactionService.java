@@ -5,6 +5,7 @@ import io.github.akarp0508.koifolio.FieldValidationException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import jakarta.validation.ConstraintViolation;
@@ -169,6 +170,17 @@ public class TransactionService {
                 .sorted(HISTORY_ORDER)
                 .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(),
                         transaction.getDate(), trade(transaction)))
+                .toList();
+    }
+
+    /** Every dividend, oldest first. */
+    @Transactional(readOnly = true)
+    public List<AccountDividend> dividendsOldestFirst(UUID userId) {
+        return transactions.findByUserId(userId).stream()
+                .filter(transaction -> transaction.getType() == TransactionType.DIVIDEND)
+                .sorted(HISTORY_ORDER)
+                .map(transaction -> new AccountDividend(transaction.getAccountId(), transaction.getInstrumentId(),
+                        new Dividend(transaction.getDate(), transaction.getAmount(), transaction.getWithheldTax())))
                 .toList();
     }
 

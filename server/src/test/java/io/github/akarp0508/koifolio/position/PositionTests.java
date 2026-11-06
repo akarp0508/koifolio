@@ -171,14 +171,18 @@ class PositionTests {
     }
 
     @Test
-    void cashTransactionsAndDividendsAreNotPositions() throws Exception {
+    void aDividendWithNoTradesIsAClosedPosition() throws Exception {
         String json = """
                 {"accountId":"%s","type":"dividend","date":"2026-01-01","ticker":"PAS","amount":"10","affectsBalance":true}"""
                 .formatted(account);
         as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(json))
                 .andExpect(status().isCreated());
 
-        as(anna, get("/api/v1/positions").param("closed", "true")).andExpect(jsonPath("$.length()").value(0));
+        as(anna, get("/api/v1/positions")).andExpect(jsonPath("$.length()").value(0));
+        as(anna, get("/api/v1/positions").param("closed", "true"))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].closed").value(true))
+                .andExpect(jsonPath("$[0].dividends").value("10.00"));
     }
 
     @Test

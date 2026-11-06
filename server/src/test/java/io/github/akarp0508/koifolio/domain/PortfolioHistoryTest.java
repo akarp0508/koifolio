@@ -114,4 +114,15 @@ class PortfolioHistoryTest {
     void noPointsNoChanges() {
         assertThat(PortfolioHistory.changes(List.of(), TODAY)).isEmpty();
     }
+
+    @Test
+    void dividendsCountFromTheDayTheyWerePaid() {
+        LocalDate before = TODAY.minusDays(2);
+        LocalDate paid = TODAY.minusDays(1);
+        List<Point> points = PortfolioHistory.withDividends(List.of(point(before, "100", "100"), point(paid, "98", "100")),
+                List.of(new Dividend(paid, new BigDecimal("3"), new BigDecimal("1"))));
+
+        assertThat(points.get(0).gain()).isEqualByComparingTo("0");
+        assertThat(points.get(1).gain()).isEqualByComparingTo("0");
+    }
 }

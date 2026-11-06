@@ -11,7 +11,7 @@ class CompanyTotalTest {
 
     private static CompanyTotal.Line line(String value, String cost, String realized, String weight) {
         return new CompanyTotal.Line(Optional.ofNullable(value).map(BigDecimal::new), new BigDecimal(cost),
-                new BigDecimal(realized), Optional.ofNullable(weight).map(BigDecimal::new));
+                new BigDecimal(realized), BigDecimal.ONE, Optional.ofNullable(weight).map(BigDecimal::new));
     }
 
     @Test
@@ -22,6 +22,7 @@ class CompanyTotalTest {
         assertThat(total.gain().orElseThrow()).isEqualByComparingTo("200");
         assertThat(total.gainPercent().orElseThrow()).isEqualByComparingTo("20");
         assertThat(total.realized()).isEqualByComparingTo("30");
+        assertThat(total.dividends()).isEqualByComparingTo("2");
         assertThat(total.weight().orElseThrow()).isEqualByComparingTo("24");
     }
 

@@ -26,7 +26,7 @@ Last reviewed: 2026-11-06.
 | Value history | ✅ Done, with backfill built in |
 | Average and FIFO cost per account | ✅ Done |
 | Bonds: one generic model, Polish series as presets | ❌ Not built |
-| Tax estimates per account | ✅ Done, as an estimate on sales |
+| Tax estimates per account | ✅ Done, as an estimate on sales and dividends |
 | Splits | ✅ Done; spin-offs aren't |
 | Purchase-date FX, with currency gains separated | ✅ Done |
 | Editing transactions without losing history | ❌ Edits are in place until the audit log exists |

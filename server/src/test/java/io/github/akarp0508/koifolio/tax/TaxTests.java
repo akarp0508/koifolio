@@ -82,6 +82,14 @@ class TaxTests {
                 .andExpect(status().isCreated());
     }
 
+    private void dividend(String account, String date, String gross, String withheld) throws Exception {
+        String json = """
+                {"accountId":"%s","type":"dividend","date":"%s","ticker":"PAS","amount":"%s","withheldTax":"%s","affectsBalance":false}"""
+                .formatted(account, date, gross, withheld);
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated());
+    }
+
     private void gain(String account, int year, String amount) throws Exception {
         trade(account, "buy", year + "-01-02", "1", "1000");
         trade(account, "sell", year + "-02-02", "1", new BigDecimal("1000").add(new BigDecimal(amount)).toPlainString());
@@ -180,6 +188,58 @@ class TaxTests {
         // No gain in USD, but bought at 400 PLN and sold at 500 PLN
         tax().andExpect(jsonPath("$.groups[0].realized").value("100.00"))
                 .andExpect(jsonPath("$.totalTax").value("19.00"));
+    }
+
+    @Test
+    void dividendsShowWhatsLeftToPayApartFromSales() throws Exception {
+        String account = account("XTB", ",\"taxRate\":\"19\"");
+        gain(account, THIS_YEAR, "-500");
+        dividend(account, THIS_YEAR + "-03-02", "100", "15");
+
+        // The loss on the sale doesn't touch the dividend
+        tax().andExpect(jsonPath("$.totalTax").value("0.00"))
+                .andExpect(jsonPath("$.totalDividendTax").value("4.00"))
+                .andExpect(jsonPath("$.dividendGroups.length()").value(1))
+                .andExpect(jsonPath("$.dividendGroups[0].ratePercent").value("19"))
+                .andExpect(jsonPath("$.dividendGroups[0].gross").value("100.00"))
+                .andExpect(jsonPath("$.dividendGroups[0].withheld").value("15.00"))
+                .andExpect(jsonPath("$.dividendGroups[0].accounts[0].name").value("XTB"))
+                .andExpect(jsonPath("$.dividendGroups[0].accounts[0].taxLeft").value("4.00"));
+    }
+
+    @Test
+    void aYearWithOnlyDividendsIsListed() throws Exception {
+        int lastYear = THIS_YEAR - 1;
+        dividend(account("XTB", ",\"taxRate\":\"19\""), lastYear + "-03-02", "100", "19");
+
+        tax().andExpect(jsonPath("$.years[1]").value(lastYear))
+                .andExpect(jsonPath("$.dividendGroups.length()").value(0));
+        as(anna, get("/api/v1/tax").param("year", String.valueOf(lastYear)))
+                .andExpect(jsonPath("$.dividendGroups[0].gross").value("100.00"))
+                .andExpect(jsonPath("$.totalDividendTax").value("0.00"));
+    }
+
+    @Test
+    void dividendsInAnAccountWithNoRateAreNamedAndLeftOut() throws Exception {
+        dividend(account("Unset", ""), THIS_YEAR + "-03-02", "100", "0");
+
+        tax().andExpect(jsonPath("$.unsetAccounts[0]").value("Unset"))
+                .andExpect(jsonPath("$.dividendGroups.length()").value(0));
+    }
+
+    @Test
+    void aForeignDividendUsesItsOwnDatesRate() throws Exception {
+        jdbc.sql("INSERT INTO fx_rates VALUES ('USD', 5, current_date, now())").update();
+        String body = as(anna, post("/api/v1/accounts").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":\"US\",\"currency\":\"USD\",\"balance\":\"0\",\"taxRate\":\"19\"}"))
+                .andReturn().getResponse().getContentAsString();
+        String account = JsonPath.read(body, "$.id");
+        jdbc.sql("INSERT INTO fx_history VALUES ('USD', ?, 4)").param(java.sql.Date.valueOf(THIS_YEAR + "-01-01")).update();
+        dividend(account, THIS_YEAR + "-01-02", "100", "15");
+
+        tax().andExpect(jsonPath("$.dividendGroups[0].gross").value("400.00"))
+                .andExpect(jsonPath("$.dividendGroups[0].withheld").value("60.00"))
+                .andExpect(jsonPath("$.totalDividendTax").value("16.00"));
     }
 
     @Test

@@ -2,6 +2,7 @@ package io.github.akarp0508.koifolio.dashboard;
 
 import io.github.akarp0508.koifolio.domain.Breakdown;
 import io.github.akarp0508.koifolio.domain.CompanyTotal;
+import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PortfolioHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
@@ -86,11 +87,14 @@ class DashboardService {
      * @param unrealizedGain value now against cost at each purchase's rate
      * @param currencyGain the part of it from exchange rates moving, for accounts in another currency
      * @param gainPercent gain against the cost of priced positions, empty without any
+     * @param dividends received, net of tax withheld
+     * @param dividendsWithheld tax withheld from them
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings the matching positions per company, biggest first
      */
     record Dashboard(String currency, BigDecimal value, BigDecimal positionsValue, BigDecimal unrealizedGain,
-                     BigDecimal currencyGain, Optional<BigDecimal> gainPercent, BigDecimal realizedGain, Optional<BigDecimal> cash,
+                     BigDecimal currencyGain, Optional<BigDecimal> gainPercent, BigDecimal realizedGain, BigDecimal dividends,
+                     BigDecimal dividendsWithheld, Optional<BigDecimal> cash,
                      List<Breakdown.Slice> bySector, List<Breakdown.Slice> byRisk, List<Attention> attention,
                      int unpriced, List<Holding> holdings) {
     }
@@ -104,6 +108,7 @@ class DashboardService {
         BigDecimal cost = BigDecimal.ZERO;
         BigDecimal currencyGain = BigDecimal.ZERO;
         BigDecimal realized = BigDecimal.ZERO;
+        List<Dividend> dividends = new ArrayList<>();
         int unpriced = 0;
         List<Breakdown.Part> sectors = new ArrayList<>();
         List<Breakdown.Part> risks = new ArrayList<>();
@@ -115,6 +120,7 @@ class DashboardService {
         for (Position position : matching) {
             String currency = position.account().getCurrency();
             realized = add(realized, position.inBase().map(PositionResult::realizedGain).orElse(BigDecimal.ZERO));
+            dividends.addAll(position.dividendsInBase());
             position.planCheck().filter(check -> check.signal().isPresent())
                     .ifPresent(check -> attention.add(new Attention(position, check)));
             if (position.result().isClosed()) {
@@ -140,8 +146,8 @@ class DashboardService {
         BigDecimal gain = value.subtract(cost, MathContext.DECIMAL128);
         Optional<BigDecimal> percent = cost.signum() == 0 ? Optional.empty()
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));
-        return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized, cash,
-                Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced, holdings(matching, weights, filter));
+        return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized,
+                Dividend.total(dividends, Dividend::net), Dividend.total(dividends, Dividend::withheld), cash, Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced, holdings(matching, weights, filter));
     }
 
     /** One account in view weighs against that account, otherwise against the whole portfolio. */
@@ -171,6 +177,7 @@ class DashboardService {
         return new CompanyTotal.Line(position.value().flatMap(position::convertToBase).filter(value -> inBase.isPresent()),
                 inBase.map(PositionResult::cost).orElse(BigDecimal.ZERO),
                 inBase.map(PositionResult::realizedGain).orElse(BigDecimal.ZERO),
+                Dividend.total(position.dividendsInBase(), Dividend::net),
                 filter.account() == null ? weight.ofPortfolio() : weight.ofAccount());
     }
 
@@ -189,7 +196,8 @@ class DashboardService {
                         .map(point -> new PortfolioHistory.Point(point.date(), point.value(), point.cost(), point.realized()))
                         .toList())
                 .toList();
-        List<PortfolioHistory.Point> totals = PortfolioHistory.total(series);
+        List<Dividend> dividends = matching.stream().flatMap(position -> position.dividendsInBase().stream()).toList();
+        List<PortfolioHistory.Point> totals = PortfolioHistory.withDividends(PortfolioHistory.total(series), dividends);
         LocalDate today = LocalDate.now(PriceHistoryService.MARKET_ZONE);
         return new History(base, totals, PortfolioHistory.changes(totals, today));
     }

@@ -7,6 +7,7 @@ import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.auth.User;
 import io.github.akarp0508.koifolio.domain.DailyClose;
 import io.github.akarp0508.koifolio.domain.DatedTrade;
+import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
 import io.github.akarp0508.koifolio.domain.PositionCalculator;
 import io.github.akarp0508.koifolio.domain.PositionHistory;
@@ -22,6 +23,7 @@ import io.github.akarp0508.koifolio.price.FxService;
 import io.github.akarp0508.koifolio.price.PriceHistoryService;
 import io.github.akarp0508.koifolio.price.PriceService;
 import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
+import io.github.akarp0508.koifolio.transaction.AccountDividend;
 import io.github.akarp0508.koifolio.transaction.AccountTrade;
 import io.github.akarp0508.koifolio.transaction.TransactionService;
 import java.math.BigDecimal;
@@ -88,7 +90,7 @@ public class PositionService {
         plan.update(text, risk, target, stop, tags);
         return new Position(position.account(), position.instrument(), position.result(), position.price(),
                 position.accountPrice(), Optional.of(plans.save(plan)), position.baseCurrency(), position.inBase(),
-                position.rateToBase());
+                position.rateToBase(), position.dividends(), position.dividendsInBase());
     }
 
     public record ExportedPlan(UUID accountId, String ticker, String plan, Integer risk, BigDecimal targetPrice,
@@ -119,10 +121,12 @@ public class PositionService {
     /**
      * @param accountPrice the price in the account's currency, empty if there's none or no FX rate
      * @param inBase cost and realized gain in the base currency, each trade at its own date's rate
+     * @param dividendsInBase the dividends in the base currency, each at its own date's rate
      */
     public record Position(Account account, InstrumentView instrument, PositionResult result, Optional<CurrentPrice> price,
                            Optional<BigDecimal> accountPrice, Optional<PositionPlan> plan, String baseCurrency,
-                           Optional<PositionResult> inBase, BigDecimal rateToBase) {
+                           Optional<PositionResult> inBase, BigDecimal rateToBase, List<Dividend> dividends,
+                           List<Dividend> dividendsInBase) {
 
         /** What selling now would gain in the base currency, against each purchase's rate. Empty without a price. */
         public Optional<BigDecimal> gainInBase() {
@@ -246,6 +250,24 @@ public class PositionService {
         return years;
     }
 
+    /** Dividends in the base currency, per calendar year and account. */
+    @Transactional(readOnly = true)
+    public Map<Integer, Map<UUID, List<Dividend>>> dividendsByYear(UUID userId) {
+        User user = authService.currentUser(userId);
+        FxService.History rates = fx.history();
+        List<AccountDividend> paid = transactions.dividendsOldestFirst(userId);
+
+        Map<Integer, Map<UUID, List<Dividend>>> years = new HashMap<>();
+        for (Account account : accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId)) {
+            List<Dividend> ofAccount = paid.stream().filter(dividend -> dividend.accountId().equals(account.getId()))
+                    .map(AccountDividend::dividend).toList();
+            dividendsInBase(ofAccount, account.getCurrency(), user, rates)
+                    .forEach(dividend -> years.computeIfAbsent(dividend.date().getYear(), unused -> new HashMap<>())
+                            .computeIfAbsent(account.getId(), unused -> new ArrayList<>()).add(dividend));
+        }
+        return years;
+    }
+
     /**
      * Each position's daily points in the base currency: trades at their own date's rate, closes at
      * each day's. Positions with no prices or no rates are left out.
@@ -321,6 +343,20 @@ public class PositionService {
         return Optional.of(converted);
     }
 
+    /** Each dividend at the rate of the day the user's rule picks. Without a rate it's left out. */
+    private static List<Dividend> dividendsInBase(List<Dividend> dividends, String currency, User user,
+                                                  FxService.History rates) {
+        String base = user.getBaseCurrency();
+        List<Dividend> converted = new ArrayList<>();
+        for (Dividend dividend : dividends) {
+            LocalDate rateDate = user.getCostFxRule().rateDate(dividend.date());
+            rates.convert(dividend.gross(), currency, base, rateDate).ifPresent(gross ->
+                    rates.convert(dividend.withheld(), currency, base, rateDate).ifPresent(withheld ->
+                            converted.add(new Dividend(dividend.date(), gross, withheld))));
+        }
+        return converted;
+    }
+
     /** Each day at that day's rate. Empty if the currency has no rate at all. */
     private static Optional<List<DailyClose>> converted(List<DailyClose> closes, String priceCurrency, String currency,
                                                         FxService.History rates) {
@@ -355,12 +391,20 @@ public class PositionService {
             trades.computeIfAbsent(new Holding(trade.accountId(), trade.instrumentId()), key -> new ArrayList<>())
                     .add(trade);
         }
+        // A dividend with no trades on record still earned something, so it gets a closed position.
+        Map<Holding, List<Dividend>> dividends = new HashMap<>();
+        for (AccountDividend paid : transactions.dividendsOldestFirst(userId)) {
+            Holding holding = new Holding(paid.accountId(), paid.instrumentId());
+            trades.computeIfAbsent(holding, key -> new ArrayList<>());
+            dividends.computeIfAbsent(holding, key -> new ArrayList<>()).add(paid.dividend());
+        }
 
         return trades.entrySet().stream()
                 .map(entry -> {
                     Account account = accountsById.get(entry.getKey().accountId());
                     UUID instrumentId = entry.getKey().instrumentId();
                     Optional<CurrentPrice> price = Optional.ofNullable(currentPrices.get(instrumentId));
+                    List<Dividend> paid = dividends.getOrDefault(entry.getKey(), List.of());
                     return new Position(account, views.get(instrumentId),
                             PositionCalculator.calculate(entry.getValue().stream().map(AccountTrade::trade).toList(),
                                     account.getCostMethod()), price,
@@ -370,7 +414,8 @@ public class PositionService {
                             inBase(entry.getValue(), account.getCurrency(), user, history)
                                     .map(converted -> PositionCalculator.calculate(
                                             converted.stream().map(DatedTrade::trade).toList(), account.getCostMethod())),
-                            rates.convert(BigDecimal.ONE, account.getCurrency(), user.getBaseCurrency()).orElse(null));
+                            rates.convert(BigDecimal.ONE, account.getCurrency(), user.getBaseCurrency()).orElse(null),
+                            paid, dividendsInBase(paid, account.getCurrency(), user, history));
                 })
                 .sorted(Comparator.comparing(Position::ticker).thenComparing(position -> position.account().getName()))
                 .toList();

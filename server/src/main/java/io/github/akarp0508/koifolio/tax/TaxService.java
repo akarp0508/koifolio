@@ -3,6 +3,7 @@ package io.github.akarp0508.koifolio.tax;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.TaxEstimate;
 import io.github.akarp0508.koifolio.position.PositionService;
 import io.github.akarp0508.koifolio.position.PositionService.Position;
@@ -20,7 +21,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Tax estimates in the base currency. Only sales count: dividends are normally taxed at source. */
+/** Tax estimates in the base currency, for sales and for what's left to pay on dividends. */
 @Service
 class TaxService {
 
@@ -44,7 +45,8 @@ class TaxService {
      * @param open positions that would add to the tax if sold, for the current year only
      */
     record Estimate(String currency, int year, boolean currentYear, List<Integer> years,
-                    List<TaxEstimate.Group<Account>> groups, List<Account> unsetAccounts, List<OpenPosition> open) {
+                    List<TaxEstimate.Group<Account>> groups, List<TaxEstimate.DividendGroup<Account>> dividendGroups,
+                    List<Account> unsetAccounts, List<OpenPosition> open) {
     }
 
     @Transactional(readOnly = true)
@@ -56,6 +58,8 @@ class TaxService {
 
         Map<Integer, Map<UUID, BigDecimal>> realized = positions.realizedByYear(userId);
         Map<UUID, BigDecimal> realizedThisYear = realized.getOrDefault(year, Map.of());
+        Map<Integer, Map<UUID, List<Dividend>>> dividends = positions.dividendsByYear(userId);
+        Map<UUID, List<Dividend>> dividendsThisYear = dividends.getOrDefault(year, Map.of());
 
         Map<UUID, BigDecimal> unrealized = new HashMap<>();
         List<OpenPosition> open = new ArrayList<>();
@@ -70,23 +74,33 @@ class TaxService {
         }
 
         List<TaxEstimate.AccountGain<Account>> gains = new ArrayList<>();
+        List<TaxEstimate.AccountDividends<Account>> paid = new ArrayList<>();
         List<Account> unset = new ArrayList<>();
         for (Account account : accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId)) {
             BigDecimal sold = realizedThisYear.get(account.getId());
             BigDecimal held = unrealized.get(account.getId());
-            if (sold == null && held == null) {
+            List<Dividend> received = dividendsThisYear.get(account.getId());
+            boolean traded = sold != null || held != null;
+            if (!traded && received == null) {
                 continue;
             }
             if (account.getTaxRate() == null) {
                 unset.add(account);
-            } else {
+                continue;
+            }
+            if (traded) {
                 gains.add(new TaxEstimate.AccountGain<>(account, account.getTaxRate(),
                         sold == null ? BigDecimal.ZERO : sold, held == null ? BigDecimal.ZERO : held));
+            }
+            if (received != null) {
+                paid.add(new TaxEstimate.AccountDividends<>(account, account.getTaxRate(), received));
             }
         }
 
         TreeSet<Integer> years = new TreeSet<>(realized.keySet());
+        years.addAll(dividends.keySet());
         years.add(thisYear);
-        return new Estimate(base, year, currentYear, List.copyOf(years.descendingSet()), TaxEstimate.group(gains), unset, open);
+        return new Estimate(base, year, currentYear, List.copyOf(years.descendingSet()), TaxEstimate.group(gains),
+                TaxEstimate.groupDividends(paid), unset, open);
     }
 }

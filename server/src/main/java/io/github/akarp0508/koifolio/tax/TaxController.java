@@ -28,9 +28,11 @@ class TaxController {
     }
 
     @GetMapping
-    @Operation(summary = "An estimate of tax on sales for one year", description = """
+    @Operation(summary = "An estimate of tax on sales and dividends for one year", description = """
             In the base currency. Accounts with the same rate add up, so losses offset gains between them. \
-            Losses aren't carried between years, and dividends aren't included. Not tax advice.""")
+            Losses aren't carried between years. Dividends are counted apart, because losses don't offset them: \
+            each one owes the gross amount at the account's rate, less what was withheld, and never below zero. \
+            Not tax advice.""")
     TaxResponse estimate(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) Integer year) {
         return TaxResponse.of(tax.estimate(UUID.fromString(jwt.getSubject()), year));
     }
@@ -38,19 +40,24 @@ class TaxController {
     /**
      * @param totalTax tax on this year's sales
      * @param totalIfSoldToday extra tax if everything open were sold now; left out for past years
+     * @param totalDividendTax tax still to pay on this year's dividends, after what was withheld
      * @param unsetAccounts accounts with something to tax but no rate, so not in the estimate
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record TaxResponse(String currency, int year, List<Integer> years, String totalTax, String totalIfSoldToday,
-                       List<TaxGroup> groups, List<String> unsetAccounts, List<OpenGain> openPositions) {
+                       String totalDividendTax, List<TaxGroup> groups, List<DividendGroupResponse> dividendGroups,
+                       List<String> unsetAccounts, List<OpenGain> openPositions) {
 
         static TaxResponse of(TaxService.Estimate estimate) {
             String currency = estimate.currency();
             BigDecimal tax = estimate.groups().stream().map(TaxEstimate.Group::tax).reduce(BigDecimal.ZERO, BigDecimal::add);
             BigDecimal ifSold = estimate.groups().stream().map(TaxEstimate.Group::ifSoldToday).reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal dividendTax = estimate.dividendGroups().stream().map(TaxEstimate.DividendGroup::taxLeft)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
             return new TaxResponse(currency, estimate.year(), estimate.years(), money(tax, currency),
-                    estimate.currentYear() ? money(ifSold, currency) : null,
+                    estimate.currentYear() ? money(ifSold, currency) : null, money(dividendTax, currency),
                     estimate.groups().stream().map(group -> TaxGroup.of(group, currency)).toList(),
+                    estimate.dividendGroups().stream().map(group -> DividendGroupResponse.of(group, currency)).toList(),
                     estimate.unsetAccounts().stream().map(account -> account.getName()).toList(),
                     estimate.open().stream().map(open -> new OpenGain(open.account().getId(), open.account().getName(),
                             open.instrumentId(), open.ticker(), money(open.gain(), currency))).toList());
@@ -70,6 +77,23 @@ class TaxController {
     }
 
     record AccountLine(UUID accountId, String name, String realized) {
+    }
+
+    /** @param taxLeft what's still to pay after what was withheld */
+    record DividendGroupResponse(String ratePercent, String gross, String withheld, String taxLeft,
+                                 List<DividendAccountLine> accounts) {
+
+        static DividendGroupResponse of(TaxEstimate.DividendGroup<io.github.akarp0508.koifolio.account.Account> group,
+                                        String currency) {
+            return new DividendGroupResponse(group.ratePercent().toPlainString(), money(group.gross(), currency),
+                    money(group.withheld(), currency), money(group.taxLeft(), currency),
+                    group.accounts().stream().map(line -> new DividendAccountLine(line.account().getId(),
+                            line.account().getName(), money(line.gross(), currency), money(line.withheld(), currency),
+                            money(line.taxLeft(), currency))).toList());
+        }
+    }
+
+    record DividendAccountLine(UUID accountId, String name, String gross, String withheld, String taxLeft) {
     }
 
     record OpenGain(UUID accountId, String accountName, UUID instrumentId, String ticker, String gain) {

@@ -96,4 +96,31 @@ class TaxEstimateTest {
 
         assertThat(years.get(2025)).isEqualByComparingTo("500");
     }
+
+    private static TaxEstimate.AccountDividends<String> paid(String name, String rate, String gross, String withheld) {
+        return new TaxEstimate.AccountDividends<>(name, new BigDecimal(rate),
+                List.of(new Dividend(LocalDate.of(2026, 6, 1), new BigDecimal(gross), new BigDecimal(withheld))));
+    }
+
+    @Test
+    void dividendsAddUpPerRateHighestFirst() {
+        var groups = TaxEstimate.groupDividends(List.of(paid("IKE", "0", "50", "0"), paid("A", "19", "100", "15"),
+                paid("B", "19.0", "200", "38")));
+
+        assertThat(groups).hasSize(2);
+        assertThat(groups.get(0).ratePercent()).isEqualByComparingTo("19");
+        assertThat(groups.get(0).gross()).isEqualByComparingTo("300");
+        assertThat(groups.get(0).withheld()).isEqualByComparingTo("53");
+        assertThat(groups.get(0).taxLeft()).isEqualByComparingTo("4");
+        assertThat(groups.get(1).taxLeft()).isEqualByComparingTo("0");
+    }
+
+    @Test
+    void tooMuchWithheldOnOneDividendDoesntCoverAnother() {
+        var account = new TaxEstimate.AccountDividends<>("A", new BigDecimal("19"), List.of(
+                new Dividend(LocalDate.of(2026, 6, 1), new BigDecimal("100"), new BigDecimal("30")),
+                new Dividend(LocalDate.of(2026, 7, 1), new BigDecimal("100"), new BigDecimal("15"))));
+
+        assertThat(account.taxLeft()).isEqualByComparingTo("4");
+    }
 }
