@@ -168,6 +168,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - `cost` and `realizedGain` include fees. Dividends aren't part of realized gain.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
+- `weight` and `portfolioWeight` are percentages of the account and of all accounts, with cash in the total, at the latest rates. They don't change with filters, and are left out without a value. Unpriced positions aren't in the total, so weights rise until they get a price.
 - `inBase` repeats cost, realized, value and gain in the base currency, with `currencyGain`, and is left out when the account already uses it.
 - Price fields are left out when there's no price, or nothing is held. A price in another currency is converted to the account's at the latest rate; without a rate, `currencyMismatch` is set and `value` and the gains are left out.
 

@@ -307,6 +307,49 @@ class DashboardTests {
     }
 
     @Test
+    void positionsShowTheirWeightsWithCashCounted() throws Exception {
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        hold(usd, "AAPL", "1", "50", "100", "USD");
+
+        as(anna, get("/api/v1/positions")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].ticker").value("AAPL"))
+                .andExpect(jsonPath("$[0].weight").value("50.0"))
+                .andExpect(jsonPath("$[0].portfolioWeight").value("8.3"))
+                .andExpect(jsonPath("$[1].weight").value("75.0"))
+                .andExpect(jsonPath("$[1].portfolioWeight").value("62.5"));
+    }
+
+    @Test
+    void filteringPositionsKeepsTheirPortfolioWeight() throws Exception {
+        hold(ike, "PAS", "10", "100", "300", "PLN");
+        hold(usd, "AAPL", "1", "50", "100", "USD");
+
+        as(anna, get("/api/v1/positions").param("account", ike))
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].portfolioWeight").value("62.5"));
+    }
+
+    @Test
+    void positionsWithoutAValueHaveNoWeight() throws Exception {
+        hold(ike, "ABC", "10", "100", null, null);
+        hold(ike, "PAS", "10", "100", "100", "PLN");
+
+        as(anna, get("/api/v1/positions")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].weight").doesNotExist())
+                .andExpect(jsonPath("$[1].weight").value("50.0"));
+    }
+
+    @Test
+    void aMissingRateLeavesOnlyTheAccountWeight() throws Exception {
+        String chf = createAccount("CH", "CHF", "100");
+        hold(chf, "NESN", "1", "100", "100", "CHF");
+
+        as(anna, get("/api/v1/positions")).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].weight").value("50.0"))
+                .andExpect(jsonPath("$[0].portfolioWeight").doesNotExist());
+    }
+
+    @Test
     void aNewUserHasAnEmptyDashboard() throws Exception {
         as(bob, get("/api/v1/dashboard")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.value").value("0.00"))

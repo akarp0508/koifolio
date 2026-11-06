@@ -23,6 +23,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 12. **Splits** (done): split transactions, with past values corrected, and detected splits suggested on the dashboard.
 13. **Purchase-date FX** (done): cost and realized gains at each trade's rate, currency gain shown separately, and the rate date as a setting.
 14. **Tax estimates** (done): a rate per account, a yearly estimate page and a dashboard tile.
+15. **Weights** (done): each position's share of its account and of everything, cash included.
 
 ## Current focus: extending the site
 
@@ -38,7 +39,6 @@ Rough priorities, to be picked one batch at a time:
 
 - **Rules,** pass/fail on the dashboard, such as "max 20% in one company" and "~50% in low-risk"
 - **Plain-text export,** then import
-- **Weights** on positions
 
 **Broader coverage**
 

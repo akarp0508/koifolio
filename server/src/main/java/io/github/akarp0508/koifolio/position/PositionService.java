@@ -14,6 +14,7 @@ import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.TaxEstimate;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.domain.Valuation;
+import io.github.akarp0508.koifolio.domain.Weights;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import io.github.akarp0508.koifolio.instrument.InstrumentService.InstrumentView;
 import io.github.akarp0508.koifolio.instrument.InstrumentService.QuoteRef;
@@ -108,6 +109,11 @@ public class PositionService {
                     .flatMap(value -> inBase.map(base -> value.subtract(base.cost(), MathContext.DECIMAL128)));
         }
 
+        /** What an open position is worth in the account's currency. Empty without a price. */
+        Optional<BigDecimal> value() {
+            return accountPrice.filter(price -> !result.isClosed()).map(price -> Valuation.of(result, price).value());
+        }
+
         /** An amount in the account's currency at today's rate. */
         Optional<BigDecimal> convertToBase(BigDecimal amount) {
             return Optional.ofNullable(rateToBase).map(rate -> amount.multiply(rate, MathContext.DECIMAL128));
@@ -133,6 +139,39 @@ public class PositionService {
         }
     }
 
+
+    /** A position's percent of its account and of the portfolio, cash included. Empty when it has no value there. */
+    record Weight(Optional<BigDecimal> ofAccount, Optional<BigDecimal> ofPortfolio) {
+
+        static final Weight NONE = new Weight(Optional.empty(), Optional.empty());
+    }
+
+    /** Weights across the whole portfolio, so pass every position, however the result gets filtered. */
+    @Transactional(readOnly = true)
+    Map<Position, Weight> weights(UUID userId, List<Position> positions) {
+        String base = authService.currentUser(userId).getBaseCurrency();
+        FxService.Rates rates = fx.rates();
+        BigDecimal allCash = BigDecimal.ZERO;
+        Map<Position, BigDecimal> ofAccount = new HashMap<>();
+        for (Account account : accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId)) {
+            allCash = allCash.add(rates.convert(account.getBalance(), account.getCurrency(), base).orElse(BigDecimal.ZERO),
+                    MathContext.DECIMAL128);
+            Map<Position, BigDecimal> values = new HashMap<>();
+            positions.stream().filter(position -> position.account().getId().equals(account.getId()))
+                    .forEach(position -> position.value().ifPresent(value -> values.put(position, value)));
+            ofAccount.putAll(Weights.of(values, account.getBalance()));
+        }
+
+        Map<Position, BigDecimal> values = new HashMap<>();
+        positions.forEach(position -> position.value().flatMap(position::convertToBase)
+                .ifPresent(value -> values.put(position, value)));
+        Map<Position, BigDecimal> ofPortfolio = Weights.of(values, allCash);
+
+        Map<Position, Weight> weights = new HashMap<>();
+        positions.forEach(position -> weights.put(position, new Weight(Optional.ofNullable(ofAccount.get(position)),
+                Optional.ofNullable(ofPortfolio.get(position)))));
+        return weights;
+    }
 
     /** @param currencyMismatch prices are in another currency with no rate, so points are in that currency */
     record History(Account account, String ticker, List<PositionHistory.Point> points, String priceCurrency,

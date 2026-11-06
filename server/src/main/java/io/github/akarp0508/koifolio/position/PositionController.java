@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -50,14 +51,18 @@ class PositionController {
     @GetMapping
     @Operation(summary = "List your positions, by ticker", description = """
             Worked out from buys and sells, using each account's cost method. Fully sold positions are \
-            left out unless closed is on. An incomplete one always shows.""")
+            left out unless closed is on. An incomplete one always shows. Weights are shares of the value, \
+            cash included.""")
     List<PositionResponse> list(@AuthenticationPrincipal Jwt jwt,
                                 @RequestParam(required = false) UUID account,
                                 @RequestParam(defaultValue = "false") boolean closed) {
-        return positions.list(UUID.fromString(jwt.getSubject())).stream()
+        UUID userId = UUID.fromString(jwt.getSubject());
+        List<PositionService.Position> all = positions.list(userId);
+        Map<PositionService.Position, PositionService.Weight> weights = positions.weights(userId, all);
+        return all.stream()
                 .filter(position -> account == null || position.account().getId().equals(account))
                 .filter(position -> closed || !position.result().isClosed() || position.result().incomplete())
-                .map(PositionResponse::of)
+                .map(position -> PositionResponse.of(position, weights.getOrDefault(position, PositionService.Weight.NONE)))
                 .toList();
     }
 
@@ -192,6 +197,8 @@ class PositionController {
      * @param risk the plan's risk if set, otherwise the company's; left out if neither is
      * @param inBase the same in the base currency, left out when the account already uses it
      * @param signal the price is at or near the plan's target or stop
+     * @param weight percent of the account, cash included; left out without a value
+     * @param portfolioWeight percent of all accounts, cash included, at the latest rates
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record PositionResponse(UUID accountId, String ticker, String currency, String quantity, String averageCost,
@@ -199,9 +206,10 @@ class PositionController {
                             String price, String priceCurrency, Instant quotedAt, String value,
                             String unrealizedGain, String unrealizedPercent, boolean currencyMismatch,
                             UUID instrumentId, String sector, Integer risk, PlanCheck.Signal signal,
-                            Set<String> instrumentTags, Set<String> positionTags, InBase inBase) {
+                            Set<String> instrumentTags, Set<String> positionTags, InBase inBase,
+                            String weight, String portfolioWeight) {
 
-        static PositionResponse of(PositionService.Position position) {
+        static PositionResponse of(PositionService.Position position, PositionService.Weight weight) {
             PositionResult result = position.result();
             String currency = position.account().getCurrency();
             String averageCost = result.isClosed() ? null : money(result.averageCost(), currency);
@@ -225,7 +233,9 @@ class PositionController {
                     mismatch,
                     position.instrument().id(), position.instrument().details().sector(), position.risk(),
                     position.planCheck().flatMap(PlanCheck::signal).orElse(null),
-                    position.instrument().details().tags(), position.tags(), InBase.of(position, valuation));
+                    position.instrument().details().tags(), position.tags(), InBase.of(position, valuation),
+                    weight.ofAccount().map(PositionController::percent).orElse(null),
+                    weight.ofPortfolio().map(PositionController::percent).orElse(null));
         }
 
         static String money(BigDecimal value, String currency) {

@@ -20,7 +20,7 @@ Last reviewed: 2026-11-06.
 
 | Feature | Status |
 |---|---|
-| Transactions, positions, P/L, weights | ✅ Done, apart from weights in the UI |
+| Transactions, positions, P/L, weights | ✅ Done |
 | Dashboard | ✅ Done, apart from rule status |
 | Automatic prices, FX | ✅ Done, for the covered markets |
 | Value history | ✅ Done, with backfill built in |
