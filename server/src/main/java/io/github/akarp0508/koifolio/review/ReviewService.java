@@ -110,6 +110,12 @@ public class ReviewService {
                 .param(userId).query(this::pending).list();
     }
 
+    /** Everything waiting, transactions and changes. */
+    @Transactional(readOnly = true)
+    int waitingCount(UUID userId) {
+        return transactions.countUnvalidated(userId) + count(userId);
+    }
+
     public int count(UUID userId) {
         return jdbc.sql("SELECT count(*) FROM pending_changes WHERE user_id = ?").param(userId).query(Integer.class).single();
     }

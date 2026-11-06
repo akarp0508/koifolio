@@ -29,6 +29,12 @@ class ReviewController {
         this.review = review;
     }
 
+    @GetMapping("/count")
+    @Operation(summary = "How much is waiting for you", description = "Agent transactions and changes together.")
+    WaitingResponse count(@AuthenticationPrincipal Jwt jwt) {
+        return new WaitingResponse(review.waitingCount(userId(jwt)));
+    }
+
     @GetMapping("/changes")
     @Operation(summary = "Company and rule changes from agents, waiting for you", description = """
             Nothing here has applied yet. current has the values each would replace.""")
@@ -87,6 +93,9 @@ class ReviewController {
             return new PendingChangeResponse(pending.id(), pending.agent(), pending.summary(), current, pending.changes(),
                     pending.createdAt());
         }
+    }
+
+    record WaitingResponse(int waiting) {
     }
 
     record DecidedResponse(int transactions, int changes) {

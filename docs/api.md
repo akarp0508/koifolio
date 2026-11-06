@@ -300,6 +300,7 @@ Implemented. Agent company and rule changes wait here, and apply only when appro
 
 | Request | Purpose |
 |---|---|
+| `GET /review/count` | How much is waiting, transactions and changes together |
 | `GET /review/changes` | What's waiting, with `current` and `proposed` values |
 | `POST /review/changes/{id}/approve` | Apply one |
 | `POST /review/changes/{id}/reject` | Drop one |

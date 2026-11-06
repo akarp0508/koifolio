@@ -393,6 +393,20 @@ class ReviewTests {
     }
 
     @Test
+    void theCountCoversTransactionsAndChanges() throws Exception {
+        as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(0));
+
+        deposit(claude, account(), "10");
+        call(claude, "save_rule", MAX_20);
+
+        as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(2));
+        as(bob, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(0));
+
+        as(anna, post("/api/v1/review/reject-all"));
+        as(anna, get("/api/v1/review/count")).andExpect(jsonPath("$.waiting").value(0));
+    }
+
+    @Test
     void reviewIsPrivate() throws Exception {
         call(claude, "save_rule", MAX_20);
         String id = pendingId();
