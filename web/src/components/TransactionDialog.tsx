@@ -10,17 +10,19 @@ import { Modal } from './Modal'
 const optionalAmount = (value: string) => normalizeAmount(value) || undefined
 const NEW_TICKER = 'new-ticker'
 
-export function TransactionDialog({ transaction, accounts, initialAccountId, onSaved, onClose }: {
+export function TransactionDialog({ transaction, accounts, initialAccountId, initialType = 'buy', initialTicker = '', onSaved, onClose }: {
   transaction: Transaction | null
   accounts: Account[]
   initialAccountId: string
+  initialType?: TransactionType
+  initialTicker?: string
   onSaved: () => void
   onClose: () => void
 }) {
   const [accountId, setAccountId] = useState(transaction?.accountId ?? initialAccountId)
-  const [type, setType] = useState<TransactionType>(transaction?.type ?? 'buy')
+  const [type, setType] = useState<TransactionType>(transaction?.type ?? initialType)
   const [date, setDate] = useState(transaction?.date ?? today())
-  const [ticker, setTicker] = useState(transaction?.ticker ?? '')
+  const [ticker, setTicker] = useState(transaction?.ticker ?? initialTicker)
   const [quantity, setQuantity] = useState(transaction?.quantity ?? '')
   const [price, setPrice] = useState(transaction?.price ?? '')
   const [fee, setFee] = useState(transaction?.fee ?? '')

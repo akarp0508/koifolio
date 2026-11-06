@@ -8,8 +8,10 @@ import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
 import { today } from '../transactions'
 import { Holdings } from './Holdings'
+import type { TradeRequest } from './Holdings'
 import { SplitSuggestions } from './SplitSuggestions'
 import { TagFilter } from './TagFilter'
+import { TransactionDialog } from './TransactionDialog'
 
 // Holds the chart library, so the rest of the page opens without it
 const PortfolioChart = lazy(() =>
@@ -100,6 +102,8 @@ export function Portfolio() {
   const [range, setRange] = useState<Range>('1Y')
   const [error, setError] = useState<ApiError | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  // null while closed; an empty request is a transaction for anything
+  const [trade, setTrade] = useState<Partial<TradeRequest> | null>(null)
 
   const fetchDashboard = useCallback(() => {
     const filter = { account: account || undefined, instrumentTags, positionTags }
@@ -116,7 +120,7 @@ export function Portfolio() {
     void fetchDashboard()
   }, [fetchDashboard])
 
-  useEffect(() => {
+  const fetchOverview = useCallback(() =>
     Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax()])
       .then(([accountList, positionList, settingsData, taxData]) => {
         setTax(taxData)
@@ -124,8 +128,16 @@ export function Portfolio() {
         setPositions(positionList)
         setSettings(settingsData)
       })
-      .catch((e: ApiError) => setError(e))
-  }, [])
+      .catch((e: ApiError) => setError(e)), [])
+
+  useEffect(() => {
+    void fetchOverview()
+  }, [fetchOverview])
+
+  function traded() {
+    setTrade(null)
+    void Promise.all([fetchOverview(), fetchDashboard()])
+  }
 
   async function refresh() {
     setRefreshing(true)
@@ -162,6 +174,7 @@ export function Portfolio() {
         <div className="header-actions wrap">
           {quoteTime && <span className="muted">Prices as of {quoteTime}</span>}
           <button disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          <button className="primary" disabled={accounts.length === 0} onClick={() => setTrade({})}>+ Transaction</button>
           {settings && (
             <>
               <label className="filter-check">
@@ -273,8 +286,20 @@ export function Portfolio() {
             </p>
           )}
 
-          <Holdings holdings={dashboard.holdings ?? []} currency={currency} />
+          <Holdings holdings={dashboard.holdings ?? []} currency={currency} onTrade={setTrade} />
         </>
+      )}
+
+      {trade && (
+        <TransactionDialog
+          transaction={null}
+          accounts={accounts}
+          initialAccountId={trade.accountId ?? (account || accounts[0].id)}
+          initialType={trade.type}
+          initialTicker={trade.ticker}
+          onSaved={traded}
+          onClose={() => setTrade(null)}
+        />
       )}
     </>
   )

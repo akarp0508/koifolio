@@ -914,3 +914,12 @@ tr.clickable a {
 tr.sub-row td:first-child {
   padding-left: 2.2rem;
 }
+
+.trade {
+  padding: 0.15rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.trade + .trade {
+  margin-left: 0.3rem;
+}
