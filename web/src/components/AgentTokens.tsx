@@ -8,10 +8,11 @@ import { Field } from './Field'
 const SCOPES: { scope: AgentScope; label: string; short: string }[] = [
   { scope: 'transactions:write', label: 'Add transactions, for you to review', short: 'transactions' },
   { scope: 'analysis:write', label: 'Propose company changes, for you to review', short: 'companies' },
+  { scope: 'accounts:write', label: 'Propose new accounts, for you to review', short: 'accounts' },
   { scope: 'rules:write', label: 'Propose rule changes, for you to review', short: 'rules' },
 ]
 
-const DEFAULT_SCOPES: AgentScope[] = ['transactions:write', 'analysis:write']
+const DEFAULT_SCOPES: AgentScope[] = ['transactions:write', 'analysis:write', 'accounts:write']
 
 const formatDay = (time: string) => new Date(time).toLocaleDateString()
 

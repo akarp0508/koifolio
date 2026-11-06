@@ -173,8 +173,8 @@ export function Review() {
       {waiting && (
         <>
           <p className="muted">
-            Transactions from agents count straight away, until you reject them. Company and rule changes apply only once you
-            approve them, and can still be reverted from the change log.
+            Transactions from agents count straight away, until you reject them. Company, rule and account changes apply only
+            once you approve them, and can still be reverted from the change log.
           </p>
 
           {total === 0 && <p className="muted">Nothing is waiting for review.</p>}

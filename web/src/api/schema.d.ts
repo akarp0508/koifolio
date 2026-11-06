@@ -241,8 +241,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Undo an agent's company or rule change
-         * @description Puts back the values from before it, in full. If the same thing has changed since, this returns 409 changed_since unless force is on, because those later changes would be lost.
+         * Undo an agent's company, rule or account change
+         * @description Puts back the values from before it, in full. An account can only be undone while it has no transactions. If the same thing has changed since, this returns 409 changed_since unless force is on, because those later changes would be lost.
          */
         post: operations["revert"];
         delete?: never;
@@ -415,7 +415,7 @@ export interface paths {
         put?: never;
         /**
          * Create a token for an agent
-         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without scopes it can also propose transactions and company changes for your review, but not rules.
+         * @description It works on the MCP server at /mcp and nowhere else. The secret is only ever returned here, so keep it. A token works through expiresOn, or until revoked without one. Every token can read. Without scopes it can also propose transactions, company changes and new accounts for your review, but not rules.
          */
         post: operations["create_3"];
         delete?: never;
@@ -579,7 +579,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Company and rule changes from agents, waiting for you
+         * Company, rule and account changes from agents, waiting for you
          * @description Nothing here has applied yet. current has the values each would replace.
          */
         get: operations["changes"];
@@ -984,7 +984,7 @@ export interface components {
         };
         AgentTokenRequest: {
             name: string;
-            scopes?: ("analysis:write" | "transactions:write" | "rules:write")[];
+            scopes?: ("analysis:write" | "transactions:write" | "accounts:write" | "rules:write")[];
             /** Format: date */
             expiresOn?: string;
         };
@@ -992,7 +992,7 @@ export interface components {
             /** Format: uuid */
             id?: string;
             name?: string;
-            scopes?: ("analysis:write" | "transactions:write" | "rules:write")[];
+            scopes?: ("analysis:write" | "transactions:write" | "accounts:write" | "rules:write")[];
             /** Format: date */
             expiresOn?: string;
             /** Format: date-time */
