@@ -20,6 +20,9 @@ public class User {
     @Column(name = "password_hash", nullable = false)
     private String passwordHash;
 
+    @Column(name = "base_currency", nullable = false)
+    private String baseCurrency;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -30,6 +33,7 @@ public class User {
         this.id = UUID.randomUUID();
         this.username = username;
         this.passwordHash = passwordHash;
+        this.baseCurrency = "PLN";
         this.createdAt = Instant.now();
     }
 
@@ -43,5 +47,13 @@ public class User {
 
     public String getPasswordHash() {
         return passwordHash;
+    }
+
+    public String getBaseCurrency() {
+        return baseCurrency;
+    }
+
+    void setBaseCurrency(String baseCurrency) {
+        this.baseCurrency = baseCurrency;
     }
 }

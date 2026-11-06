@@ -32,6 +32,7 @@ koifolio:
     refresh-every: 15m
     refresh-cooldown: 1m
     bankier-url: https://api.bankier.pl/quotes/public
+    nbp-url: https://api.nbp.pl/api
   auth:
     jwt-secret: ${KOIFOLIO_JWT_SECRET}
     token-ttl: 12h

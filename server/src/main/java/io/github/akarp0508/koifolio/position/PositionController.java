@@ -6,6 +6,7 @@ import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.Valuation;
 import io.github.akarp0508.koifolio.instrument.InstrumentDetails;
+import io.github.akarp0508.koifolio.instrument.Tags;
 import io.github.akarp0508.koifolio.price.PriceService.CurrentPrice;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,6 +24,7 @@ import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -79,7 +81,7 @@ class PositionController {
     DetailsResponse savePlan(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID accountId, @PathVariable String ticker,
                              @Valid @RequestBody PlanRequest request) {
         return DetailsResponse.of(positions.savePlan(UUID.fromString(jwt.getSubject()), accountId, ticker, request.plan(),
-                request.risk(), request.targetPrice(), request.stopPrice()));
+                request.risk(), request.targetPrice(), request.stopPrice(), Tags.clean(request.tags())));
     }
 
     record PlanRequest(
@@ -91,7 +93,9 @@ class PositionController {
             @Schema(type = "string", example = "180") BigDecimal targetPrice,
             @Positive(message = "must be greater than 0")
             @Digits(integer = 13, fraction = 6, message = "must have at most 13 digits and 6 decimal places")
-            @Schema(type = "string", example = "120") BigDecimal stopPrice) {
+            @Schema(type = "string", example = "120") BigDecimal stopPrice,
+            @Size(max = 20, message = "must be at most 20 tags")
+            List<@Size(max = 30, message = "must be at most 30 characters") String> tags) {
     }
 
     /**
@@ -101,7 +105,8 @@ class PositionController {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record DetailsResponse(UUID instrumentId, String name, String sector, Integer companyRisk, String thesis, String analysis,
                            String plan, Integer risk, String targetPrice, String stopPrice, String targetDistance,
-                           String stopDistance, PlanCheck.Signal signal) {
+                           String stopDistance, PlanCheck.Signal signal, Set<String> instrumentTags,
+                           Set<String> positionTags) {
 
         static DetailsResponse of(PositionService.Position position) {
             InstrumentDetails company = position.instrument().details();
@@ -114,7 +119,7 @@ class PositionController {
                     plan.map(PositionPlan::getStopPrice).map(PositionController::plain).orElse(null),
                     check.flatMap(PlanCheck::targetDistance).map(PositionController::percent).orElse(null),
                     check.flatMap(PlanCheck::stopDistance).map(PositionController::percent).orElse(null),
-                    check.flatMap(PlanCheck::signal).orElse(null));
+                    check.flatMap(PlanCheck::signal).orElse(null), company.tags(), position.tags());
         }
     }
 
@@ -157,8 +162,8 @@ class PositionController {
      * @param averageCost left out once nothing is held
      * @param realizedGain counts only shares with a known cost
      * @param incomplete a sale exceeded what was held, so the history is missing something
-     * @param priceCurrency can differ from {@code currency}; value and gain are then left out
-     * @param currencyMismatch the price is in another currency than the account
+     * @param priceCurrency can differ from {@code currency}; value and gain are converted at the latest rate
+     * @param currencyMismatch the price is in another currency and there's no rate, so value and gain are left out
      * @param risk the plan's risk if set, otherwise the company's; left out if neither is
      * @param signal the price is at or near the plan's target or stop
      */
@@ -167,7 +172,8 @@ class PositionController {
                             String cost, String realizedGain, boolean closed, boolean incomplete,
                             String price, String priceCurrency, Instant quotedAt, String value,
                             String unrealizedGain, String unrealizedPercent, boolean currencyMismatch,
-                            UUID instrumentId, String sector, Integer risk, PlanCheck.Signal signal) {
+                            UUID instrumentId, String sector, Integer risk, PlanCheck.Signal signal,
+                            Set<String> instrumentTags, Set<String> positionTags) {
 
         static PositionResponse of(PositionService.Position position) {
             PositionResult result = position.result();
@@ -176,9 +182,9 @@ class PositionController {
             String quantity = result.quantity().stripTrailingZeros().toPlainString();
 
             Optional<CurrentPrice> price = position.price().filter(current -> !result.isClosed());
-            boolean mismatch = price.isPresent() && !price.get().currency().equals(currency);
-            Optional<Valuation> valuation = price.filter(current -> !mismatch)
-                    .map(current -> Valuation.of(result, current.price()));
+            boolean mismatch = price.isPresent() && position.accountPrice().isEmpty();
+            Optional<Valuation> valuation = price.flatMap(current -> position.accountPrice())
+                    .map(accountPrice -> Valuation.of(result, accountPrice));
 
             return new PositionResponse(position.account().getId(), position.ticker(), currency, quantity, averageCost,
                     money(result.cost(), currency), money(result.realizedGain(), currency), result.isClosed(),
@@ -192,7 +198,8 @@ class PositionController {
                             .map(percent -> percent.setScale(1, RoundingMode.HALF_UP).toPlainString()).orElse(null),
                     mismatch,
                     position.instrument().id(), position.instrument().details().sector(), position.risk(),
-                    position.planCheck().flatMap(PlanCheck::signal).orElse(null));
+                    position.planCheck().flatMap(PlanCheck::signal).orElse(null),
+                    position.instrument().details().tags(), position.tags());
         }
 
         static String money(BigDecimal value, String currency) {

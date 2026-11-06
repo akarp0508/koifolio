@@ -32,16 +32,18 @@ public class PriceService {
     private final QuoteRepository quotes;
     private final InstrumentService instruments;
     private final PriceHistoryService history;
+    private final FxService fx;
     private final Duration cooldown;
     private final AtomicBoolean refreshing = new AtomicBoolean();
     private volatile Instant lastManualRefresh = Instant.EPOCH;
 
     PriceService(QuoteProvider provider, QuoteRepository quotes, InstrumentService instruments,
-                 PriceHistoryService history, @Value("${koifolio.prices.refresh-cooldown}") Duration cooldown) {
+                 PriceHistoryService history, FxService fx, @Value("${koifolio.prices.refresh-cooldown}") Duration cooldown) {
         this.provider = provider;
         this.quotes = quotes;
         this.instruments = instruments;
         this.history = history;
+        this.fx = fx;
         this.cooldown = cooldown;
     }
 
@@ -87,6 +89,7 @@ public class PriceService {
         } catch (RuntimeException e) {
             log.warn("Price refresh failed, keeping the last known prices: {}", e.toString());
         }
+        fx.refresh();
         try {
             history.sync();
         } finally {

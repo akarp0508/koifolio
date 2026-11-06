@@ -4,3 +4,4 @@ koifolio:
   prices:
     schedule-enabled: false
     refresh-cooldown: 0s
+    nbp-url: http://localhost:1

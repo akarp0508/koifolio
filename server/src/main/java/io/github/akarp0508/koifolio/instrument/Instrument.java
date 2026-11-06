@@ -1,10 +1,16 @@
 package io.github.akarp0508.koifolio.instrument;
 
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /** A ticker a user holds or follows. Removing one from their list only clears {@code listed}, for its transactions. */
@@ -34,6 +40,11 @@ public class Instrument {
 
     @Column(nullable = false)
     private String analysis;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "instrument_tags", joinColumns = @JoinColumn(name = "instrument_id"))
+    @Column(name = "tag")
+    private Set<String> tags = new HashSet<>();
 
     @Column(nullable = false)
     private boolean listed;
@@ -96,10 +107,12 @@ public class Instrument {
         risk = details.risk() == null ? null : details.risk().shortValue();
         thesis = details.thesis();
         analysis = details.analysis();
+        tags.clear();
+        tags.addAll(details.tags());
     }
 
     InstrumentDetails details() {
-        return new InstrumentDetails(name, sector, risk == null ? null : risk.intValue(), thesis, analysis);
+        return new InstrumentDetails(name, sector, risk == null ? null : risk.intValue(), thesis, analysis, tags);
     }
 
     void setListed(boolean listed) {

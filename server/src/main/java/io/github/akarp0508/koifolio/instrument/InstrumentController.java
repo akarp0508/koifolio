@@ -11,6 +11,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -81,10 +82,12 @@ class InstrumentController {
             @Size(max = 100, message = "must be at most 100 characters") @Schema(example = "IT / cybersecurity") String sector,
             @Min(value = 1, message = "must be between 1 and 5") @Max(value = 5, message = "must be between 1 and 5") Integer risk,
             @Size(max = 1000, message = "must be at most 1000 characters") String thesis,
-            @Size(max = 100000, message = "must be at most 100000 characters") String analysis) {
+            @Size(max = 100000, message = "must be at most 100000 characters") String analysis,
+            @Size(max = 20, message = "must be at most 20 tags")
+            List<@Size(max = 30, message = "must be at most 30 characters") String> tags) {
 
         InstrumentDetails details() {
-            return new InstrumentDetails(name, sector, risk, thesis, analysis);
+            return new InstrumentDetails(name, sector, risk, thesis, analysis, Tags.clean(tags));
         }
     }
 
@@ -93,22 +96,24 @@ class InstrumentController {
             @Size(max = 100, message = "must be at most 100 characters") String sector,
             @Min(value = 1, message = "must be between 1 and 5") @Max(value = 5, message = "must be between 1 and 5") Integer risk,
             @Size(max = 1000, message = "must be at most 1000 characters") String thesis,
-            @Size(max = 100000, message = "must be at most 100000 characters") String analysis) {
+            @Size(max = 100000, message = "must be at most 100000 characters") String analysis,
+            @Size(max = 20, message = "must be at most 20 tags")
+            List<@Size(max = 30, message = "must be at most 30 characters") String> tags) {
 
         InstrumentDetails details() {
-            return new InstrumentDetails(name, sector, risk, thesis, analysis);
+            return new InstrumentDetails(name, sector, risk, thesis, analysis, Tags.clean(tags));
         }
     }
 
     /** @param risk left out if not set */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record InstrumentResponse(UUID id, String ticker, String name, String sector, Integer risk, String thesis,
-                              String analysis) {
+                              String analysis, Set<String> tags) {
 
         static InstrumentResponse of(Instrument instrument) {
             InstrumentDetails details = instrument.details();
             return new InstrumentResponse(instrument.getId(), instrument.getTicker(), details.name(), details.sector(),
-                    details.risk(), details.thesis(), details.analysis());
+                    details.risk(), details.thesis(), details.analysis(), details.tags());
         }
     }
 }

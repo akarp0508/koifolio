@@ -52,6 +52,22 @@ class PriceTests {
         FakeProvider fakeProvider() {
             return new FakeProvider();
         }
+
+        @Bean
+        @Primary
+        FakeFx fakeFx() {
+            return new FakeFx();
+        }
+    }
+
+    static class FakeFx implements FxProvider {
+
+        final List<Rate> rates = new CopyOnWriteArrayList<>();
+
+        @Override
+        public List<Rate> latestRates() {
+            return rates;
+        }
     }
 
     static class FakeProvider implements QuoteProvider {
