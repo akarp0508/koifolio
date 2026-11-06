@@ -923,3 +923,13 @@ tr.sub-row td:first-child {
 .trade + .trade {
   margin-left: 0.3rem;
 }
+
+.trade.buy {
+  color: var(--gain);
+  border-color: var(--gain);
+}
+
+.trade.sell {
+  color: var(--loss);
+  border-color: var(--loss);
+}

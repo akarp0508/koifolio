@@ -40,8 +40,8 @@ function TradeButtons({ ticker, accountId, canSell, onTrade }: {
 
   return (
     <td className="actions">
-      <button className="trade" aria-label={`Buy ${ticker}`} onClick={(e) => trade(e, 'buy')}>Buy</button>
-      {canSell && <button className="trade" aria-label={`Sell ${ticker}`} onClick={(e) => trade(e, 'sell')}>Sell</button>}
+      <button className="trade buy" aria-label={`Buy ${ticker}`} onClick={(e) => trade(e, 'buy')}>Buy</button>
+      {canSell && <button className="trade sell" aria-label={`Sell ${ticker}`} onClick={(e) => trade(e, 'sell')}>Sell</button>}
     </td>
   )
 }
