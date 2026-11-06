@@ -9,6 +9,7 @@ import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.time.LocalDate;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.Currency;
@@ -110,7 +111,14 @@ public class TransactionService {
         transactions.delete(transaction);
     }
 
-    /** Every buy and sell, oldest first. */
+    /** Adds a split, as confirmed by the user. */
+    @Transactional
+    public void addSplit(UUID userId, UUID accountId, String ticker, LocalDate date, BigDecimal from, BigDecimal to) {
+        create(userId, new TransactionRequest(accountId, TransactionType.SPLIT, date, ticker, null, null, null, null, null,
+                from, to, false, null));
+    }
+
+    /** Every buy, sell and split, oldest first. */
     @Transactional(readOnly = true)
     public List<AccountTrade> tradesOldestFirst(UUID userId) {
         return transactions.findByUserId(userId).stream()

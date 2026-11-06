@@ -1,6 +1,7 @@
 package io.github.akarp0508.koifolio.price;
 
 import io.github.akarp0508.koifolio.domain.DailyClose;
+import io.github.akarp0508.koifolio.domain.SplitDetector;
 import io.github.akarp0508.koifolio.price.PriceHistoryRepository.Needed;
 import java.sql.Date;
 import java.time.Clock;
@@ -70,11 +71,39 @@ public class PriceHistoryService {
             }
             try {
                 List<DailyClose> closes = provider.dailyCloses(needed.symbol(), needed.isin(), start.get(), today);
+                List<DailyClose> stored = closes(needed.symbol());
+                SplitDetector.Result check = SplitDetector.compare(stored, closes);
+                if (check.rewritten()) {
+                    // Older closes are out of date too, so take the whole history again
+                    log.info("Past closes of {} changed, fetching its history again", needed.symbol());
+                    closes = provider.dailyCloses(needed.symbol(), needed.isin(), coveredFrom(needed), today);
+                }
                 store(needed, closes, today);
+                check.split().ifPresent(split -> suggest(needed.symbol(), stored, split, today));
             } catch (RuntimeException e) {
                 log.warn("Fetching closes for {} failed, trying again next run: {}", needed.symbol(), e.toString());
             }
         }
+    }
+
+    private LocalDate coveredFrom(Needed needed) {
+        return statuses.findById(needed.symbol()).map(PriceHistory::getCoveredFrom)
+                .filter(covered -> covered.isBefore(needed.firstTrade()))
+                .orElse(needed.firstTrade());
+    }
+
+    /** The split happened after the last close stored before it, and that's as exact as it gets. */
+    private void suggest(String symbol, List<DailyClose> stored, SplitDetector.DetectedSplit split, LocalDate today) {
+        LocalDate lastStored = stored.getLast().date();
+        LocalDate date = closes(symbol).stream().map(DailyClose::date).filter(day -> day.isAfter(lastStored))
+                .findFirst().orElse(today);
+        jdbc.sql("""
+                INSERT INTO split_suggestions (id, symbol, date, split_from, split_to)
+                VALUES (gen_random_uuid(), ?, ?, ?, ?)
+                ON CONFLICT (symbol, date) DO NOTHING""")
+                .params(symbol, Date.valueOf(date), split.from(), split.to())
+                .update();
+        log.info("{} looks like a {} for {} split around {}", symbol, split.to(), split.from(), date);
     }
 
     /** Where to start fetching, or nothing if this symbol is up to date. */
