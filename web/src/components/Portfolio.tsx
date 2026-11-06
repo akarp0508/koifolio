@@ -1,12 +1,13 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Dashboard as DashboardData, DashboardSlice, PeriodChange, PortfolioHistory, Position, Settings, TaxEstimate } from '../api/client'
-import { formatAmount, formatGain, gainClass } from '../format'
+import type { Account, Dashboard, DashboardSlice, PeriodChange, PortfolioHistory, Position, Settings, TaxEstimate } from '../api/client'
+import { formatAmount, formatGain, formatQuoteTime, gainClass } from '../format'
 import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
 import { SIGNAL_LABELS, allTags, signalClass } from '../plans'
 import { today } from '../transactions'
+import { Holdings } from './Holdings'
 import { SplitSuggestions } from './SplitSuggestions'
 import { TagFilter } from './TagFilter'
 
@@ -24,7 +25,7 @@ const PERIOD_LABELS: Record<NonNullable<PeriodChange['period']>, string> = {
   YEAR: '1Y',
 }
 
-function gainNote(dashboard: DashboardData) {
+function gainNote(dashboard: Dashboard) {
   const percent = dashboard.unrealizedPercent && `${formatGain(dashboard.unrealizedPercent)}%`
   const currency = dashboard.currencyGain && gainClass(dashboard.currencyGain)
     ? `currency ${formatGain(dashboard.currencyGain)}`
@@ -86,11 +87,11 @@ function Bars({ title, slices, currency }: { title: string; slices: DashboardSli
   )
 }
 
-export function Dashboard() {
+export function Portfolio() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
-  const [dashboard, setDashboard] = useState<DashboardData | null>(null)
+  const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [account, setAccount] = useState(ALL)
   const [instrumentTags, setInstrumentTags] = useState<string[]>([])
   const [positionTags, setPositionTags] = useState<string[]>([])
@@ -98,6 +99,7 @@ export function Dashboard() {
   const [tax, setTax] = useState<TaxEstimate | null>(null)
   const [range, setRange] = useState<Range>('1Y')
   const [error, setError] = useState<ApiError | null>(null)
+  const [refreshing, setRefreshing] = useState(false)
 
   const fetchDashboard = useCallback(() => {
     const filter = { account: account || undefined, instrumentTags, positionTags }
@@ -125,6 +127,20 @@ export function Dashboard() {
       .catch((e: ApiError) => setError(e))
   }, [])
 
+  async function refresh() {
+    setRefreshing(true)
+    setError(null)
+    try {
+      await api.refreshPrices()
+      setPositions(await api.listPositions())
+      await fetchDashboard()
+    } catch (e) {
+      setError(e as ApiError)
+    } finally {
+      setRefreshing(false)
+    }
+  }
+
   function changeSettings(changes: Parameters<typeof api.updateSettings>[0]) {
     api.updateSettings(changes)
       .then((updated) => {
@@ -137,31 +153,36 @@ export function Dashboard() {
   const currency = dashboard?.currency ?? ''
   const filteredByTags = instrumentTags.length > 0 || positionTags.length > 0
   const points = history ? inRange(history.points, range, today()) : []
+  const quoteTime = formatQuoteTime(positions.map((position) => position.quotedAt))
 
   return (
     <>
       <header className="page-header">
-        <h1>Dashboard</h1>
-        {settings && (
-          <div className="header-actions">
-            <label className="filter-check">
-              Base currency
-              <select value={settings.baseCurrency} onChange={(e) => changeSettings({ baseCurrency: e.target.value })}>
-                {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
-              </select>
-            </label>
-            <label className="filter-check" title="Which day's exchange rate converts a buy or sell to the base currency">
-              Trade FX rate
-              <select
-                value={settings.costFxRule}
-                onChange={(e) => changeSettings({ costFxRule: e.target.value as Settings['costFxRule'] })}
-              >
-                <option value="previous_publication">Day before (Polish tax)</option>
-                <option value="transaction_date">Trade date</option>
-              </select>
-            </label>
-          </div>
-        )}
+        <h1>Portfolio</h1>
+        <div className="header-actions wrap">
+          {quoteTime && <span className="muted">Prices as of {quoteTime}</span>}
+          <button disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
+          {settings && (
+            <>
+              <label className="filter-check">
+                Base currency
+                <select value={settings.baseCurrency} onChange={(e) => changeSettings({ baseCurrency: e.target.value })}>
+                  {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
+                </select>
+              </label>
+              <label className="filter-check" title="Which day's exchange rate converts a buy or sell to the base currency">
+                Trade FX rate
+                <select
+                  value={settings.costFxRule}
+                  onChange={(e) => changeSettings({ costFxRule: e.target.value as Settings['costFxRule'] })}
+                >
+                  <option value="previous_publication">Day before (Polish tax)</option>
+                  <option value="transaction_date">Trade date</option>
+                </select>
+              </label>
+            </>
+          )}
+        </div>
       </header>
 
       <SplitSuggestions onApplied={fetchDashboard} />
@@ -205,25 +226,45 @@ export function Dashboard() {
             </Tile>
           </div>
 
-          {history && <Periods changes={history.changes} currency={currency} />}
-
-          {history && history.points.length > 0 && (
-            <section className="panel chart-panel">
-              <header>
-                <h2>Value over time</h2>
-                <div className="ranges">
-                  {RANGES.map((option) => (
-                    <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{option}</button>
-                  ))}
-                </div>
-              </header>
-              {points.length > 0 ? (
-                <Suspense fallback={<p className="muted">Loading…</p>}>
-                  <PortfolioChart points={points} currency={currency} />
-                </Suspense>
-              ) : <p className="muted">Nothing in this range.</p>}
-            </section>
+          {dashboard.attention.length > 0 && (
+            <ul className="attention" aria-label="Needs attention">
+              {dashboard.attention.map((item) => (
+                <li key={`${item.accountId}-${item.ticker}`}>
+                  <a href={`#positions/${item.accountId}/${encodeURIComponent(item.ticker ?? '')}`}>{item.ticker}</a>
+                  <span className="muted">{item.accountName}</span>
+                  {item.signal && <span className={signalClass(item.signal)}>{SIGNAL_LABELS[item.signal]}</span>}
+                  {item.distance && <span className="muted">{formatGain(item.distance)}%</span>}
+                </li>
+              ))}
+            </ul>
           )}
+
+          <div className="overview">
+            <div>
+              {history && history.points.length > 0 && (
+                <section className="panel chart-panel">
+                  <header>
+                    <h2>Value over time</h2>
+                    <div className="ranges">
+                      {RANGES.map((option) => (
+                        <button key={option} aria-pressed={option === range} onClick={() => setRange(option)}>{option}</button>
+                      ))}
+                    </div>
+                  </header>
+                  {points.length > 0 ? (
+                    <Suspense fallback={<p className="muted">Loading…</p>}>
+                      <PortfolioChart points={points} currency={currency} />
+                    </Suspense>
+                  ) : <p className="muted">Nothing in this range.</p>}
+                </section>
+              )}
+              {history && <Periods changes={history.changes} currency={currency} />}
+            </div>
+            <div className="overview-side">
+              <Bars title="By sector" slices={dashboard.bySector} currency={currency} />
+              <Bars title="By risk" slices={dashboard.byRisk} currency={currency} />
+            </div>
+          </div>
 
           {dashboard.unpriced > 0 && (
             <p className="muted">
@@ -232,31 +273,7 @@ export function Dashboard() {
             </p>
           )}
 
-          <div className="panels">
-            <Bars title="By sector" slices={dashboard.bySector} currency={currency} />
-            <Bars title="By risk" slices={dashboard.byRisk} currency={currency} />
-          </div>
-
-          <h2 className="section-title">Needs attention</h2>
-          {dashboard.attention.length === 0 && <p className="muted">Nothing near a target or stop.</p>}
-          {dashboard.attention.length > 0 && (
-            <div className="table-scroll">
-              <table>
-                <tbody>
-                  {dashboard.attention.map((item) => (
-                    <tr key={`${item.accountId}-${item.ticker}`}>
-                      <td><a href={`#positions/${item.accountId}/${encodeURIComponent(item.ticker ?? '')}`}>{item.ticker}</a></td>
-                      <td>{item.accountName}</td>
-                      <td>
-                        {item.signal && <span className={signalClass(item.signal)}>{SIGNAL_LABELS[item.signal]}</span>}
-                      </td>
-                      <td className="number muted">{item.distance && `${formatGain(item.distance)}%`}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <Holdings holdings={dashboard.holdings ?? []} currency={currency} />
         </>
       )}
     </>

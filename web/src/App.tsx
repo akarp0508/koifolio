@@ -2,10 +2,9 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
-import { Dashboard } from './components/Dashboard'
 import { Instruments } from './components/Instruments'
 import { Login } from './components/Login'
-import { Positions } from './components/Positions'
+import { Portfolio } from './components/Portfolio'
 import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
 import { useTheme } from './theme'
@@ -19,14 +18,18 @@ const InstrumentDetail = lazy(() =>
 
 const THEME_LABELS = { system: 'Theme: system', light: 'Theme: light', dark: 'Theme: dark' }
 
-const PAGES = [
-  { hash: '#dashboard', label: 'Dashboard', Page: Dashboard },
+const MAIN_PAGES = [
+  { hash: '#portfolio', label: 'Portfolio', Page: Portfolio },
+  { hash: '#activity', label: 'Activity', Page: Transactions },
+]
+
+const OTHER_PAGES = [
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
-  { hash: '#transactions', label: 'Transactions', Page: Transactions },
-  { hash: '#positions', label: 'Positions', Page: Positions },
   { hash: '#instruments', label: 'Instruments', Page: Instruments },
   { hash: '#tax', label: 'Tax', Page: Tax },
 ]
+
+const PAGES = [...MAIN_PAGES, ...OTHER_PAGES]
 
 function useHash() {
   const [hash, setHash] = useState(window.location.hash)
@@ -55,7 +58,7 @@ function App() {
   const hash = useHash()
   const detail = hash.match(/^#positions\/([^/]+)\/(.+)$/)
   const instrumentDetail = hash.match(/^#instruments\/(.+)$/)
-  const parent = detail ? '#positions' : instrumentDetail ? '#instruments' : hash
+  const parent = detail ? '#portfolio' : instrumentDetail ? '#instruments' : hash
   const current = PAGES.find((page) => page.hash === parent) ?? PAGES[0]
 
   const logOut = useCallback(() => {
@@ -94,9 +97,14 @@ function App() {
     <div className="layout">
       <nav className="sidebar">
         <strong className="brand">koifolio</strong>
-        {PAGES.map((page) => (
+        {MAIN_PAGES.map((page) => (
           <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} />
         ))}
+        <div className="nav-group">
+          {OTHER_PAGES.map((page) => (
+            <NavItem key={page.hash} href={page.hash} current={page === current} label={page.label} />
+          ))}
+        </div>
         <div className="sidebar-footer">
           <div className="user">
             <span>{user.username}</span>

@@ -834,3 +834,83 @@ tr.clickable a {
   color: inherit;
   text-decoration: none;
 }
+
+.nav-group {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.87rem;
+}
+
+.header-actions.wrap {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.attention {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  margin: 1rem 0 0;
+  padding: 0.6rem 1.15rem;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.attention li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  font-size: 0.87rem;
+}
+
+.attention .signal {
+  display: inline;
+}
+
+.overview {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(16rem, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.overview-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.overview .chart-panel {
+  margin-top: 0;
+}
+
+@media (max-width: 60rem) {
+  .overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.holdings {
+  margin-top: 1.5rem;
+}
+
+.expand {
+  display: inline-block;
+  width: 1.4rem;
+  padding: 0;
+  color: var(--muted);
+  background: none;
+  border: none;
+  text-align: left;
+}
+
+.holding-account {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+}
+
+tr.sub-row td:first-child {
+  padding-left: 2.2rem;
+}

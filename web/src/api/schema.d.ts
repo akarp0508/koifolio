@@ -380,7 +380,7 @@ export interface paths {
         };
         /**
          * Totals and breakdowns in your base currency
-         * @description Converted at the latest rates. A position matches if it has any of the instrument tags and any of the position tags. Cash has no tags, so it's left out while tags filter the view.
+         * @description Converted at the latest rates. A position matches if it has any of the instrument tags and any of the position tags. Cash has no tags, so it's left out while tags filter the view. Holdings group matching positions by company. Their weight is of the chosen account, or of the whole portfolio without one, with cash in the total; tags don't change it.
          */
         get: operations["dashboard"];
         put?: never;
@@ -754,6 +754,18 @@ export interface components {
             currencyMismatch?: boolean;
             points?: components["schemas"]["HistoryPoint"][];
         };
+        AccountHoldingResponse: {
+            /** Format: uuid */
+            accountId?: string;
+            accountName?: string;
+            closed?: boolean;
+            incomplete?: boolean;
+            value?: string;
+            unrealizedGain?: string;
+            unrealizedPercent?: string;
+            realizedGain?: string;
+            weight?: string;
+        };
         AttentionResponse: {
             /** Format: uuid */
             accountId?: string;
@@ -777,6 +789,19 @@ export interface components {
             attention?: components["schemas"]["AttentionResponse"][];
             /** Format: int32 */
             unpriced?: number;
+            holdings?: components["schemas"]["HoldingResponse"][];
+        };
+        HoldingResponse: {
+            /** Format: uuid */
+            instrumentId?: string;
+            ticker?: string;
+            held?: boolean;
+            value?: string;
+            unrealizedGain?: string;
+            unrealizedPercent?: string;
+            realizedGain?: string;
+            weight?: string;
+            accounts?: components["schemas"]["AccountHoldingResponse"][];
         };
         SliceResponse: {
             label?: string;

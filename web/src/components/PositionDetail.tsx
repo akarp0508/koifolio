@@ -53,7 +53,7 @@ export function PositionDetail({ accountId, ticker }: { accountId: string; ticke
 
   return (
     <>
-      <a className="back" href="#positions">← Positions</a>
+      <a className="back" href="#portfolio">← Portfolio</a>
       <header className="page-header">
         <h1>{ticker}{account && <span className="muted"> — {account.name}</span>}</h1>
         <div className="ranges">

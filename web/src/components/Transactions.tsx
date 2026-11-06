@@ -42,7 +42,7 @@ export function Transactions() {
   return (
     <>
       <header className="page-header">
-        <h1>Transactions</h1>
+        <h1>Activity</h1>
         <button className="primary" disabled={!hasAccounts} onClick={() => setDialog({ kind: 'new' })}>
           + Transaction
         </button>
