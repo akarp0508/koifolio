@@ -4,6 +4,7 @@ import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.account.AccountService;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.instrument.InstrumentDetails;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import io.github.akarp0508.koifolio.rule.RuleService;
@@ -39,9 +40,11 @@ public class ReviewService {
     private final RuleService rules;
     private final TransactionService transactions;
     private final AccountService accounts;
+    private final BondService bonds;
 
     ReviewService(JdbcClient jdbc, JsonMapper json, AuditLog auditLog, InstrumentService instruments, RuleService rules,
-                  TransactionService transactions, AccountService accounts) {
+                  TransactionService transactions, AccountService accounts, BondService bonds) {
+        this.bonds = bonds;
         this.accounts = accounts;
         this.jdbc = jdbc;
         this.json = json;
@@ -55,7 +58,8 @@ public class ReviewService {
         COMPANY,
         RULE,
         RULE_DELETE,
-        ACCOUNT
+        ACCOUNT,
+        BOND
     }
 
     record Pending(UUID id, String agent, Kind kind, String ticker, UUID ruleId, String summary, Map<String, Object> changes,
@@ -94,6 +98,13 @@ public class ReviewService {
         String balance = input.balance() == null ? "0" : input.balance().toPlainString();
         return propose(userId, agent, Kind.ACCOUNT, null, null, json.convertValue(input, MAP),
                 "Create account %s (%s, balance %s)".formatted(input.name().strip(), input.currency(), balance));
+    }
+
+    @Transactional
+    public Proposed proposeBond(UUID userId, String agent, BondService.Input input) {
+        bonds.check(userId, input);
+        return propose(userId, agent, Kind.BOND, null, null, json.convertValue(input, MAP),
+                "Add %d %s bonds".formatted(input.quantity(), input.series()));
     }
 
     @Transactional
@@ -144,7 +155,7 @@ public class ReviewService {
             }).orElse(Map.of());
             case RULE, RULE_DELETE -> pending.ruleId() == null ? Map.of()
                     : rules.lookUp(userId, pending.ruleId()).<Map<String, Object>>map(input -> json.convertValue(input, MAP)).orElse(Map.of());
-            case ACCOUNT -> Map.of();
+            case ACCOUNT, BOND -> Map.of();
         };
     }
 
@@ -193,6 +204,7 @@ public class ReviewService {
             }
             case RULE_DELETE -> rules.delete(userId, pending.ruleId(), agent);
             case ACCOUNT -> accounts.create(userId, convert(pending.changes(), AccountService.Input.class), agent);
+            case BOND -> bonds.create(userId, convert(pending.changes(), BondService.Input.class), agent);
         }
         decide(userId, pending, "approve", "Approved: ");
     }
@@ -241,6 +253,7 @@ public class ReviewService {
                 }
             }
             case "account" -> accounts.deleteUnused(userId, entry.entityId());
+            case "bond" -> bonds.delete(userId, entry.entityId(), Actor.USER);
             default -> throw new IllegalStateException(entry.entityType());
         }
         auditLog.markReverted(entryId);

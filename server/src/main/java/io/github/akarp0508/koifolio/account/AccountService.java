@@ -5,6 +5,7 @@ import io.github.akarp0508.koifolio.ApiException;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.domain.CostMethod;
 import io.github.akarp0508.koifolio.position.PositionService;
 import io.github.akarp0508.koifolio.rule.RuleService;
@@ -30,9 +31,11 @@ public class AccountService {
     private final TransactionService transactions;
     private final PositionService positions;
     private final RuleService rules;
+    private final BondService bonds;
 
     AccountService(AccountRepository accounts, AuthService authService, AuditLog auditLog, TransactionService transactions,
-                   PositionService positions, RuleService rules) {
+                   PositionService positions, RuleService rules, BondService bonds) {
+        this.bonds = bonds;
         this.accounts = accounts;
         this.authService = authService;
         this.auditLog = auditLog;
@@ -80,7 +83,8 @@ public class AccountService {
     /** Undoes an agent's account. Deleting one erases its transactions, so one that has any stays. */
     @Transactional
     public void deleteUnused(UUID userId, UUID id) {
-        if (transactions.exportAll(userId).stream().anyMatch(found -> id.equals(found.accountId()))) {
+        if (transactions.exportAll(userId).stream().anyMatch(found -> id.equals(found.accountId()))
+                || bonds.exportAll(userId).stream().anyMatch(found -> id.equals(found.accountId()))) {
             throw new ApiException(HttpStatus.CONFLICT, "account_in_use",
                     "This account has transactions, so it can't be reverted. You can delete it from Accounts, which erases them.");
         }
@@ -127,6 +131,7 @@ public class AccountService {
         before.put("transactions", itsTransactions);
         before.put("plans", positions.exportPlans(userId).stream().filter(plan -> id.equals(plan.accountId())).toList());
         before.put("rules", rules.exportAll(userId).stream().filter(rule -> id.equals(rule.accountId())).toList());
+        before.put("bonds", bonds.exportAll(userId).stream().filter(bond -> id.equals(bond.accountId())).toList());
         log(userId, Actor.USER, account, "delete", "Deleted account %s with %d transactions".formatted(account.getName(), itsTransactions.size()),
                 before, null);
         accounts.delete(account);

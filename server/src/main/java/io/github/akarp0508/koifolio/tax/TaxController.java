@@ -96,6 +96,8 @@ class TaxController {
     record DividendAccountLine(UUID accountId, String name, String gross, String withheld, String taxLeft) {
     }
 
+    /** @param instrumentId left out for a bond, whose ticker is its series */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     record OpenGain(UUID accountId, String accountName, UUID instrumentId, String ticker, String gain) {
     }
 

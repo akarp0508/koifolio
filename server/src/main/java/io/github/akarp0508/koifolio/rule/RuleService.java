@@ -7,6 +7,7 @@ import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.domain.RuleCheck;
 import io.github.akarp0508.koifolio.domain.RuleType;
 import io.github.akarp0508.koifolio.position.PositionService;
@@ -33,15 +34,17 @@ public class RuleService {
     private final PositionService positions;
     private final FxService fx;
     private final AuditLog auditLog;
+    private final BondService bonds;
 
     RuleService(RuleRepository rules, AccountRepository accounts, AuthService authService, PositionService positions,
-                FxService fx, AuditLog auditLog) {
+                FxService fx, AuditLog auditLog, BondService bonds) {
         this.rules = rules;
         this.accounts = accounts;
         this.authService = authService;
         this.positions = positions;
         this.fx = fx;
         this.auditLog = auditLog;
+        this.bonds = bonds;
     }
 
     /** @param unpriced open positions left out of the check, lacking a price or an FX rate */
@@ -148,6 +151,8 @@ public class RuleService {
         List<Account> owned = accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId);
         List<Position> open = positions.list(userId).stream().filter(position -> !position.result().isClosed()).toList();
 
+        // Bonds are low risk and count like cash here
+        Map<UUID, BigDecimal> bondValues = bonds.valueByAccount(userId);
         List<Checked> results = new ArrayList<>();
         for (Rule rule : list(userId)) {
             UUID accountId = rule.getAccountId();
@@ -168,11 +173,11 @@ public class RuleService {
 
             BigDecimal cash = BigDecimal.ZERO;
             for (Account account : owned) {
+                BigDecimal safe = account.getBalance().add(bondValues.getOrDefault(account.getId(), BigDecimal.ZERO));
                 if (accountId == null) {
-                    cash = cash.add(rates.convert(account.getBalance(), account.getCurrency(), base).orElse(BigDecimal.ZERO),
-                            MathContext.DECIMAL128);
+                    cash = cash.add(rates.convert(safe, account.getCurrency(), base).orElse(BigDecimal.ZERO), MathContext.DECIMAL128);
                 } else if (account.getId().equals(accountId)) {
-                    cash = account.getBalance();
+                    cash = safe;
                 }
             }
             RuleCheck check = rule.getType() == RuleType.MAX_POSITION_WEIGHT

@@ -3,10 +3,12 @@ package io.github.akarp0508.koifolio.tax;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.domain.Dividend;
 import io.github.akarp0508.koifolio.domain.TaxEstimate;
 import io.github.akarp0508.koifolio.position.PositionService;
 import io.github.akarp0508.koifolio.position.PositionService.Position;
+import io.github.akarp0508.koifolio.price.FxService;
 import java.math.BigDecimal;
 import java.math.MathContext;
 import java.time.LocalDate;
@@ -30,8 +32,12 @@ class TaxService {
     private final AuthService authService;
     private final PositionService positions;
     private final AccountRepository accounts;
+    private final BondService bonds;
+    private final FxService fx;
 
-    TaxService(AuthService authService, PositionService positions, AccountRepository accounts) {
+    TaxService(AuthService authService, PositionService positions, AccountRepository accounts, BondService bonds, FxService fx) {
+        this.bonds = bonds;
+        this.fx = fx;
         this.authService = authService;
         this.positions = positions;
         this.accounts = accounts;
@@ -52,6 +58,7 @@ class TaxService {
     @Transactional(readOnly = true)
     Estimate estimate(UUID userId, Integer requestedYear) {
         String base = authService.currentUser(userId).getBaseCurrency();
+        FxService.Rates rates = fx.rates();
         int thisYear = LocalDate.now(ZONE).getYear();
         int year = requestedYear == null ? thisYear : requestedYear;
         boolean currentYear = year == thisYear;
@@ -69,6 +76,15 @@ class TaxService {
                 gain.ifPresent(amount -> {
                     unrealized.merge(position.account().getId(), amount, (a, b) -> a.add(b, MathContext.DECIMAL128));
                     open.add(new OpenPosition(position.account(), position.instrument().id(), position.ticker(), amount));
+                });
+            }
+        }
+
+        if (currentYear) {
+            for (BondService.Valued bond : bonds.list(userId)) {
+                rates.convert(bond.interest(), BondService.CURRENCY, base).ifPresent(amount -> {
+                    unrealized.merge(bond.account().getId(), amount, (a, b) -> a.add(b, MathContext.DECIMAL128));
+                    open.add(new OpenPosition(bond.account(), null, bond.series(), amount));
                 });
             }
         }

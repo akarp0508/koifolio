@@ -50,7 +50,7 @@ class DashboardController {
 
     @GetMapping("/history")
     @Operation(summary = "Portfolio value over time, and changes over 1D to 1Y", description = """
-            Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is \
+            Same filters as the dashboard, positions and bonds. Each day uses that day's FX rates. A change is \
             what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax \
             withheld.""")
     PortfolioHistoryResponse history(@AuthenticationPrincipal Jwt jwt,
@@ -90,6 +90,8 @@ class DashboardController {
      * @param currencyGain the part of unrealizedGain from exchange rates, for accounts in another currency
      * @param dividends received, net of tax withheld, each at its own date's rate
      * @param dividendsWithheld tax withheld from them
+     * @param bondsValue bonds at today's accrued value, part of value, zero while a company or tags filter the view
+     * @param bondsGain the interest accrued on them
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings per company, biggest first, with sold ones marked by held being false
      * @param unvalidated agent transactions waiting for review, across all accounts
@@ -98,7 +100,7 @@ class DashboardController {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record DashboardResponse(String currency, String value, String positionsValue, String unrealizedGain,
                              String currencyGain, String unrealizedPercent, String realizedGain, String dividends,
-                             String dividendsWithheld, String cash, List<SliceResponse> bySector,
+                             String dividendsWithheld, String bondsValue, String bondsGain, String cash, List<SliceResponse> bySector,
                              List<SliceResponse> byRisk, List<AttentionResponse> attention, int unpriced,
                              List<HoldingResponse> holdings, int unvalidated, int pendingChanges) {
 
@@ -106,7 +108,8 @@ class DashboardController {
             String currency = d.currency();
             return new DashboardResponse(currency, money(d.value(), currency), money(d.positionsValue(), currency),
                     money(d.unrealizedGain(), currency), money(d.currencyGain(), currency), d.gainPercent().map(DashboardResponse::percent).orElse(null),
-                    money(d.realizedGain(), currency), money(d.dividends(), currency), money(d.dividendsWithheld(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
+                    money(d.realizedGain(), currency), money(d.dividends(), currency), money(d.dividendsWithheld(), currency), money(d.bondsValue(), currency),
+                    money(d.bondsGain(), currency), d.cash().map(cash -> money(cash, currency)).orElse(null),
                     slices(d.bySector(), currency), slices(d.byRisk(), currency),
                     d.attention().stream().map(AttentionResponse::of).toList(), d.unpriced(),
                     d.holdings().stream().map(holding -> HoldingResponse.of(holding, currency)).toList(), d.unvalidated(), d.pendingChanges());

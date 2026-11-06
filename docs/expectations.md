@@ -25,7 +25,7 @@ Last reviewed: 2026-11-06.
 | Automatic prices, FX | ✅ Done, for the covered markets |
 | Value history | ✅ Done, with backfill built in |
 | Average and FIFO cost per account | ✅ Done |
-| Bonds: one generic model, Polish series as presets | ❌ Not built |
+| Bonds: one generic model, Polish series as presets | 🟡 Polish TOS, ROS, EDO and ROD are built, without redemption. COI, ROR, DOR and OTS aren't |
 | Tax estimates per account | ✅ Done, as an estimate on sales and dividends |
 | Splits | ✅ Done; spin-offs aren't |
 | Purchase-date FX, with currency gains separated | ✅ Done |

@@ -35,7 +35,9 @@ price_overrides     user_id, instrument_id, price, currency, set_at
 audit_log           id, user_id, actor_type (user | agent), actor_name, entity_type, entity_id,
                     action, summary, before (jsonb), after (jsonb), created_at, reverted_at
 
-pending_changes     id, user_id, agent_name, kind (company, rule, rule delete, account), ticker, rule_id, changes (jsonb), summary, created_at
+bond_lots           id, user_id, account_id, series, quantity, purchase_date, rates, early_fee, affects_balance, created_at
+
+pending_changes     id, user_id, agent_name, kind (company, rule, rule delete, account, bond), ticker, rule_id, changes (jsonb), summary, created_at
 
 agent_tokens        id, user_id, name, token_hash, scopes, expires_on, last_used_at, created_at
                     UNIQUE (user_id, name)

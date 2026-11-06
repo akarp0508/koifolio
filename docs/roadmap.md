@@ -31,6 +31,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 20. **Dividend income** (done): dividends in returns and the chart, net of tax withheld, and what's left to pay on the Tax page.
 21. **MCP read tools** (done): agent tokens on the profile page, and read tools at `/mcp`.
 22. **MCP writes** (done): agents add transactions and propose company and rule changes, per token. Everything waits on a Review page, with approve and reject one at a time or all together, a change log of who changed what, and a revert for approved changes. Deleted transactions are kept out of the numbers but not erased.
+23. **Polish bonds** (done): TOS, ROS, EDO and ROD valued daily from their terms, checked against official tables, and counted in totals, weights, rules, the chart and the tax estimate.
 
 ## Current focus: extending the site
 
@@ -48,7 +49,7 @@ Rough priorities, to be picked one batch at a time:
 **Broader coverage**
 
 - **Broker import,** which backfill really needs
-- **Bonds:** the largest single item, so it gets a batch of its own
+- **More bonds:** COI, ROR, DOR and OTS, redemption, and rates fetched automatically
 - **Manual prices,** for what the source doesn't cover
 - **PL / EN** interface
 - Mobile polish

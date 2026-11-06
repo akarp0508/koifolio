@@ -7,6 +7,7 @@ import io.github.akarp0508.koifolio.audit.Actor;
 import io.github.akarp0508.koifolio.audit.AuditLog;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.auth.User;
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.domain.DailyClose;
 import io.github.akarp0508.koifolio.domain.DatedTrade;
 import io.github.akarp0508.koifolio.domain.Dividend;
@@ -61,11 +62,13 @@ public class PositionService {
     private final PositionPlanRepository plans;
     private final FxService fx;
     private final AuditLog auditLog;
+    private final BondService bonds;
 
     PositionService(AuthService authService, AccountRepository accounts, TransactionService transactions,
                     InstrumentService instruments, PriceService prices, PriceHistoryService priceHistory,
-                    PositionPlanRepository plans, FxService fx, AuditLog auditLog) {
+                    PositionPlanRepository plans, FxService fx, AuditLog auditLog, BondService bonds) {
         this.auditLog = auditLog;
+        this.bonds = bonds;
         this.authService = authService;
         this.accounts = accounts;
         this.transactions = transactions;
@@ -205,13 +208,15 @@ public class PositionService {
         FxService.Rates rates = fx.rates();
         BigDecimal allCash = BigDecimal.ZERO;
         Map<Position, BigDecimal> ofAccount = new HashMap<>();
+        Map<UUID, BigDecimal> bondValues = bonds.valueByAccount(userId);
         for (Account account : accounts.findByUserIdOrderByCreatedAtAscIdAsc(userId)) {
-            allCash = allCash.add(rates.convert(account.getBalance(), account.getCurrency(), base).orElse(BigDecimal.ZERO),
+            BigDecimal cashAndBonds = account.getBalance().add(bondValues.getOrDefault(account.getId(), BigDecimal.ZERO));
+            allCash = allCash.add(rates.convert(cashAndBonds, account.getCurrency(), base).orElse(BigDecimal.ZERO),
                     MathContext.DECIMAL128);
             Map<Position, BigDecimal> values = new HashMap<>();
             positions.stream().filter(position -> position.account().getId().equals(account.getId()))
                     .forEach(position -> position.value().ifPresent(value -> values.put(position, value)));
-            ofAccount.putAll(Weights.of(values, account.getBalance()));
+            ofAccount.putAll(Weights.of(values, cashAndBonds));
         }
 
         Map<Position, BigDecimal> values = new HashMap<>();

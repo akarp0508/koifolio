@@ -83,8 +83,13 @@ final class BackupFormat {
     record RuleEntry(RuleType type, String account, BigDecimal limitPercent, Integer maxRisk) {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record BondEntry(String account, String series, int quantity, LocalDate purchaseDate, List<BigDecimal> rates, BigDecimal earlyFee,
+                     boolean affectsBalance) {
+    }
+
     record Backup(Manifest manifest, List<AccountEntry> accounts, Map<String, List<TransactionEntry>> transactions,
-                  List<CompanyEntry> companies, List<PlanEntry> plans, List<RuleEntry> rules) {
+                  List<CompanyEntry> companies, List<PlanEntry> plans, List<RuleEntry> rules, List<BondEntry> bonds) {
     }
 
     /** The file can't be read as an export. The message says what to fix. */
@@ -102,6 +107,7 @@ final class BackupFormat {
             entry(zip, "accounts.yaml", YAML.writeValueAsString(backup.accounts()));
             entry(zip, "plans.yaml", YAML.writeValueAsString(backup.plans()));
             entry(zip, "rules.yaml", YAML.writeValueAsString(backup.rules()));
+            entry(zip, "bonds.yaml", YAML.writeValueAsString(backup.bonds()));
             for (Map.Entry<String, List<TransactionEntry>> file : backup.transactions().entrySet()) {
                 entry(zip, "transactions/" + file.getKey() + ".jsonl", file.getValue().stream()
                         .map(JSON::writeValueAsString).collect(Collectors.joining("\n", "", "\n")));
@@ -148,7 +154,8 @@ final class BackupFormat {
         return new Backup(manifest, list(files, "accounts.yaml", new TypeReference<>() {
         }), transactions, companies, list(files, "plans.yaml", new TypeReference<>() {
         }), list(files, "rules.yaml", new TypeReference<>() {
-        }));
+        }), files.containsKey("bonds.yaml") ? list(files, "bonds.yaml", new TypeReference<>() {
+        }) : List.of());
     }
 
     private static Map<String, String> unzip(byte[] archive) {

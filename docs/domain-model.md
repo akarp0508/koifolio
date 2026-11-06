@@ -39,8 +39,8 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 ## Planned
 
-**More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend, fee and split. Still to come: `SpinOff` (moves a fraction of the cost to the new instrument), `Interest`, `CurrencyExchange`, `BondBuy` and `BondRedeem`.
+**More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend, fee and split. Still to come: `SpinOff` (moves a fraction of the cost to the new instrument), `Interest`, `CurrencyExchange`.
 
-**Bonds.** One generic model, so any bond works given its parameters: nominal, term, period, a fixed, indexed (CPI + margin) or floating (reference rate + margin) coupon, capitalized or paid interest, and an early redemption fee. Each purchase is its own lot, because interest accrues from the purchase date. Polish retail series (OTS, ROR, DOR, TOS, COI, EDO, ROS, ROD) ship as presets. Exact rules (rounding, fee limits, which CPI month applies) must be verified against official data and tested against published values before presets ship.
+**Bonds.** Polish retail bonds that capitalise yearly: TOS (3 years), ROS (6), EDO (10) and ROD (12). Each purchase is its own lot, because interest accrues from the purchase date. Value per bond is `base × (1 + rate × days / days in that year)`, rounded to the grosz, where `base` is 100 multiplied up by each finished year without rounding. That's tested against all 1,461 daily values of four Ministry of Finance tables. Older issue letters say the base is rounded, but the published tables only match if it isn't. Rates are entered, one per year, because nothing fetches them. COI, ROR and DOR pay interest out and OTS runs for months, so they aren't covered. A generic model for any bond, with presets, is still the long-term direction.
 
 **Rules.** A maximum weight per company or a minimum low-risk weight, each for one account or all. Low-risk weight counts positions at or below a risk level, plus cash. Positions with no risk set don't count as low.

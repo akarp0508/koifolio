@@ -284,6 +284,22 @@ Implemented. An estimate of tax on sales and dividends, in the base currency. No
 - `unsetAccounts` names accounts with something to tax but no rate, which aren't counted.
 - Cost, proceeds and dividends use each one's own rate, per `costFxRule`.
 
+## Bonds
+
+Implemented, for Polish TOS, ROS, EDO and ROD bonds in PLN accounts.
+
+| Request | Purpose |
+|---|---|
+| `GET /bonds` | Purchases valued today, with `value`, `interest` and `ifRedeemedToday` |
+| `POST /bonds` | Add one: `series`, `accountId`, `quantity`, `purchaseDate`, `rates`, `earlyFee`, `affectsBalance` |
+| `PUT /bonds/{id}/rates` | Replace the yearly rates |
+| `DELETE /bonds/{id}` | Remove one, putting the cost back if it affected the balance |
+
+- `series` must match the purchase date, so a TOS bought in August 2025 is `TOS0828`.
+- `earlyFee` is per bond, and only a TOS can leave it out: 1.00 from September 2024, 0.70 before. It never exceeds the interest earned, and doesn't apply from maturity.
+- `rateAssumed` means a year has no rate yet, so the last one stands in.
+- Tax isn't taken off `ifRedeemedToday`. The tax page's `totalIfSoldToday` includes bond interest at the account's rate.
+
 ## Agent tokens
 
 Implemented. Tokens for the [MCP server](mcp.md), which work there and nowhere else.

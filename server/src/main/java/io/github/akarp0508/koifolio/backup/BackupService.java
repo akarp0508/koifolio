@@ -5,9 +5,11 @@ import io.github.akarp0508.koifolio.FieldValidationException;
 import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.auth.User;
 import io.github.akarp0508.koifolio.backup.BackupFormat.AccountEntry;
 import io.github.akarp0508.koifolio.backup.BackupFormat.Backup;
+import io.github.akarp0508.koifolio.backup.BackupFormat.BondEntry;
 import io.github.akarp0508.koifolio.backup.BackupFormat.CompanyEntry;
 import io.github.akarp0508.koifolio.backup.BackupFormat.InvalidBackupException;
 import io.github.akarp0508.koifolio.backup.BackupFormat.Manifest;
@@ -54,12 +56,13 @@ class BackupService {
     private final InstrumentService instruments;
     private final PositionService positions;
     private final RuleService rules;
+    private final BondService bonds;
     private final FxService fx;
     private final JdbcClient jdbc;
     private final EntityManager entityManager;
 
     BackupService(AuthService authService, AccountRepository accounts, TransactionService transactions,
-                  InstrumentService instruments, PositionService positions, RuleService rules, FxService fx,
+                  InstrumentService instruments, PositionService positions, RuleService rules, BondService bonds, FxService fx,
                   JdbcClient jdbc, EntityManager entityManager) {
         this.authService = authService;
         this.accounts = accounts;
@@ -67,6 +70,7 @@ class BackupService {
         this.instruments = instruments;
         this.positions = positions;
         this.rules = rules;
+        this.bonds = bonds;
         this.fx = fx;
         this.jdbc = jdbc;
         this.entityManager = entityManager;
@@ -103,8 +107,11 @@ class BackupService {
         List<RuleEntry> ruleEntries = rules.exportAll(userId).stream().map(rule -> new RuleEntry(rule.type(),
                 rule.accountId() == null ? null : keys.get(rule.accountId()), plain(rule.limitPercent()), rule.maxRisk())).toList();
 
+        List<BondEntry> bondEntries = bonds.exportAll(userId).stream().map(bond -> new BondEntry(keys.get(bond.accountId()), bond.series(),
+                bond.quantity(), bond.purchaseDate(), bond.rates(), plain(bond.earlyFee()), bond.affectsBalance())).toList();
+
         Manifest manifest = new Manifest(BackupFormat.VERSION, Instant.now(), user.getBaseCurrency(), user.getCostFxRule());
-        return BackupFormat.write(new Backup(manifest, accountEntries, lines, companies, plans, ruleEntries));
+        return BackupFormat.write(new Backup(manifest, accountEntries, lines, companies, plans, ruleEntries, bondEntries));
     }
 
     /** Replaces everything in one transaction, so any problem leaves the data as it was. */
@@ -158,6 +165,14 @@ class BackupService {
                 rules.restore(userId, new RuleService.Input(rule.type(), rule.account() == null ? null : ids.get(rule.account()),
                         rule.limitPercent(), rule.maxRisk()));
             }
+            for (BondEntry bond : backup.bonds()) {
+                try {
+                    bonds.restore(userId, new BondService.Exported(ids.get(bond.account()), bond.series(), bond.quantity(), bond.purchaseDate(),
+                            bond.rates(), bond.earlyFee(), bond.affectsBalance()));
+                } catch (FieldValidationException e) {
+                    throw invalid("bonds.yaml " + bond.series() + ": " + e.getMessage());
+                }
+            }
             authService.restoreSettings(userId, backup.manifest().baseCurrency(), backup.manifest().costFxRule());
             entityManager.flush();
             return new Restored(backup.accounts().size(), restoredTransactions, backup.companies().size(),
@@ -202,6 +217,9 @@ class BackupService {
         });
         backup.plans().stream().filter(plan -> !keys.contains(plan.account())).findFirst().ifPresent(plan -> {
             throw invalid("plans.yaml: no account has the key " + plan.account());
+        });
+        backup.bonds().stream().filter(bond -> !keys.contains(bond.account())).findFirst().ifPresent(bond -> {
+            throw invalid("bonds.yaml: no account has the key " + bond.account());
         });
         backup.rules().stream().filter(rule -> rule.account() != null && !keys.contains(rule.account())).findFirst()
                 .ifPresent(rule -> {

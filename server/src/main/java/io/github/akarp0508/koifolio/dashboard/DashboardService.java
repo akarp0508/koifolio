@@ -1,5 +1,6 @@
 package io.github.akarp0508.koifolio.dashboard;
 
+import io.github.akarp0508.koifolio.bond.BondService;
 import io.github.akarp0508.koifolio.domain.Breakdown;
 import io.github.akarp0508.koifolio.domain.CompanyTotal;
 import io.github.akarp0508.koifolio.domain.Dividend;
@@ -42,9 +43,11 @@ class DashboardService {
     private final FxService fx;
     private final TransactionService transactions;
     private final ReviewService review;
+    private final BondService bonds;
 
     DashboardService(AuthService authService, PositionService positions, AccountRepository accounts, FxService fx,
-                     TransactionService transactions, ReviewService review) {
+                     TransactionService transactions, ReviewService review, BondService bonds) {
+        this.bonds = bonds;
         this.review = review;
         this.transactions = transactions;
         this.authService = authService;
@@ -96,6 +99,8 @@ class DashboardService {
      * @param gainPercent gain against the cost of priced positions, empty without any
      * @param dividends received, net of tax withheld
      * @param dividendsWithheld tax withheld from them
+     * @param bondsValue bonds at today's accrued value, part of value, zero while a company or tags filter the view
+     * @param bondsGain the interest accrued on them
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
      * @param holdings the matching positions per company, biggest first
      * @param unvalidated agent transactions waiting for review, across all accounts
@@ -103,7 +108,7 @@ class DashboardService {
      */
     record Dashboard(String currency, BigDecimal value, BigDecimal positionsValue, BigDecimal unrealizedGain,
                      BigDecimal currencyGain, Optional<BigDecimal> gainPercent, BigDecimal realizedGain, BigDecimal dividends,
-                     BigDecimal dividendsWithheld, Optional<BigDecimal> cash,
+                     BigDecimal dividendsWithheld, BigDecimal bondsValue, BigDecimal bondsGain, Optional<BigDecimal> cash,
                      List<Breakdown.Slice> bySector, List<Breakdown.Slice> byRisk, List<Attention> attention,
                      int unpriced, List<Holding> holdings, int unvalidated, int pendingChanges) {
     }
@@ -151,12 +156,28 @@ class DashboardService {
             risks.add(new Breakdown.Part(riskGroup(position.risk()), valueInBase.get()));
         }
 
+        BigDecimal bondsValue = BigDecimal.ZERO;
+        BigDecimal bondsGain = BigDecimal.ZERO;
+        if (!filter.excludesCash()) {
+            for (BondService.Valued bond : bonds.list(userId)) {
+                if (filter.account() == null || bond.account().getId().equals(filter.account())) {
+                    Optional<BigDecimal> inBase = rates.convert(bond.value(), BondService.CURRENCY, base);
+                    if (inBase.isPresent()) {
+                        bondsValue = add(bondsValue, inBase.get());
+                        bondsGain = add(bondsGain, rates.convert(bond.interest(), BondService.CURRENCY, base).orElseThrow());
+                        sectors.add(new Breakdown.Part(Optional.of("Bonds"), inBase.get()));
+                        risks.add(new Breakdown.Part(Optional.of("1-2"), inBase.get()));
+                    }
+                }
+            }
+        }
+
         Optional<BigDecimal> cash = filter.excludesCash() ? Optional.empty() : Optional.of(cash(userId, filter, rates, base));
         BigDecimal gain = value.subtract(cost, MathContext.DECIMAL128);
         Optional<BigDecimal> percent = cost.signum() == 0 ? Optional.empty()
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));
-        return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized,
-                Dividend.total(dividends, Dividend::net), Dividend.total(dividends, Dividend::withheld), cash, Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced, holdings(matching, weights, filter),
+        return new Dashboard(base, add(add(value, bondsValue), cash.orElse(BigDecimal.ZERO)), value, gain, currencyGain, percent, realized,
+                Dividend.total(dividends, Dividend::net), Dividend.total(dividends, Dividend::withheld), bondsValue, bondsGain, cash, Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced, holdings(matching, weights, filter),
                 transactions.countUnvalidated(userId), review.count(userId));
     }
 
@@ -207,8 +228,19 @@ class DashboardService {
                         .toList())
                 .toList();
         List<Dividend> dividends = matching.stream().flatMap(position -> position.dividendsInBase().stream()).toList();
-        List<PortfolioHistory.Point> totals = PortfolioHistory.withDividends(PortfolioHistory.total(series), dividends);
         LocalDate today = LocalDate.now(PriceHistoryService.MARKET_ZONE);
+        List<List<PortfolioHistory.Point>> all = new ArrayList<>(series);
+        if (!filter.excludesCash()) {
+            bonds.list(userId).stream()
+                    .filter(bond -> filter.account() == null || bond.account().getId().equals(filter.account()))
+                    .forEach(bond -> all.add(bonds.points(bond, today).stream()
+                            .flatMap(point -> rates.convert(point.value(), BondService.CURRENCY, base, point.date())
+                                    .flatMap(value -> rates.convert(point.cost(), BondService.CURRENCY, base, bond.purchaseDate())
+                                            .map(cost -> new PortfolioHistory.Point(point.date(), value, cost, BigDecimal.ZERO)))
+                                    .stream())
+                            .toList()));
+        }
+        List<PortfolioHistory.Point> totals = PortfolioHistory.withDividends(PortfolioHistory.total(all), dividends);
         return new History(base, totals, PortfolioHistory.changes(totals, today));
     }
 

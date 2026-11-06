@@ -31,7 +31,7 @@
 - **Accounts own lots and cash.** An account has a name, a free-form description, a currency and a cost method. There are no fixed account types.
 - **Cost basis:** `average` or `fifo`, set per account, average by default. Changing it recalculates positions.
 - **Positions are calculated on each request,** in the `domain` package, not stored. One per account and ticker. A sale past the shares on record counts only the shares with a known cost, and the position is marked `incomplete`.
-- **Bonds:** one generic model, with Polish retail series as presets.
+- **Bonds:** Polish yearly-capitalising series only for now, valued from their terms and held apart from transactions. They count in totals, weights, the chart and the tax estimate, and as low risk in rules. Rates are entered by hand. Redemption isn't modelled: a matured bond keeps its final value until it's removed. The aim is still one generic model with Polish series as presets.
 - **Base currency:** configurable, default PLN.
 - **Transactions are edited in place and soft-deleted.** Each edit keeps its old values in the change log, and deleted ones stay in the database, out of every number and out of exports. A restore erases them for good, along with everything else it replaces.
 - **The change log covers transactions, companies, rules, accounts and plans,** from either you or an agent. Settings, tokens and restores aren't logged. It isn't part of an export, and a restore leaves it alone.
