@@ -38,8 +38,10 @@ Implemented.
 
 | Request | Purpose |
 |---|---|
-| `GET /settings` | `{"baseCurrency": "PLN", "currencies": ["AUD", "…"]}`: the base currency and those with a rate |
-| `PATCH /settings` | `{"baseCurrency": "USD"}`; a currency with no rate gives `400 unknown_currency` |
+| `GET /settings` | `{"baseCurrency": "PLN", "costFxRule": "previous_publication", "currencies": ["AUD", "…"]}` |
+| `PATCH /settings` | Change `baseCurrency` or `costFxRule`; a currency with no rate gives `400 unknown_currency` |
+
+`costFxRule` picks the rate that converts a trade: `previous_publication` (the last before it, the Polish tax rule) or `transaction_date`.
 
 ## Accounts
 
@@ -165,6 +167,7 @@ Implemented. Worked out from buys and sells on every request; nothing is stored.
 - `cost` and `realizedGain` include fees. Dividends aren't part of realized gain.
 - `incomplete` means a sale exceeded the shares on record. Realized gain then counts only shares with a known cost, and the position always shows, even if nothing is held.
 - `averageCost` is left out once nothing is held.
+- `inBase` repeats cost, realized, value and gain in the base currency, with `currencyGain`, and is left out when the account already uses it.
 - Price fields are left out when there's no price, or nothing is held. A price in another currency is converted to the account's at the latest rate; without a rate, `currencyMismatch` is set and `value` and the gains are left out.
 
 | `GET /positions/{accountId}/{ticker}/details` | The company and your plan together |
@@ -215,6 +218,7 @@ Implemented.
   "value": "3400.00",
   "positionsValue": "2000.00",
   "unrealizedGain": "600.00",
+  "currencyGain": "100.00",
   "unrealizedPercent": "42.9",
   "realizedGain": "80.00",
   "cash": "1400.00",
@@ -225,7 +229,8 @@ Implemented.
 }
 ```
 
-- Everything is in the base currency, at the latest rates. Cost isn't kept at purchase-date rates, so an account in a foreign currency shows its gain at today's rate.
+- Value and cash are at the latest rates. Cost and realized gains use each trade's own rate, per `costFxRule`.
+- `currencyGain` is the part of `unrealizedGain` from rates moving: cost at today's rate minus cost at purchase rates. It covers accounts in another currency than the base. A foreign stock in a base-currency account has its currency effect inside the stock's gain, because its cost was entered in that currency.
 - A position matches if it has any of the wanted instrument tags, and any of the wanted position tags. The two kinds and the account must all match.
 - `cash` is left out while tags filter the view, because cash has no tags.
 - Slices with no `label` have no sector or risk set. Risk groups are `1-2`, `3` and `4-5`, using the plan's risk if set.
@@ -241,7 +246,7 @@ History response:
 }
 ```
 
-- Positions only, without cash. Each day converts at that day's rate, using the last one published.
+- Positions only, without cash. Value uses each day's rate, and cost and realized gains each trade's own.
 - `gain` is value − cost + realized, and a change is how much `gain` moved. Deposits, buys and sells therefore don't count as profit or loss.
 - `period` is `DAY`, `WEEK`, `MONTH`, `YEAR_TO_DATE` or `YEAR`, compared with the last point before the period starts. Periods reaching further back than the history are left out, and `percent` is of the value at the start.
 - Positions without prices or any rate are left out.

@@ -17,7 +17,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 ## Calculation rules
 
-**Cost.** Buy fees raise cost, and sell fees reduce proceeds. Cost stays in the account's currency.
+**Cost.** Buy fees raise cost, and sell fees reduce proceeds. In the account's currency it's as entered. In the base currency, each trade converts at its own rate first, then the same calculator runs, so lots, FIFO, fees and splits all follow. `CostFxRule` picks the rate's date.
 
 **Splits.** A split multiplies every lot's quantity and leaves its cost alone, so FIFO lots stay apart. Closes are split-adjusted by the source, so `PositionHistory` scales a close up by every split dated after it, giving what the shares really traded at.
 
@@ -27,7 +27,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 **Period changes.** A change is how much the gain moved, where gain is value − cost + realized, so deposits, buys and sells aren't profit.
 
-**Currency.** Prices in another currency convert to the account's. Totals convert to the user's base currency at the latest rate, and history at each day's rate. NBP quotes against PLN, so other pairs are cross rates through PLN.
+**Currency.** Prices in another currency convert to the account's. Value converts to the user's base currency at the latest rate, and history at each day's rate. Currency gain is cost at today's rate minus cost at purchase rates. NBP quotes against PLN, so other pairs are cross rates through PLN.
 
 **Plan signals.** Near means within 5% of a level, and the stop wins if both apply.
 
@@ -35,7 +35,7 @@ Plain Java with no Spring, no I/O and no users. Services load data and pass it i
 
 **More transaction types.** Today's types are deposit, withdrawal, buy, sell, dividend, fee and split. Still to come: `SpinOff` (moves a fraction of the cost to the new instrument), `Interest`, `CurrencyExchange`, `BondBuy` and `BondRedeem`.
 
-**Tax.** Set per account, with a method and a rate. Unrealized is gain × rate per position, with no tax on losses. Realized is summed per calendar year and account, with losses offsetting gains in that year, and no carry-forward. The cost FX date is a setting: the last rate before the transaction by default (the Polish tax rule), or the transaction date. An early version is on the `domain-replay-wip` branch.
+**Tax.** Set per account, with a method and a rate. Unrealized is gain × rate per position, with no tax on losses. Realized is summed per calendar year and account, with losses offsetting gains in that year, and no carry-forward. An early version is on the `domain-replay-wip` branch.
 
 **Bonds.** One generic model, so any bond works given its parameters: nominal, term, period, a fixed, indexed (CPI + margin) or floating (reference rate + margin) coupon, capitalized or paid interest, and an early redemption fee. Each purchase is its own lot, because interest accrues from the purchase date. Polish retail series (OTS, ROR, DOR, TOS, COI, EDO, ROS, ROD) ship as presets. Exact rules (rounding, fee limits, which CPI month applies) must be verified against official data and tested against published values before presets ship.
 

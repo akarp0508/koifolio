@@ -24,6 +24,14 @@ const PERIOD_LABELS: Record<NonNullable<PeriodChange['period']>, string> = {
   YEAR: '1Y',
 }
 
+function gainNote(dashboard: DashboardData) {
+  const percent = dashboard.unrealizedPercent && `${formatGain(dashboard.unrealizedPercent)}%`
+  const currency = dashboard.currencyGain && gainClass(dashboard.currencyGain)
+    ? `currency ${formatGain(dashboard.currencyGain)}`
+    : undefined
+  return [percent, currency].filter(Boolean).join(' · ') || undefined
+}
+
 function Tile({ label, children, note, tone = '' }: {
   label: string
   children: ReactNode
@@ -109,8 +117,8 @@ export function Dashboard() {
       .catch((e: ApiError) => setError(e))
   }, [])
 
-  function changeBase(baseCurrency: string) {
-    api.updateSettings(baseCurrency)
+  function changeSettings(changes: Parameters<typeof api.updateSettings>[0]) {
+    api.updateSettings(changes)
       .then((updated) => {
         setSettings(updated)
         return fetchDashboard()
@@ -127,12 +135,24 @@ export function Dashboard() {
       <header className="page-header">
         <h1>Dashboard</h1>
         {settings && (
-          <label className="filter-check">
-            Base currency
-            <select value={settings.baseCurrency} onChange={(e) => changeBase(e.target.value)}>
-              {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
-            </select>
-          </label>
+          <div className="header-actions">
+            <label className="filter-check">
+              Base currency
+              <select value={settings.baseCurrency} onChange={(e) => changeSettings({ baseCurrency: e.target.value })}>
+                {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
+              </select>
+            </label>
+            <label className="filter-check" title="Which day's exchange rate converts a buy or sell to the base currency">
+              Trade FX rate
+              <select
+                value={settings.costFxRule}
+                onChange={(e) => changeSettings({ costFxRule: e.target.value as Settings['costFxRule'] })}
+              >
+                <option value="previous_publication">Day before (Polish tax)</option>
+                <option value="transaction_date">Trade date</option>
+              </select>
+            </label>
+          </div>
         )}
       </header>
 
@@ -163,8 +183,7 @@ export function Dashboard() {
         <>
           <div className="tiles">
             <Tile label="Value">{formatAmount(dashboard.value)} {currency}</Tile>
-            <Tile label="P/L" tone={gainClass(dashboard.unrealizedGain)}
-                  note={dashboard.unrealizedPercent && `${formatGain(dashboard.unrealizedPercent)}%`}>
+            <Tile label="P/L" tone={gainClass(dashboard.unrealizedGain)} note={gainNote(dashboard)}>
               {formatGain(dashboard.unrealizedGain)} {currency}
             </Tile>
             <Tile label="Realized" tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>

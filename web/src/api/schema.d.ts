@@ -242,7 +242,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change your base currency */
+        /**
+         * Change your settings
+         * @description Send only what changes.
+         */
         patch: operations["update_2"];
         trace?: never;
     };
@@ -603,10 +606,14 @@ export interface components {
         };
         SettingsRequest: {
             /** @example PLN */
-            baseCurrency: string;
+            baseCurrency?: string;
+            /** @enum {string} */
+            costFxRule?: "previous_publication" | "transaction_date";
         };
         SettingsResponse: {
             baseCurrency?: string;
+            /** @enum {string} */
+            costFxRule?: "previous_publication" | "transaction_date";
             currencies?: string[];
         };
         UpdateAccountRequest: {
@@ -628,6 +635,14 @@ export interface components {
             /** Format: int32 */
             splitTo?: number;
             accounts?: string[];
+        };
+        InBase: {
+            currency?: string;
+            cost?: string;
+            realizedGain?: string;
+            value?: string;
+            gain?: string;
+            currencyGain?: string;
         };
         PositionResponse: {
             /** Format: uuid */
@@ -657,6 +672,7 @@ export interface components {
             signal?: "STOP_HIT" | "TARGET_REACHED" | "NEAR_STOP" | "NEAR_TARGET";
             instrumentTags?: string[];
             positionTags?: string[];
+            inBase?: components["schemas"]["InBase"];
         };
         HistoryPoint: {
             /** Format: date */
@@ -690,6 +706,7 @@ export interface components {
             value?: string;
             positionsValue?: string;
             unrealizedGain?: string;
+            currencyGain?: string;
             unrealizedPercent?: string;
             realizedGain?: string;
             cash?: string;

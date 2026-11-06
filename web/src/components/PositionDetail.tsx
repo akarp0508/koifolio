@@ -84,6 +84,17 @@ export function PositionDetail({ accountId, ticker }: { accountId: string; ticke
         </div>
       )}
 
+      {position?.inBase?.gain && (
+        <p className="muted">
+          In {position.inBase.currency}: {formatAmount(position.inBase.value ?? '')}, P/L{' '}
+          <span className={gainClass(position.inBase.gain)}>{formatGain(position.inBase.gain)}</span>
+          {position.inBase.currencyGain && gainClass(position.inBase.currencyGain) && (
+            <>, of which currency <span className={gainClass(position.inBase.currencyGain)}>
+              {formatGain(position.inBase.currencyGain)}</span></>
+          )}
+        </p>
+      )}
+
       {history && !history.covered && (
         <p className="muted">No price history: the price source doesn't cover this ticker.</p>
       )}

@@ -28,7 +28,7 @@ Last reviewed: 2026-11-06.
 | Bonds: one generic model, Polish series as presets | ❌ Not built |
 | Tax estimates per account | ❌ Not built; an early version is on the `domain-replay-wip` branch |
 | Splits | ✅ Done; spin-offs aren't |
-| Purchase-date FX, with currency gains separated | ❌ Not built |
+| Purchase-date FX, with currency gains separated | ✅ Done |
 | Editing transactions without losing history | ❌ Edits are in place until the audit log exists |
 | Manual prices | ❌ Not built |
 | PL / EN interface | ❌ English only |

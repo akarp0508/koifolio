@@ -21,6 +21,7 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 10. **Dashboard** (done): home page with totals in a base currency, sector and risk breakdowns, an attention list, and filters by account and two kinds of tags. NBP rates.
 11. **Portfolio chart** (done): value over time, 1D to 1Y changes, gain and loss colours, and FX history.
 12. **Splits** (done): split transactions, with past values corrected, and detected splits suggested on the dashboard.
+13. **Purchase-date FX** (done): cost and realized gains at each trade's rate, currency gain shown separately, and the rate date as a setting.
 
 ## Current focus: extending the site
 
@@ -31,7 +32,6 @@ Rough priorities, to be picked one batch at a time:
 **Numbers you can trust**
 
 - **Spin-offs:** moving part of the cost to a new instrument
-- **Purchase-date FX:** cost at the rate of each buy, currency gains shown separately, and the cost FX setting
 - **Tax estimates** per account. An early version is on the `domain-replay-wip` branch
 
 **Promised features**
