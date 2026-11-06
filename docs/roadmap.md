@@ -21,17 +21,40 @@ The MVP is complete once step 4 is tested. Scope for each step is agreed when we
 10. **Dashboard** (done): home page with totals in a base currency, sector and risk breakdowns, an attention list, and filters by account and two kinds of tags. NBP rates.
 11. **Portfolio chart** (done): value over time, 1D to 1Y changes, gain and loss colours, and FX history.
 
-## After the MVP
+## Current focus: extending the site
 
-The rest of the plans in this folder describe where the app may go, not a commitment. Rough order:
+We're building a website only for now. Deployment and MCP wait until later, and [expectations.md](expectations.md) keeps track of what they were meant to be.
 
-- **Purchase-date FX:** cost at the rate of each buy, currency gains shown separately, and the cost FX setting. Tax estimates are on the `domain-replay-wip` branch.
-- Manual prices, for what the source doesn't cover
-- **Split transactions:** price history is split-adjusted, so a position held through a split shows wrong past values until splits can be entered
-- More web UI, with each screen's look agreed first
-- Daily snapshots
-- MCP server and audit log: agents writing company analysis builds on the instrument fields
-- Bonds, rules
-- Backfill, export/import, git backup, passkeys
-- Risk & scenarios view, rule checks with explanations
-- Rate limiting on login and registration: required before the app is exposed publicly
+Rough priorities, to be picked one batch at a time:
+
+**Numbers you can trust**
+
+- **Split transactions,** and spin-offs: price history is split-adjusted, so a position held through a split shows wrong past values until splits can be entered
+- **Purchase-date FX:** cost at the rate of each buy, currency gains shown separately, and the cost FX setting
+- **Tax estimates** per account. An early version is on the `domain-replay-wip` branch
+
+**Promised features**
+
+- **Rules,** pass/fail on the dashboard, such as "max 20% in one company" and "~50% in low-risk"
+- **Plain-text export,** then import
+- **Weights** on positions
+
+**Broader coverage**
+
+- **Broker import,** which backfill really needs
+- **Bonds:** the largest single item, so it gets a batch of its own
+- **Manual prices,** for what the source doesn't cover
+- **PL / EN** interface
+- Mobile polish
+
+## Deferred, on purpose
+
+Not being worked on. Pick these up when the site is where it should be.
+
+- **Deployment:** private remote and CI, the Pi over Tailscale, scheduled backups with a restore test
+- **MCP server and audit log.** Agents writing company analysis builds on the instrument fields. Revisions and soft delete for transactions come with the audit log
+- **Hosting for others:** rate limiting on login and registration (required before exposing the app publicly), signup controls, passkeys, GDPR
+
+## Ideas for later
+
+Risk and scenarios view, rule checks with explanations, agent skills, an earnings calendar.

@@ -2,6 +2,8 @@
 
 ## Settled
 
+- **Website first.** Deployment and MCP are deferred on purpose, and the focus is extending the site. See [roadmap.md](roadmap.md) and [expectations.md](expectations.md).
+
 - **MVP first, one feature at a time:** login, then balance info, then transactions. See [roadmap.md](roadmap.md). Decisions below that go beyond the MVP are direction, not current scope.
 - **Web UI:** clean and minimal, one koi-orange accent, light/dark following the system with a toggle. Plain CSS with theme variables, no UI framework or router yet; both can be added when there's a need. English only for now; PL/EN comes later.
 - **The web token is kept in `localStorage`,** so a login survives closing the tab. That exposes it to any script on the page, which is why the app loads no third-party scripts.
@@ -16,9 +18,9 @@
 - **Period changes measure gain, not value:** value − cost + realized, so deposits, buys and sells aren't profit.
 - **Each account has one currency and one balance** in the MVP, set directly by the user. A multi-currency broker account means several accounts. This replaces the earlier plan of cash per currency within an account. How transactions affect the balance is decided in the transactions step.
 - **Stack:** Java 25, Spring Boot 4.1, Maven project in `server/`, Postgres 18, React + Vite + TypeScript + Recharts.
-- **Deployment:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
+- **Deployment, when it comes:** Docker Compose on a Raspberry Pi 5 (8 GB), reached over Tailscale. Built so it can later be hosted for others.
 - **Storage:** Postgres is the source of truth. Plain text is export/import plus an optional one-way git backup.
-- **Agents:** through MCP only.
+- **Agents, when they come:** through MCP only.
 - **Accounts own lots and cash.** An account has a name, a free-form description, a currency and a cost method. There are no fixed account types.
 - **Cost basis:** `average` or `fifo`, set per account, average by default. Changing it recalculates positions.
 - **Positions are calculated on each request,** in the `domain` package, not stored. One per account and ticker. A sale past the shares on record counts only the shares with a known cost, and the position is marked `incomplete`.

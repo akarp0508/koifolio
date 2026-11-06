@@ -1,23 +1,23 @@
 # koifolio
 
-A self-hosted, AI-agent-friendly portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
+A self-hosted portfolio tracker for individual investors. It works with any broker, exchange or tax system. Automatic prices currently cover GPW, NewConnect, NYSE, NASDAQ and Deutsche Börse; anything else works with manual prices.
 
-> **Status:** early development, building an MVP. Login, accounts with balances, transactions, instruments with company notes, positions with per-account plans, current prices, position history and a dashboard work, in the API and web UI. See the [roadmap](docs/roadmap.md).
+> **Status:** early development, focused on the website. Login, accounts with balances, transactions, instruments with company notes, positions with per-account plans, current prices, position history and a dashboard work, in the API and web UI. See the [roadmap](docs/roadmap.md).
 
 ## Why
 
 Brokerage apps show *what* you hold. They don't help you keep track of *why* you hold it, how risky it is, or whether your portfolio still follows your own rules.
 
-koifolio keeps your transactions, accounts and company analyses in one place. You use it through a web UI, and AI agents (Claude Code and others) work with the same data through an MCP server: they write company analyses, refresh risk scores and check rules. Everything is exportable to plain text (Markdown, YAML, JSONL) at any time, optionally backed up to your own git repo. The app is open source and self-hosted.
+koifolio keeps your transactions, accounts and company analyses in one place. You use it through a web UI. The app is open source and self-hosted. Agent access through MCP and plain-text export are planned.
 
 ## Core ideas
 
 - **Analysis lives next to the numbers.** Each company has a Markdown note plus structured fields (sector, risk score, scenarios). Agents update the analysis and the numbers in one place.
-- **Agents are first-class users.** A built-in MCP server exposes the same calculations the UI shows. Every agent change is checked by the same code as the UI and recorded in the audit log, and agent transactions wait for your review.
-- **Your data is never locked in.** Plain-text export/import in documented formats, plus an optional scheduled git backup.
+- **Agents as first-class users (planned).** A built-in MCP server will expose the same calculations the UI shows.
+- **Your data is never locked in (planned).** Plain-text export/import in documented formats.
 - **Multiple accounts.** Any kind of account, each with its own tax settings (e.g. a regular brokerage account, or a tax-free one like Polish IKE) — viewed separately or together.
-- **Your rules, checked automatically.** E.g. "max 20% in one company", "~50% in low-risk assets".
-- **Self-hosted, always on.** One Docker Compose stack (app + Postgres), light enough for a Raspberry Pi 5. Built multi-user from day one, even if you're the only user.
+- **Your rules, checked automatically (planned).** E.g. "max 20% in one company", "~50% in low-risk assets".
+- **Self-hosted.** One Docker Compose stack (app + Postgres). Built multi-user from day one, even if you're the only user.
 
 ## Features
 

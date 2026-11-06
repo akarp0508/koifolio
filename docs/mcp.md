@@ -1,5 +1,7 @@
 # MCP server
 
+> **Deferred.** Nothing here is built yet. The site comes first; see [roadmap.md](roadmap.md).
+
 Exposed by `server` at `/mcp`, protected by OAuth as the MCP spec defines for remote servers. Tools call the same services as the REST API, so agents and the UI get the same numbers and the same validation.
 
 Over Tailscale, Claude Code on the desktop can reach it. claude.ai web and mobile can't, unless the server is exposed publicly.

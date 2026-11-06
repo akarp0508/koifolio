@@ -1,5 +1,7 @@
 # Plain-text export format
 
+> **Planned.** Nothing here is built yet, and the examples still need updating to the current model.
+
 The export (and the optional git backup) is a directory of small, human- and agent-readable files. Import reads the same format, on demand (replace or merge). There is no live two-way sync.
 
 ```
