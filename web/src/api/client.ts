@@ -14,7 +14,7 @@ export type Instrument = Schemas['InstrumentResponse'] & Required<Pick<Schemas['
 export type InstrumentInput = Schemas['UpdateInstrumentRequest']
 export type DashboardSlice = Schemas['SliceResponse']
 export type Dashboard = Schemas['DashboardResponse'] & Required<Pick<Schemas['DashboardResponse'],
-  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
+  'currency' | 'value' | 'unrealizedGain' | 'realizedGain' | 'dividends' | 'dividendsWithheld' | 'bySector' | 'byRisk' | 'attention' | 'unpriced'>>
 export type Settings = Required<Schemas['SettingsResponse']>
 export type RestoredData = Required<Schemas['RestoredResponse']>
 export type Rule = Schemas['RuleResponse'] & Required<Pick<Schemas['RuleResponse'], 'id' | 'type' | 'limitPercent'>>

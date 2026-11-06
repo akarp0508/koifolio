@@ -40,7 +40,8 @@ function gainNote(dashboard: Dashboard) {
 function taxNote(tax: TaxEstimate) {
   const unset = tax.unsetAccounts?.length ?? 0
   const sold = tax.totalIfSoldToday && `${formatGain(tax.totalIfSoldToday)} if sold today`
-  return unset > 0 ? `${sold} · ${unset} without a rate` : sold
+  const dividends = gainClass(tax.totalDividendTax) ? `${formatAmount(tax.totalDividendTax ?? '')} on dividends` : undefined
+  return [sold, dividends, unset > 0 ? `${unset} without a rate` : undefined].filter(Boolean).join(' · ') || undefined
 }
 
 function Tile({ label, children, note, tone = '' }: {
@@ -211,6 +212,13 @@ export function Portfolio() {
               {formatGain(dashboard.unrealizedGain)} {currency}
             </Tile>
             <Tile label="Realized" tone={gainClass(dashboard.realizedGain)}>{formatGain(dashboard.realizedGain)} {currency}</Tile>
+            <Tile
+              label="Dividends"
+              tone={gainClass(dashboard.dividends)}
+              note={gainClass(dashboard.dividendsWithheld) ? `withheld ${formatAmount(dashboard.dividendsWithheld)}` : undefined}
+            >
+              {formatGain(dashboard.dividends)} {currency}
+            </Tile>
             {tax && (
               <Tile label={`Est. tax ${tax.year}`} note={taxNote(tax)}>
                 <a className="tile-link" href="#tax">{formatAmount(tax.totalTax ?? '')} {tax.currency}</a>

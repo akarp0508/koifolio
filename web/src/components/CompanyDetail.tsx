@@ -69,6 +69,9 @@ function CombinedSummary({ holding, currency }: { holding: Holding; currency: st
       {holding.realizedGain && (
         <Figure label="Realized" gain={holding.realizedGain} value={`${formatGain(holding.realizedGain)} ${currency}`} />
       )}
+      {gainClass(holding.dividends) && (
+        <Figure label="Dividends" gain={holding.dividends} value={`${formatGain(holding.dividends ?? '')} ${currency}`} />
+      )}
       {holding.weight && <Figure label="Weight" value={`${holding.weight}%`} />}
     </div>
   )
@@ -85,6 +88,9 @@ function AccountSummary({ position }: { position: Position }) {
                   value={`${formatGain(position.unrealizedGain)} ${currency}`} />
         )}
         <Figure label="Realized" gain={position.realizedGain} value={`${formatGain(position.realizedGain)} ${currency}`} />
+        {gainClass(position.dividends) && (
+          <Figure label="Dividends" gain={position.dividends} value={`${formatGain(position.dividends ?? '')} ${currency}`} />
+        )}
         {position.weight && <Figure label="Weight" value={`${position.weight}%`} />}
         <Figure label="Quantity" value={formatAmount(position.quantity)} />
         {position.averageCost && <Figure label="Avg cost" value={`${formatAmount(position.averageCost)} ${currency}`} />}

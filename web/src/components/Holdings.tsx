@@ -23,6 +23,7 @@ function Numbers({ row }: { row: Holding | AccountHolding }) {
         {row.unrealizedPercent && <span className="not-in-balance">{formatGain(row.unrealizedPercent)}%</span>}
       </td>
       <td className={`number ${gainClass(row.realizedGain)}`}>{row.realizedGain ? formatGain(row.realizedGain) : '—'}</td>
+      <td className={`number ${gainClass(row.dividends)}`}>{gainClass(row.dividends) ? formatGain(row.dividends ?? '') : '—'}</td>
     </>
   )
 }
@@ -117,6 +118,7 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
             <th className="number" title="Share of the selected account, or of everything, cash included">Weight</th>
             <th className="number">P/L</th>
             <th className="number">Realized</th>
+            <th className="number" title="Received, after tax withheld">Dividends</th>
             <th><span className="visually-hidden">Actions</span></th>
           </tr>
         </thead>
@@ -124,7 +126,7 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
           {held.map((holding) => <Company key={holding.instrumentId} holding={holding} onTrade={onTrade} />)}
           {notHeld.length > 0 && (
             <tr className="clickable" onClick={() => setShowNotHeld(!showNotHeld)}>
-              <td colSpan={6}>
+              <td colSpan={7}>
                 <button className="expand" aria-expanded={showNotHeld} aria-label="Companies not held">{showNotHeld ? '▾' : '▸'}</button>
                 <span className="muted">Not held ({notHeld.length})</span>
               </td>

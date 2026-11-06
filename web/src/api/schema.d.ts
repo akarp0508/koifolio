@@ -341,8 +341,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * An estimate of tax on sales for one year
-         * @description In the base currency. Accounts with the same rate add up, so losses offset gains between them. Losses aren't carried between years, and dividends aren't included. Not tax advice.
+         * An estimate of tax on sales and dividends for one year
+         * @description In the base currency. Accounts with the same rate add up, so losses offset gains between them. Losses aren't carried between years. Dividends are counted apart, because losses don't offset them: each one owes the gross amount at the account's rate, less what was withheld, and never below zero. Not tax advice.
          */
         get: operations["estimate"];
         put?: never;
@@ -499,7 +499,7 @@ export interface paths {
         };
         /**
          * Portfolio value over time, and changes over 1D to 1Y
-         * @description Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit.
+         * @description Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is what the gain moved by, so deposits and buys don't count as profit, and dividends do, net of tax withheld.
          */
         get: operations["history_1"];
         put?: never;
@@ -796,6 +796,21 @@ export interface components {
             name?: string;
             realized?: string;
         };
+        DividendAccountLine: {
+            /** Format: uuid */
+            accountId?: string;
+            name?: string;
+            gross?: string;
+            withheld?: string;
+            taxLeft?: string;
+        };
+        DividendGroupResponse: {
+            ratePercent?: string;
+            gross?: string;
+            withheld?: string;
+            taxLeft?: string;
+            accounts?: components["schemas"]["DividendAccountLine"][];
+        };
         OpenGain: {
             /** Format: uuid */
             accountId?: string;
@@ -820,7 +835,9 @@ export interface components {
             years?: number[];
             totalTax?: string;
             totalIfSoldToday?: string;
+            totalDividendTax?: string;
             groups?: components["schemas"]["TaxGroup"][];
+            dividendGroups?: components["schemas"]["DividendGroupResponse"][];
             unsetAccounts?: string[];
             openPositions?: components["schemas"]["OpenGain"][];
         };
@@ -855,6 +872,7 @@ export interface components {
             value?: string;
             gain?: string;
             currencyGain?: string;
+            dividends?: string;
         };
         PositionResponse: {
             /** Format: uuid */
@@ -887,6 +905,8 @@ export interface components {
             inBase?: components["schemas"]["InBase"];
             weight?: string;
             portfolioWeight?: string;
+            dividends?: string;
+            dividendsWithheld?: string;
         };
         HistoryPoint: {
             /** Format: date */
@@ -916,6 +936,7 @@ export interface components {
             unrealizedGain?: string;
             unrealizedPercent?: string;
             realizedGain?: string;
+            dividends?: string;
             weight?: string;
         };
         AttentionResponse: {
@@ -937,6 +958,8 @@ export interface components {
             currencyGain?: string;
             unrealizedPercent?: string;
             realizedGain?: string;
+            dividends?: string;
+            dividendsWithheld?: string;
             cash?: string;
             bySector?: components["schemas"]["SliceResponse"][];
             byRisk?: components["schemas"]["SliceResponse"][];
@@ -954,6 +977,7 @@ export interface components {
             unrealizedGain?: string;
             unrealizedPercent?: string;
             realizedGain?: string;
+            dividends?: string;
             weight?: string;
             accounts?: components["schemas"]["AccountHoldingResponse"][];
         };
