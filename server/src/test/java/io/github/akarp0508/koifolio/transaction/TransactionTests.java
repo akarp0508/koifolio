@@ -553,6 +553,63 @@ class TransactionTests {
         as(anna, get("/api/v1/instruments")).andExpect(jsonPath("$.length()").value(0));
     }
 
+    private static String split(String date, String from, String to) {
+        return "\"type\":\"split\",\"date\":\"%s\",\"ticker\":\"PAS\",\"splitFrom\":\"%s\",\"splitTo\":\"%s\",\"affectsBalance\":true"
+                .formatted(date, from, to);
+    }
+
+    @Test
+    void aSplitNeverTouchesTheBalance() throws Exception {
+        add(trade("buy", "2026-03-01", "10", "50"));
+
+        add(split("2026-03-02", "1", "10")).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.type").value("split"))
+                .andExpect(jsonPath("$.ticker").value("PAS"))
+                .andExpect(jsonPath("$.splitFrom").value("1"))
+                .andExpect(jsonPath("$.splitTo").value("10"))
+                .andExpect(jsonPath("$.cashEffect").value("0.00"))
+                .andExpect(jsonPath("$.affectsBalance").value(false));
+
+        expectBalance("500.00");
+    }
+
+    @Test
+    void sellingTheSplitSharesIsNotOversold() throws Exception {
+        add(trade("buy", "2026-03-01", "10", "50"));
+        add(split("2026-03-02", "1", "10"));
+
+        add(trade("sell", "2026-03-03", "100", "5")).andExpect(jsonPath("$.oversold").value(false));
+    }
+
+    @Test
+    void aSplitBackfilledLaterClearsTheWarning() throws Exception {
+        add(trade("buy", "2026-03-01", "10", "50"));
+        String sale = addedId(trade("sell", "2026-03-03", "100", "5"));
+        as(anna, get("/api/v1/transactions/" + sale)).andExpect(jsonPath("$.oversold").value(true));
+
+        add(split("2026-03-02", "1", "10"));
+
+        as(anna, get("/api/v1/transactions/" + sale)).andExpect(jsonPath("$.oversold").value(false));
+    }
+
+    @Test
+    void aSplitNeedsBothSides() throws Exception {
+        add("\"type\":\"split\",\"date\":\"2026-03-02\",\"ticker\":\"PAS\",\"affectsBalance\":false")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors.length()").value(2));
+        add(split("2026-03-02", "0", "10")).andExpect(status().isBadRequest());
+        add(split("2026-03-02", "2", "2")).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("splitTo"));
+    }
+
+    @Test
+    void aSplitCanBeEditedAndDeleted() throws Exception {
+        String id = addedId(split("2026-03-02", "1", "10"));
+
+        replace(anna, id, split("2026-03-02", "1", "5")).andExpect(jsonPath("$.splitTo").value("5"));
+        as(anna, delete("/api/v1/transactions/" + id)).andExpect(status().isNoContent());
+    }
+
     @Test
     void needsAToken() throws Exception {
         mvc.perform(get("/api/v1/transactions")).andExpect(status().isUnauthorized());

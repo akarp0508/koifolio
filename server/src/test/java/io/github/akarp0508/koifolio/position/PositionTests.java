@@ -201,6 +201,20 @@ class PositionTests {
     }
 
     @Test
+    void aSplitShowsInThePosition() throws Exception {
+        trade(account, "buy", "2026-01-01", "PAS", "10", "500");
+        String json = """
+                {"accountId":"%s","type":"split","date":"2026-02-01","ticker":"PAS","splitFrom":"1","splitTo":"10","affectsBalance":false}"""
+                .formatted(account);
+        as(anna, post("/api/v1/transactions").contentType(MediaType.APPLICATION_JSON).content(json))
+                .andExpect(status().isCreated());
+
+        as(anna, get("/api/v1/positions")).andExpect(jsonPath("$[0].quantity").value("100"))
+                .andExpect(jsonPath("$[0].averageCost").value("50.00"))
+                .andExpect(jsonPath("$[0].cost").value("5000.00"));
+    }
+
+    @Test
     void needsAToken() throws Exception {
         mvc.perform(get("/api/v1/positions")).andExpect(status().isUnauthorized());
     }

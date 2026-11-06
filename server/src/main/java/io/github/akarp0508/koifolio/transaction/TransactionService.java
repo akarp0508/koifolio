@@ -8,6 +8,7 @@ import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import java.math.BigDecimal;
+import java.math.MathContext;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.Currency;
@@ -113,13 +114,20 @@ public class TransactionService {
     @Transactional(readOnly = true)
     public List<AccountTrade> tradesOldestFirst(UUID userId) {
         return transactions.findByUserId(userId).stream()
-                .filter(transaction -> transaction.getType() == TransactionType.BUY
-                        || transaction.getType() == TransactionType.SELL)
+                .filter(transaction -> transaction.getInstrumentId() != null && transaction.getType() != TransactionType.DIVIDEND)
                 .sorted(HISTORY_ORDER)
-                .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(), transaction.getDate(),
-                        new Trade(transaction.getType() == TransactionType.BUY ? Trade.Side.BUY : Trade.Side.SELL,
-                                transaction.getQuantity(), transaction.getPrice(), transaction.getFee())))
+                .map(transaction -> new AccountTrade(transaction.getAccountId(), transaction.getInstrumentId(),
+                        transaction.getDate(), trade(transaction)))
                 .toList();
+    }
+
+    private static Trade trade(Transaction transaction) {
+        return switch (transaction.getType()) {
+            case BUY -> new Trade(Trade.Side.BUY, transaction.getQuantity(), transaction.getPrice(), transaction.getFee());
+            case SELL -> new Trade(Trade.Side.SELL, transaction.getQuantity(), transaction.getPrice(), transaction.getFee());
+            case SPLIT -> Trade.split(transaction.getSplitFrom(), transaction.getSplitTo());
+            default -> throw new IllegalArgumentException("Not a trade: " + transaction.getType());
+        };
     }
 
     private Map<UUID, String> currencies(UUID userId) {
@@ -179,6 +187,9 @@ public class TransactionService {
             Holding holding = new Holding(transaction.getAccountId(), transaction.getInstrumentId());
             if (transaction.getType() == TransactionType.BUY) {
                 held.merge(holding, transaction.getQuantity(), BigDecimal::add);
+            } else if (transaction.getType() == TransactionType.SPLIT) {
+                held.computeIfPresent(holding, (key, shares) -> shares.multiply(transaction.getSplitTo())
+                        .divide(transaction.getSplitFrom(), MathContext.DECIMAL128));
             } else if (transaction.getType() == TransactionType.SELL) {
                 BigDecimal remaining = held.getOrDefault(holding, BigDecimal.ZERO).subtract(transaction.getQuantity());
                 if (remaining.signum() < 0) {
@@ -196,6 +207,7 @@ public class TransactionService {
             case BUY, SELL -> trade(request, currency, errors);
             case DIVIDEND -> dividend(request, currency, errors);
             case DEPOSIT, WITHDRAWAL, FEE -> cash(request, currency, errors);
+            case SPLIT -> split(request, errors);
         };
         if (!errors.isEmpty()) {
             throw new FieldValidationException(errors);
@@ -222,7 +234,7 @@ public class TransactionService {
         BigDecimal value = quantity.multiply(price);
         BigDecimal cashEffect = request.type() == TransactionType.BUY ? value.add(fee).negate() : value.subtract(fee);
         return new TransactionValues(request.type(), request.date(), ticker, quantity, price, fee, null, null,
-                rounded(cashEffect, currency), request.affectsBalance());
+                rounded(cashEffect, currency), request.affectsBalance(), null, null);
     }
 
     private static TransactionValues dividend(TransactionRequest request, String currency, Map<String, String> errors) {
@@ -236,7 +248,7 @@ public class TransactionService {
             return null;
         }
         return new TransactionValues(request.type(), request.date(), ticker, null, null, null, amount, withheldTax,
-                amount.subtract(withheldTax), request.affectsBalance());
+                amount.subtract(withheldTax), request.affectsBalance(), null, null);
     }
 
     private static TransactionValues cash(TransactionRequest request, String currency, Map<String, String> errors) {
@@ -246,7 +258,22 @@ public class TransactionService {
         }
         BigDecimal cashEffect = request.type() == TransactionType.DEPOSIT ? amount : amount.negate();
         return new TransactionValues(request.type(), request.date(), null, null, null, null, amount, null,
-                cashEffect, request.affectsBalance());
+                cashEffect, request.affectsBalance(), null, null);
+    }
+
+    /** Shares change hands with no money, so the balance is never involved. */
+    private static TransactionValues split(TransactionRequest request, Map<String, String> errors) {
+        String ticker = ticker(request, errors);
+        BigDecimal from = requirePositive("splitFrom", request.splitFrom(), errors);
+        BigDecimal to = requirePositive("splitTo", request.splitTo(), errors);
+        if (errors.isEmpty() && from.compareTo(to) == 0) {
+            errors.put("splitTo", "must differ from the old shares");
+        }
+        if (!errors.isEmpty()) {
+            return null;
+        }
+        return new TransactionValues(request.type(), request.date(), ticker, null, null, null, null, null,
+                BigDecimal.ZERO, false, from, to);
     }
 
     private static String ticker(TransactionRequest request, Map<String, String> errors) {

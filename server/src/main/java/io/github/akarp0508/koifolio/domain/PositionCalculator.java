@@ -36,6 +36,12 @@ public final class PositionCalculator {
         boolean incomplete = false;
 
         for (Trade trade : trades) {
+            if (trade.side() == Trade.Side.SPLIT) {
+                List<Lot> split = lots.stream().map(lot -> new Lot(trade.applySplit(lot.quantity()), lot.cost())).toList();
+                lots.clear();
+                lots.addAll(split);
+                continue;
+            }
             BigDecimal value = trade.quantity().multiply(trade.price(), PRECISION);
             if (trade.side() == Trade.Side.BUY) {
                 Lot lot = new Lot(trade.quantity(), value.add(trade.fee(), PRECISION));

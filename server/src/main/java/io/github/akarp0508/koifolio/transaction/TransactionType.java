@@ -8,5 +8,6 @@ public enum TransactionType {
     @JsonProperty("buy") BUY,
     @JsonProperty("sell") SELL,
     @JsonProperty("dividend") DIVIDEND,
-    @JsonProperty("fee") FEE
+    @JsonProperty("fee") FEE,
+    @JsonProperty("split") SPLIT
 }

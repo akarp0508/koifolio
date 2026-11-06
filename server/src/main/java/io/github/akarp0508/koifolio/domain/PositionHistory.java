@@ -5,7 +5,10 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-/** What a position was worth on each day there's a price for. */
+/**
+ * What a position was worth on each day there's a price for. Closes are adjusted for splits, so a
+ * close from before a split is scaled back up to what the shares really traded at.
+ */
 public final class PositionHistory {
 
     private PositionHistory() {
@@ -28,7 +31,8 @@ public final class PositionHistory {
         PositionResult position = null;
         int next = 0;
 
-        for (DailyClose close : closes) {
+        for (DailyClose daily : closes) {
+            DailyClose close = new DailyClose(daily.date(), beforeLaterSplits(daily, trades));
             boolean traded = false;
             while (next < trades.size() && !trades.get(next).date().isAfter(close.date())) {
                 applied.add(trades.get(next).trade());
@@ -45,5 +49,15 @@ public final class PositionHistory {
             }
         }
         return points;
+    }
+
+    private static BigDecimal beforeLaterSplits(DailyClose close, List<DatedTrade> trades) {
+        BigDecimal price = close.close();
+        for (DatedTrade trade : trades) {
+            if (trade.trade().side() == Trade.Side.SPLIT && trade.date().isAfter(close.date())) {
+                price = trade.trade().applySplit(price);
+            }
+        }
+        return price;
     }
 }

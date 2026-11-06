@@ -88,6 +88,30 @@ class PositionHistoryTest {
     }
 
     @Test
+    void aCloseBeforeASplitShowsWhatTheSharesReallyTraded() {
+        // Dino: bought at about 500 before its 10 for 1, and the source now shows that day as about 50
+        List<DatedTrade> trades = List.of(buy(MON, "10", "500"),
+                new DatedTrade(WED, Trade.split(BigDecimal.ONE, BigDecimal.TEN)));
+
+        List<PositionHistory.Point> points = history(trades, close(MON, "50"), close(TUE, "51"), close(WED, "52"), close(THU, "53"));
+
+        assertThat(points).extracting(point -> point.value().intValue()).containsExactly(5000, 5100, 5200, 5300);
+        assertThat(points).extracting(point -> point.quantity().intValue()).containsExactly(10, 10, 100, 100);
+        assertThat(points.get(0).close()).isEqualByComparingTo("500");
+        assertThat(points.get(3).close()).isEqualByComparingTo("53");
+        assertThat(points).extracting(point -> point.cost().intValue()).containsOnly(5000);
+    }
+
+    @Test
+    void severalSplitsAllCount() {
+        List<DatedTrade> trades = List.of(buy(MON, "1", "400"),
+                new DatedTrade(TUE, Trade.split(BigDecimal.ONE, new BigDecimal("2"))),
+                new DatedTrade(WED, Trade.split(BigDecimal.ONE, new BigDecimal("2"))));
+
+        assertThat(history(trades, close(MON, "100")).getFirst().value()).isEqualByComparingTo("400");
+    }
+
+    @Test
     void noClosesMeansNoPoints() {
         assertThat(history(List.of(buy(MON, "1", "1")))).isEmpty();
     }

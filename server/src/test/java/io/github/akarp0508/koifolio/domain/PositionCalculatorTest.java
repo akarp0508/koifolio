@@ -35,6 +35,55 @@ class PositionCalculatorTest {
         return PositionCalculator.calculate(List.of(trades), CostMethod.AVERAGE);
     }
 
+    private static Trade split(String from, String to) {
+        return Trade.split(new BigDecimal(from), new BigDecimal(to));
+    }
+
+    @Test
+    void aSplitChangesQuantityButNotCost() {
+        PositionResult result = average(buy("10", "500"), split("1", "10"));
+
+        assertThat(result.quantity()).isEqualByComparingTo("100");
+        assertThat(result.cost()).isEqualByComparingTo("5000");
+        assertThat(result.averageCost()).isEqualByComparingTo("50");
+    }
+
+    @Test
+    void aReverseSplitStaysExact() {
+        PositionResult result = average(buy("30", "1"), split("3", "1"));
+
+        assertThat(result.quantity()).isEqualByComparingTo("10");
+    }
+
+    @Test
+    void aOneForThreeSplitDoesNotLoseShares() {
+        assertThat(average(buy("9", "1"), split("3", "1"), split("1", "3")).quantity()).isEqualByComparingTo("9");
+    }
+
+    @Test
+    void sellingAfterASplitUsesTheNewQuantity() {
+        PositionResult result = average(buy("10", "100"), split("1", "2"), sell("20", "60"));
+
+        assertThat(result.isClosed()).isTrue();
+        assertThat(result.incomplete()).isFalse();
+        assertThat(result.realizedGain()).isEqualByComparingTo("200");
+    }
+
+    @Test
+    void aSplitKeepsFifoLotsApart() {
+        PositionResult result = fifo(buy("10", "100"), buy("10", "200"), split("1", "2"), sell("20", "100"));
+
+        assertThat(result.cost()).isEqualByComparingTo("2000");
+        assertThat(result.realizedGain()).isEqualByComparingTo("1000");
+    }
+
+    @Test
+    void aSplitWithNothingHeldDoesNothing() {
+        PositionResult result = fifo(split("1", "2"), buy("1", "10"));
+
+        assertThat(result.quantity()).isEqualByComparingTo("1");
+    }
+
     @Test
     void fifoSellsTheOldestSharesFirst() {
         PositionResult result = fifo(buy("10", "100"), buy("10", "120"), sell("5", "150"));

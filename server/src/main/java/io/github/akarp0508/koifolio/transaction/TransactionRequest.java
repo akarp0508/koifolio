@@ -35,7 +35,13 @@ record TransactionRequest(
         @Schema(type = "string", description = "dividend. Defaults to 0", example = "0")
         @Digits(integer = 15, fraction = 4, message = "must have at most 15 digits and 4 decimal places")
         BigDecimal withheldTax,
-        @NotNull @Schema(description = "Whether this changes the account balance. Off for backfilled history.")
+        @Schema(type = "string", description = "split. Old shares", example = "1")
+        @Digits(integer = 10, fraction = 8, message = "must have at most 10 digits and 8 decimal places")
+        BigDecimal splitFrom,
+        @Schema(type = "string", description = "split. New shares for that many old ones", example = "10")
+        @Digits(integer = 10, fraction = 8, message = "must have at most 10 digits and 8 decimal places")
+        BigDecimal splitTo,
+        @NotNull @Schema(description = "Whether this changes the account balance. Off for backfilled history. A split never does.")
         Boolean affectsBalance,
         @Schema(description = "Go ahead even if this takes the balance below zero. Without it, that returns 409.")
         Boolean allowNegativeBalance) {

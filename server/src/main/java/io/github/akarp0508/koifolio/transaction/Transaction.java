@@ -49,6 +49,12 @@ public class Transaction {
     @Column(name = "withheld_tax", precision = 19, scale = 4)
     private BigDecimal withheldTax;
 
+    @Column(name = "split_from", precision = 18, scale = 8)
+    private BigDecimal splitFrom;
+
+    @Column(name = "split_to", precision = 18, scale = 8)
+    private BigDecimal splitTo;
+
     /** What this transaction does to cash: negative for a buy, for example. */
     @Column(name = "cash_effect", nullable = false, precision = 19, scale = 4)
     private BigDecimal cashEffect;
@@ -78,6 +84,8 @@ public class Transaction {
         fee = values.fee();
         amount = values.amount();
         withheldTax = values.withheldTax();
+        splitFrom = values.splitFrom();
+        splitTo = values.splitTo();
         cashEffect = values.cashEffect();
         affectsBalance = values.affectsBalance();
     }
@@ -125,6 +133,14 @@ public class Transaction {
 
     BigDecimal getWithheldTax() {
         return withheldTax;
+    }
+
+    BigDecimal getSplitFrom() {
+        return splitFrom;
+    }
+
+    BigDecimal getSplitTo() {
+        return splitTo;
     }
 
     BigDecimal getCashEffect() {
