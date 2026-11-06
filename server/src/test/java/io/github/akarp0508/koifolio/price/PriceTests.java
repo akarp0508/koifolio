@@ -63,10 +63,18 @@ class PriceTests {
     static class FakeFx implements FxProvider {
 
         final List<Rate> rates = new CopyOnWriteArrayList<>();
+        final List<Rate> history = new CopyOnWriteArrayList<>();
+        final List<String> calls = new CopyOnWriteArrayList<>();
 
         @Override
         public List<Rate> latestRates() {
             return rates;
+        }
+
+        @Override
+        public List<Rate> ratesBetween(LocalDate from, LocalDate to) {
+            calls.add(from + " " + to);
+            return history;
         }
     }
 

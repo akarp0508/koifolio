@@ -9,6 +9,9 @@ interface FxProvider {
 
     List<Rate> latestRates();
 
+    /** Every rate published from {@code from} to {@code to}, both included. */
+    List<Rate> ratesBetween(LocalDate from, LocalDate to);
+
     /** @param rate how many PLN one unit buys */
     record Rate(String currency, BigDecimal rate, LocalDate effectiveDate) {
     }

@@ -13,7 +13,7 @@ public final class PositionHistory {
 
     /** @param traded a buy or sell happened since the previous point */
     public record Point(LocalDate date, BigDecimal quantity, BigDecimal close, BigDecimal value, BigDecimal cost,
-                        boolean traded) {
+                        BigDecimal realized, boolean traded) {
     }
 
     /**
@@ -40,7 +40,8 @@ public final class PositionHistory {
             }
             if (position != null) {
                 BigDecimal value = position.quantity().multiply(close.close(), PositionCalculator.PRECISION);
-                points.add(new Point(close.date(), position.quantity(), close.close(), value, position.cost(), traded));
+                points.add(new Point(close.date(), position.quantity(), close.close(), value, position.cost(),
+                        position.realizedGain(), traded));
             }
         }
         return points;

@@ -2,6 +2,8 @@ package io.github.akarp0508.koifolio.dashboard;
 
 import io.github.akarp0508.koifolio.domain.Breakdown;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
+import io.github.akarp0508.koifolio.domain.PortfolioHistory;
+import io.github.akarp0508.koifolio.domain.PositionHistory;
 import io.github.akarp0508.koifolio.domain.Valuation;
 import io.github.akarp0508.koifolio.position.PositionService;
 import io.github.akarp0508.koifolio.position.PositionService.Position;
@@ -9,8 +11,10 @@ import io.github.akarp0508.koifolio.account.Account;
 import io.github.akarp0508.koifolio.account.AccountRepository;
 import io.github.akarp0508.koifolio.auth.AuthService;
 import io.github.akarp0508.koifolio.price.FxService;
+import io.github.akarp0508.koifolio.price.PriceHistoryService;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -114,6 +118,36 @@ class DashboardService {
                 : Optional.of(gain.multiply(HUNDRED, MathContext.DECIMAL128).divide(cost, MathContext.DECIMAL128));
         return new Dashboard(base, add(value, cash.orElse(BigDecimal.ZERO)), value, gain, percent, realized, cash,
                 Breakdown.of(sectors), Breakdown.of(risks), attention, unpriced);
+    }
+
+    /** Totals over time, each day at that day's rate. */
+    record History(String currency, List<PortfolioHistory.Point> points, List<PortfolioHistory.Change> changes) {
+    }
+
+    @Transactional(readOnly = true)
+    History history(UUID userId, Filter filter) {
+        String base = authService.currentUser(userId).getBaseCurrency();
+        FxService.History rates = fx.history();
+        List<Position> matching = positions.list(userId).stream().filter(filter::matches).toList();
+
+        List<List<PortfolioHistory.Point>> series = new ArrayList<>();
+        for (PositionService.PointsOf position : positions.points(userId, matching, rates)) {
+            String currency = position.position().account().getCurrency();
+            List<PortfolioHistory.Point> points = new ArrayList<>();
+            for (PositionHistory.Point point : position.points()) {
+                LocalDate date = point.date();
+                Optional<BigDecimal> value = rates.convert(point.value(), currency, base, date);
+                Optional<BigDecimal> cost = rates.convert(point.cost(), currency, base, date);
+                Optional<BigDecimal> realized = rates.convert(point.realized(), currency, base, date);
+                if (value.isPresent() && cost.isPresent() && realized.isPresent()) {
+                    points.add(new PortfolioHistory.Point(date, value.get(), cost.get(), realized.get()));
+                }
+            }
+            series.add(points);
+        }
+        List<PortfolioHistory.Point> totals = PortfolioHistory.total(series);
+        LocalDate today = LocalDate.now(PriceHistoryService.MARKET_ZONE);
+        return new History(base, totals, PortfolioHistory.changes(totals, today));
     }
 
     private BigDecimal cash(UUID userId, Filter filter, FxService.Rates rates, String base) {

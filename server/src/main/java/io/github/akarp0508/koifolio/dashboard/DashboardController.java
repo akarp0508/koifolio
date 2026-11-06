@@ -3,10 +3,12 @@ package io.github.akarp0508.koifolio.dashboard;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import io.github.akarp0508.koifolio.domain.Breakdown;
 import io.github.akarp0508.koifolio.domain.PlanCheck;
+import io.github.akarp0508.koifolio.domain.PortfolioHistory;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +44,41 @@ class DashboardController {
         return DashboardResponse.of(dashboards.build(UUID.fromString(jwt.getSubject()), filter));
     }
 
+    @GetMapping("/history")
+    @Operation(summary = "Portfolio value over time, and changes over 1D to 1Y", description = """
+            Same filters as the dashboard, positions only. Each day uses that day's FX rates. A change is \
+            what the gain moved by, so deposits and buys don't count as profit.""")
+    HistoryResponse history(@AuthenticationPrincipal Jwt jwt,
+                            @RequestParam(required = false) UUID account,
+                            @RequestParam(defaultValue = "") Set<String> instrumentTag,
+                            @RequestParam(defaultValue = "") Set<String> positionTag) {
+        var filter = new DashboardService.Filter(account, instrumentTag, positionTag);
+        return HistoryResponse.of(dashboards.history(UUID.fromString(jwt.getSubject()), filter));
+    }
+
+    record HistoryResponse(String currency, List<HistoryPoint> points, List<ChangeResponse> changes) {
+
+        static HistoryResponse of(DashboardService.History history) {
+            String currency = history.currency();
+            return new HistoryResponse(currency,
+                    history.points().stream().map(point -> new HistoryPoint(point.date(),
+                            DashboardResponse.money(point.value(), currency), DashboardResponse.money(point.cost(), currency),
+                            DashboardResponse.money(point.gain(), currency))).toList(),
+                    history.changes().stream().map(change -> new ChangeResponse(change.period(),
+                            DashboardResponse.money(change.change(), currency),
+                            change.percent().map(DashboardResponse::percent).orElse(null))).toList());
+        }
+    }
+
+    /** @param gain value minus cost, plus what's been realized */
+    record HistoryPoint(LocalDate date, String value, String cost, String gain) {
+    }
+
+    /** @param percent of the value at the start; left out if nothing was held then */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    record ChangeResponse(PortfolioHistory.Period period, String change, String percent) {
+    }
+
     /**
      * @param cash left out while tags filter the view
      * @param unpriced open positions left out of the numbers, lacking a price or an FX rate
@@ -69,7 +106,7 @@ class DashboardController {
             return value.setScale(1, RoundingMode.HALF_UP).toPlainString();
         }
 
-        private static String money(BigDecimal value, String currency) {
+        static String money(BigDecimal value, String currency) {
             int digits = Currency.getInstance(currency).getDefaultFractionDigits();
             return value.setScale(digits, RoundingMode.HALF_UP).toPlainString();
         }

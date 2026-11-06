@@ -29,12 +29,24 @@ class NbpFxProviderTest {
             exchange.getResponseBody().write(body);
             exchange.close();
         });
+        server.createContext("/exchangerates/tables/A/2026-11-07/", exchange -> {
+            exchange.sendResponseHeaders(404, -1);
+            exchange.close();
+        });
         server.start();
     }
 
     @AfterEach
     void stop() {
         server.stop(0);
+    }
+
+    @Test
+    void aRangeWithNoTablesIsEmpty() {
+        var rates = new NbpFxProvider("http://localhost:" + server.getAddress().getPort())
+                .ratesBetween(LocalDate.of(2026, 11, 7), LocalDate.of(2026, 11, 8));
+
+        assertThat(rates).isEmpty();
     }
 
     @Test

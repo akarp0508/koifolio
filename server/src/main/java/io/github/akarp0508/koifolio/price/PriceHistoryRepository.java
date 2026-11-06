@@ -21,4 +21,10 @@ interface PriceHistoryRepository extends JpaRepository<PriceHistory, String> {
             group by i.quoteSymbol, i.quoteIsin
             order by i.quoteSymbol""")
     List<Needed> findNeeded();
+
+    @Query("""
+            select min(t.date) from Transaction t
+            where t.type in (io.github.akarp0508.koifolio.transaction.TransactionType.BUY,
+                             io.github.akarp0508.koifolio.transaction.TransactionType.SELL)""")
+    LocalDate findEarliestTrade();
 }

@@ -13,6 +13,7 @@ import io.github.akarp0508.koifolio.domain.PositionResult;
 import io.github.akarp0508.koifolio.domain.Trade;
 import io.github.akarp0508.koifolio.instrument.InstrumentService;
 import io.github.akarp0508.koifolio.instrument.InstrumentService.InstrumentView;
+import io.github.akarp0508.koifolio.instrument.InstrumentService.QuoteRef;
 import io.github.akarp0508.koifolio.price.FxService;
 import io.github.akarp0508.koifolio.price.PriceHistoryService;
 import io.github.akarp0508.koifolio.price.PriceService;
@@ -112,12 +113,9 @@ public class PositionService {
     }
 
 
+    /** @param currencyMismatch prices are in another currency with no rate, so points are in that currency */
     record History(Account account, String ticker, List<PositionHistory.Point> points, String priceCurrency,
-                   boolean covered) {
-
-        boolean currencyMismatch() {
-            return priceCurrency != null && !priceCurrency.equals(account.getCurrency());
-        }
+                   boolean covered, boolean currencyMismatch) {
     }
 
     /** Daily closes, then today's price if it's newer. A symbol the source doesn't cover gives no points. */
@@ -125,31 +123,83 @@ public class PositionService {
     History history(UUID userId, UUID accountId, String ticker) {
         authService.currentUser(userId);
         String normalized = InstrumentService.normalizeTicker(ticker);
-        Map<UUID, String> tickers = instruments.tickers(userId);
-        List<AccountTrade> trades = transactions.tradesOldestFirst(userId).stream()
-                .filter(trade -> trade.accountId().equals(accountId))
-                .filter(trade -> normalized.equals(tickers.get(trade.instrumentId())))
-                .toList();
-        Account account = accounts.findByIdAndUserId(accountId, userId).filter(found -> !trades.isEmpty())
+        Position position = list(userId).stream()
+                .filter(found -> found.account().getId().equals(accountId) && found.ticker().equals(normalized))
+                .findFirst()
                 .orElseThrow(PositionService::notFound);
 
-        UUID instrumentId = trades.getFirst().instrumentId();
-        InstrumentService.QuoteRef ref = instruments.quoteRefs(userId).get(instrumentId);
+        UUID instrumentId = position.instrument().id();
+        QuoteRef ref = instruments.quoteRefs(userId).get(instrumentId);
         if (ref == null) {
-            return new History(account, normalized, List.of(), null, false);
+            return new History(position.account(), normalized, List.of(), null, false, false);
         }
+        List<DatedTrade> trades = tradesOf(userId, accountId, instrumentId);
+        List<DailyClose> closes = closes(ref, prices.currentPrices(userId).get(instrumentId));
+        Optional<List<DailyClose>> converted = inAccountCurrency(closes, ref.currency(), position.account(), fx.history());
+        return new History(position.account(), normalized,
+                PositionHistory.calculate(trades, converted.orElse(closes), position.account().getCostMethod()),
+                ref.currency(), true, converted.isEmpty());
+    }
 
+    /** Each position's daily points, in its account's currency. Positions with no prices are left out. */
+    @Transactional(readOnly = true)
+    public List<PointsOf> points(UUID userId, List<Position> positions, FxService.History rates) {
+        Map<UUID, QuoteRef> refs = instruments.quoteRefs(userId);
+        Map<UUID, CurrentPrice> current = prices.currentPrices(userId);
+        List<AccountTrade> allTrades = transactions.tradesOldestFirst(userId);
+
+        List<PointsOf> series = new ArrayList<>();
+        for (Position position : positions) {
+            UUID instrumentId = position.instrument().id();
+            QuoteRef ref = refs.get(instrumentId);
+            if (ref == null) {
+                continue;
+            }
+            List<DatedTrade> trades = allTrades.stream()
+                    .filter(trade -> trade.accountId().equals(position.account().getId())
+                            && trade.instrumentId().equals(instrumentId))
+                    .map(trade -> new DatedTrade(trade.date(), trade.trade()))
+                    .toList();
+            inAccountCurrency(closes(ref, current.get(instrumentId)), ref.currency(), position.account(), rates)
+                    .map(closes -> PositionHistory.calculate(trades, closes, position.account().getCostMethod()))
+                    .ifPresent(points -> series.add(new PointsOf(position, points)));
+        }
+        return series;
+    }
+
+    public record PointsOf(Position position, List<PositionHistory.Point> points) {
+    }
+
+    private List<DatedTrade> tradesOf(UUID userId, UUID accountId, UUID instrumentId) {
+        return transactions.tradesOldestFirst(userId).stream()
+                .filter(trade -> trade.accountId().equals(accountId) && trade.instrumentId().equals(instrumentId))
+                .map(trade -> new DatedTrade(trade.date(), trade.trade()))
+                .toList();
+    }
+
+    private List<DailyClose> closes(QuoteRef ref, CurrentPrice current) {
         List<DailyClose> closes = new ArrayList<>(priceHistory.closes(ref.symbol()));
-        CurrentPrice current = prices.currentPrices(userId).get(instrumentId);
         if (current != null) {
             LocalDate quoted = current.quotedAt().atZone(PriceHistoryService.MARKET_ZONE).toLocalDate();
             if (closes.isEmpty() || quoted.isAfter(closes.getLast().date())) {
                 closes.add(new DailyClose(quoted, current.price()));
             }
         }
-        List<DatedTrade> dated = trades.stream().map(trade -> new DatedTrade(trade.date(), trade.trade())).toList();
-        return new History(account, normalized, PositionHistory.calculate(dated, closes, account.getCostMethod()),
-                ref.currency(), true);
+        return closes;
+    }
+
+    /** Each day at that day's rate. Empty if the currency has no rate at all. */
+    private static Optional<List<DailyClose>> inAccountCurrency(List<DailyClose> closes, String priceCurrency,
+                                                                Account account, FxService.History rates) {
+        List<DailyClose> converted = new ArrayList<>();
+        for (DailyClose close : closes) {
+            Optional<BigDecimal> price = rates.convert(close.close(), priceCurrency, account.getCurrency(), close.date());
+            if (price.isEmpty()) {
+                return Optional.empty();
+            }
+            converted.add(new DailyClose(close.date(), price.get()));
+        }
+        return Optional.of(converted);
     }
 
     @Transactional(readOnly = true)

@@ -49,6 +49,9 @@ class PriceHistoryTests {
     @Autowired
     private PriceTests.FakeProvider source;
 
+    @Autowired
+    private PriceTests.FakeFx fx;
+
     private String anna;
     private String bob;
     private String account;
@@ -59,6 +62,8 @@ class PriceHistoryTests {
         jdbc.sql("DELETE FROM quotes").update();
         jdbc.sql("DELETE FROM daily_closes").update();
         jdbc.sql("DELETE FROM price_history").update();
+        jdbc.sql("DELETE FROM fx_history").update();
+        fx.history.clear();
         source.failing = false;
         source.symbols.clear();
         source.quotes.clear();
@@ -224,6 +229,34 @@ class PriceHistoryTests {
         refresh();
 
         assertThat(storedCloses()).isEqualTo(10);
+    }
+
+    @Test
+    void fxHistoryIsFetchedFromTheFirstTradeOnceADay() throws Exception {
+        LocalDate day = TODAY.minusDays(10);
+        fx.history.add(new FxProvider.Rate("USD", new BigDecimal("3.9"), day));
+        fx.calls.clear();
+        jdbc.sql("DELETE FROM fx_history").update();
+        buy(anna, account, "PAS", 10);
+
+        refresh();
+        refresh();
+
+        assertThat(fx.calls).containsExactly(TODAY.minusDays(17) + " " + TODAY);
+        assertThat(jdbc.sql("SELECT count(*) FROM fx_history").query(Long.class).single()).isEqualTo(1);
+    }
+
+    @Test
+    void aBackfilledTradeFetchesEarlierFxHistory() throws Exception {
+        fx.calls.clear();
+        buy(anna, account, "PAS", 10);
+        refresh();
+
+        buy(anna, account, "PAS", 100);
+        refresh();
+
+        assertThat(fx.calls).hasSize(2);
+        assertThat(fx.calls.getLast()).startsWith(TODAY.minusDays(107).toString());
     }
 
     @Test
