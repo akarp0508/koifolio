@@ -291,6 +291,16 @@ button.icon {
   justify-content: space-between;
 }
 
+.user-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.user-link:hover,
+.user-link[aria-current='page'] {
+  text-decoration: underline;
+}
+
 .content {
   width: 100%;
   min-width: 0;

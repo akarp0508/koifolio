@@ -1,7 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ApiError, api } from '../api/client'
-import type { Account, Dashboard, DashboardSlice, Instrument, PeriodChange, PortfolioHistory, Position, RuleResult, Settings, TaxEstimate } from '../api/client'
+import type { Account, Dashboard, DashboardSlice, Instrument, PeriodChange, PortfolioHistory, Position, RuleResult, TaxEstimate } from '../api/client'
 import { formatAmount, formatGain, formatQuoteTime, gainClass } from '../format'
 import { RANGES, inRange } from '../history'
 import type { Range } from '../history'
@@ -95,7 +95,6 @@ export function Portfolio() {
   const [accounts, setAccounts] = useState<Account[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [instruments, setInstruments] = useState<Instrument[]>([])
-  const [settings, setSettings] = useState<Settings | null>(null)
   const [dashboard, setDashboard] = useState<Dashboard | null>(null)
   const [account, setAccount] = useState(ALL)
   const [instrumentTags, setInstrumentTags] = useState<string[]>([])
@@ -126,14 +125,13 @@ export function Portfolio() {
   }, [fetchDashboard])
 
   const fetchOverview = useCallback(() =>
-    Promise.all([api.listAccounts(), api.listPositions(), api.settings(), api.tax(), api.listInstruments(), api.checkRules()])
-      .then(([accountList, positionList, settingsData, taxData, instrumentList, ruleList]) => {
+    Promise.all([api.listAccounts(), api.listPositions(), api.tax(), api.listInstruments(), api.checkRules()])
+      .then(([accountList, positionList, taxData, instrumentList, ruleList]) => {
         setTax(taxData)
         setRuleResults(ruleList)
         setInstruments(instrumentList)
         setAccounts(accountList)
         setPositions(positionList)
-        setSettings(settingsData)
       })
       .catch((e: ApiError) => setError(e)), [])
 
@@ -160,15 +158,6 @@ export function Portfolio() {
     }
   }
 
-  function changeSettings(changes: Parameters<typeof api.updateSettings>[0]) {
-    api.updateSettings(changes)
-      .then((updated) => {
-        setSettings(updated)
-        return fetchDashboard()
-      })
-      .catch((e: ApiError) => setError(e))
-  }
-
   const currency = dashboard?.currency ?? ''
   const filteredByTags = instrumentTags.length > 0 || positionTags.length > 0
   const points = history ? inRange(history.points, range, today()) : []
@@ -188,26 +177,6 @@ export function Portfolio() {
           <button disabled={refreshing} onClick={refresh}>{refreshing ? 'Refreshing…' : 'Refresh'}</button>
           <button onClick={() => setAddingCompany(true)}>+ Company</button>
           <button className="primary" disabled={accounts.length === 0} onClick={() => setTrade({})}>+ Transaction</button>
-          {settings && (
-            <>
-              <label className="filter-check">
-                Base currency
-                <select value={settings.baseCurrency} onChange={(e) => changeSettings({ baseCurrency: e.target.value })}>
-                  {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
-                </select>
-              </label>
-              <label className="filter-check" title="Which day's exchange rate converts a buy or sell to the base currency">
-                Trade FX rate
-                <select
-                  value={settings.costFxRule}
-                  onChange={(e) => changeSettings({ costFxRule: e.target.value as Settings['costFxRule'] })}
-                >
-                  <option value="previous_publication">Day before (Polish tax)</option>
-                  <option value="transaction_date">Trade date</option>
-                </select>
-              </label>
-            </>
-          )}
         </div>
       </header>
 

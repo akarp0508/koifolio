@@ -2,9 +2,9 @@ import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { api, clearToken, hasToken, setUnauthorizedHandler } from './api/client'
 import type { User } from './api/client'
 import { Accounts } from './components/Accounts'
-import { Data } from './components/Data'
 import { Login } from './components/Login'
 import { Portfolio } from './components/Portfolio'
+import { Profile } from './components/Profile'
 import { Rules } from './components/Rules'
 import { Tax } from './components/Tax'
 import { Transactions } from './components/Transactions'
@@ -25,7 +25,6 @@ const OTHER_PAGES = [
   { hash: '#accounts', label: 'Accounts', Page: Accounts },
   { hash: '#rules', label: 'Rules', Page: Rules },
   { hash: '#tax', label: 'Tax', Page: Tax },
-  { hash: '#data', label: 'Data', Page: Data },
 ]
 
 const PAGES = [...MAIN_PAGES, ...OTHER_PAGES]
@@ -57,7 +56,8 @@ function App() {
   const hash = useHash()
   const company = hash.match(/^#companies\/([^/]+)(?:\/([^/]+))?$/)
   const parent = company ? '#portfolio' : hash
-  const current = PAGES.find((page) => page.hash === parent) ?? PAGES[0]
+  const profile = hash === '#profile'
+  const current = profile ? null : PAGES.find((page) => page.hash === parent) ?? PAGES[0]
 
   const logOut = useCallback(() => {
     clearToken()
@@ -105,7 +105,7 @@ function App() {
         </div>
         <div className="sidebar-footer">
           <div className="user">
-            <span>{user.username}</span>
+            <a className="user-link" aria-current={profile ? 'page' : undefined} href="#profile">{user.username}</a>
             <button className="icon" aria-label={THEME_LABELS[theme]} title={THEME_LABELS[theme]} onClick={nextTheme}>◐</button>
           </div>
           <button className="link" onClick={logOut}>Log out</button>
@@ -113,7 +113,9 @@ function App() {
       </nav>
       <main className="content">
         <Suspense fallback={<p className="muted">Loading…</p>}>
-          {company ? <CompanyDetail key={company[1]} id={company[1]} accountId={company[2]} /> : <current.Page />}
+          {company && <CompanyDetail key={company[1]} id={company[1]} accountId={company[2]} />}
+          {profile && <Profile user={user} />}
+          {!company && current && <current.Page />}
         </Suspense>
       </main>
     </div>

@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../api/client'
-import type { RestoredData } from '../api/client'
+import type { RestoredData, Settings, User } from '../api/client'
 import { ConfirmDialog } from './ConfirmDialog'
 
 function saveFile(blob: Blob, name: string) {
@@ -12,12 +12,21 @@ function saveFile(blob: Blob, name: string) {
   URL.revokeObjectURL(url)
 }
 
-export function Data() {
+export function Profile({ user }: { user: User }) {
   const input = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [restored, setRestored] = useState<RestoredData | null>(null)
   const [exporting, setExporting] = useState(false)
+  const [settings, setSettings] = useState<Settings | null>(null)
   const [error, setError] = useState<ApiError | null>(null)
+
+  useEffect(() => {
+    api.settings().then(setSettings).catch((e: ApiError) => setError(e))
+  }, [])
+
+  function changeSettings(changes: Parameters<typeof api.updateSettings>[0]) {
+    api.updateSettings(changes).then(setSettings).catch((e: ApiError) => setError(e))
+  }
 
   async function exportData() {
     setExporting(true)
@@ -48,12 +57,37 @@ export function Data() {
   return (
     <>
       <header className="page-header">
-        <h1>Data</h1>
+        <h1>{user.username}</h1>
       </header>
 
       {error && <p className="error" role="alert">{error.message}</p>}
 
       <div className="panels">
+        <section className="panel">
+          <header><h2>Settings</h2></header>
+          {!settings && !error && <p className="muted">Loading…</p>}
+          {settings && (
+            <>
+              <label className="field">
+                <span>Base currency</span>
+                <select value={settings.baseCurrency} onChange={(e) => changeSettings({ baseCurrency: e.target.value })}>
+                  {settings.currencies.map((code) => <option key={code} value={code}>{code}</option>)}
+                </select>
+              </label>
+              <label className="field">
+                <span>Trade FX rate</span>
+                <select
+                  value={settings.costFxRule}
+                  onChange={(e) => changeSettings({ costFxRule: e.target.value as Settings['costFxRule'] })}
+                >
+                  <option value="previous_publication">Day before (Polish tax)</option>
+                  <option value="transaction_date">Trade date</option>
+                </select>
+              </label>
+              <p className="muted">Which day's exchange rate converts a buy or sell to the base currency.</p>
+            </>
+          )}
+        </section>
         <section className="panel">
           <header><h2>Export</h2></header>
           <p className="muted">

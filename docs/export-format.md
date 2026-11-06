@@ -1,6 +1,6 @@
 # Plain-text export format
 
-The export is a zip of small files that people and agents can read. **Data → Download export** gets it, and **Restore** loads one back, replacing all your data. There's no live sync, and no merge.
+The export is a zip of small files that people and agents can read. Your profile page, opened by clicking your username, has **Download export**, and **Restore** to load one back, replacing all your data. There's no live sync, and no merge.
 
 ```
 koifolio-export-2026-11-06.zip
