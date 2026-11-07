@@ -314,6 +314,22 @@ class DashboardTests {
     }
 
     @Test
+    void holdingsShowEachAccountsRisk() throws Exception {
+        hold(ike, "PAS", "1", "1", "60", "PLN");
+        hold(ike, "PKO", "1", "1", "30", "PLN");
+        hold(ike, "XTB", "1", "1", "10", "PLN");
+        describe("PAS", "{\"risk\":4}");
+        describe("PKO", "{\"risk\":2}");
+        plan(ike, "PKO", "{\"risk\":5}");
+
+        dashboard().andExpect(jsonPath("$.holdings[?(@.ticker == 'PAS')].risks[0]").value(4))
+                .andExpect(jsonPath("$.holdings[?(@.ticker == 'PKO')].risks[0]").value(5))
+                .andExpect(jsonPath("$.holdings[?(@.ticker == 'PKO')].accounts[0].risk").value(5))
+                .andExpect(jsonPath("$.holdings[?(@.ticker == 'XTB')].risks[0]").doesNotExist())
+                .andExpect(jsonPath("$.holdings[?(@.ticker == 'XTB')].accounts[0].risk").doesNotExist());
+    }
+
+    @Test
     void breaksDownBySectorAndRisk() throws Exception {
         hold(ike, "PAS", "1", "1", "60", "PLN");
         hold(ike, "PKO", "1", "1", "30", "PLN");

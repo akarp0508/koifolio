@@ -558,6 +558,10 @@ tr.closed td {
   color: var(--loss);
 }
 
+.risk-medium {
+  color: var(--warning);
+}
+
 /* Position page */
 
 tr.clickable {

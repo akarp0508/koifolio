@@ -1358,6 +1358,8 @@ export interface components {
             realizedGain?: string;
             dividends?: string;
             weight?: string;
+            /** Format: int32 */
+            risk?: number;
         };
         AttentionResponse: {
             /** Format: uuid */
@@ -1405,6 +1407,7 @@ export interface components {
             realizedGain?: string;
             dividends?: string;
             weight?: string;
+            risks?: number[];
             accounts?: components["schemas"]["AccountHoldingResponse"][];
         };
         SliceResponse: {

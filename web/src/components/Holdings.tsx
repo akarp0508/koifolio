@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react'
 import type { Dashboard, Instrument } from '../api/client'
 import { decimal, formatAmount, formatGain, gainClass } from '../format'
 import { t } from '../i18n'
+import { RISK_LABELS } from '../plans'
 
 type Holding = NonNullable<Dashboard['holdings']>[number]
 type AccountHolding = NonNullable<Holding['accounts']>[number]
@@ -13,6 +14,22 @@ const INCOMPLETE_HINT = t('A sale exceeds the shares on record, so realized gain
 
 const companyHash = (instrumentId?: string, accountId?: string) =>
   accountId ? `#companies/${instrumentId}/${accountId}` : `#companies/${instrumentId}`
+
+const riskClass = (risk: number) => (risk <= 2 ? 'gain' : risk === 3 ? 'risk-medium' : 'loss')
+
+/** One risk, or the lowest to highest when accounts differ. */
+function Risk({ risks }: { risks: number[] }) {
+  if (risks.length === 0) {
+    return <td className="number">—</td>
+  }
+  const low = risks[0]
+  const high = risks[risks.length - 1]
+  return (
+    <td className={`number ${riskClass(high)}`} title={risks.map((risk) => RISK_LABELS[risk]).join(', ')}>
+      {low === high ? low : `${low}–${high}`}
+    </td>
+  )
+}
 
 function Numbers({ row }: { row: Holding | AccountHolding }) {
   return (
@@ -73,6 +90,7 @@ function Company({ holding, onTrade }: { holding: Holding; onTrade: (request: Tr
           {accounts.length === 1 && <span className="muted holding-account">{accounts[0].accountName}</span>}
           {incomplete && <span className="warning" role="img" aria-label={INCOMPLETE_HINT} title={INCOMPLETE_HINT}>⚠</span>}
         </td>
+        <Risk risks={holding.risks ?? []} />
         <Numbers row={holding} />
         <TradeButtons ticker={ticker} accountId={tradingAccount?.accountId ?? accounts[0]?.accountId}
                       canSell={tradingAccount !== undefined} onTrade={onTrade} />
@@ -83,6 +101,7 @@ function Company({ holding, onTrade }: { holding: Holding; onTrade: (request: Tr
           <tr key={account.accountId} className={account.closed ? 'closed clickable sub-row' : 'clickable sub-row'}
               onClick={() => { window.location.hash = accountHash }}>
             <td><a href={accountHash} onClick={(e) => e.stopPropagation()}>{account.accountName}</a></td>
+            <Risk risks={account.risk === undefined ? [] : [account.risk]} />
             <Numbers row={account} />
             <TradeButtons ticker={ticker} accountId={account.accountId} canSell={!account.closed} onTrade={onTrade} />
           </tr>
@@ -102,7 +121,12 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
   const held = holdings.filter((holding) => holding.held)
   const notHeld: Holding[] = [
     ...holdings.filter((holding) => !holding.held),
-    ...watched.map((instrument) => ({ instrumentId: instrument.id, ticker: instrument.ticker, held: false })),
+    ...watched.map((instrument) => ({
+      instrumentId: instrument.id,
+      ticker: instrument.ticker,
+      held: false,
+      risks: instrument.risk === undefined ? [] : [instrument.risk],
+    })),
   ]
 
   if (held.length === 0 && notHeld.length === 0) {
@@ -115,6 +139,7 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
         <thead>
           <tr>
             <th>{t('Company')}</th>
+            <th className="number" title={t("The plan's risk where it sets one, otherwise the company's")}>{t('Risk')}</th>
             <th className="number">{t('Value')} ({currency})</th>
             <th className="number" title={t('Share of the selected account, or of everything, cash included')}>{t('Weight')}</th>
             <th className="number">{t('P/L')}</th>
@@ -127,7 +152,7 @@ export function Holdings({ holdings, watched, currency, onTrade }: {
           {held.map((holding) => <Company key={holding.instrumentId} holding={holding} onTrade={onTrade} />)}
           {notHeld.length > 0 && (
             <tr className="clickable" onClick={() => setShowNotHeld(!showNotHeld)}>
-              <td colSpan={7}>
+              <td colSpan={8}>
                 <button className="expand" aria-expanded={showNotHeld} aria-label={t('Companies not held')}>{showNotHeld ? '▾' : '▸'}</button>
                 <span className="muted">{t('Not held ({count})', { count: notHeld.length })}</span>
               </td>

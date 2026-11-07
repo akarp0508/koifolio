@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Currency;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -133,10 +134,14 @@ class DashboardController {
         }
     }
 
-    /** A company's numbers, in the base currency. Value and gain are left out without a price. */
+    /**
+     * A company's numbers, in the base currency. Value and gain are left out without a price.
+     *
+     * @param risks each account's risk, the plan's override or else the company's, lowest first and each once. Empty if none is set
+     */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record HoldingResponse(UUID instrumentId, String ticker, boolean held, String value, String unrealizedGain,
-                           String unrealizedPercent, String realizedGain, String dividends, String weight,
+                           String unrealizedPercent, String realizedGain, String dividends, String weight, List<Integer> risks,
                            List<AccountHoldingResponse> accounts) {
 
         static HoldingResponse of(DashboardService.Holding holding, String currency) {
@@ -148,6 +153,8 @@ class DashboardController {
                     DashboardResponse.money(total.realized(), currency),
                     DashboardResponse.money(total.dividends(), currency),
                     total.weight().map(DashboardResponse::percent).orElse(null),
+                    holding.accounts().stream().map(account -> account.position().risk()).filter(Objects::nonNull)
+                            .distinct().sorted().toList(),
                     holding.accounts().stream().map(account -> AccountHoldingResponse.of(account, currency)).toList());
         }
     }
@@ -155,11 +162,12 @@ class DashboardController {
     /**
      * @param closed nothing is held in this account any more
      * @param incomplete a sale exceeded what was held, so the history is missing something
+     * @param risk the plan's override, or else the company's. Left out if neither is set
      */
     @JsonInclude(JsonInclude.Include.NON_NULL)
     record AccountHoldingResponse(UUID accountId, String accountName, boolean closed, boolean incomplete, String value,
                                   String unrealizedGain, String unrealizedPercent, String realizedGain, String dividends,
-                                  String weight) {
+                                  String weight, Integer risk) {
 
         static AccountHoldingResponse of(DashboardService.AccountHolding holding, String currency) {
             CompanyTotal total = holding.total();
@@ -171,7 +179,7 @@ class DashboardController {
                     total.gainPercent().map(DashboardResponse::percent).orElse(null),
                     DashboardResponse.money(total.realized(), currency),
                     DashboardResponse.money(total.dividends(), currency),
-                    total.weight().map(DashboardResponse::percent).orElse(null));
+                    total.weight().map(DashboardResponse::percent).orElse(null), position.risk());
         }
     }
 

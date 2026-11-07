@@ -3,6 +3,7 @@ export const pl: Record<string, string> = {
   '+ Account': '+ Konto',
   '{date}, {count} items': '{date}, {count} poz.',
   'All imports': 'Wszystkie importy',
+  "The plan's risk where it sets one, otherwise the company's": 'Ryzyko z planu, jeśli je ustawia, a w przeciwnym razie ryzyko spółki',
   'Company it came from': 'Spółka macierzysta',
   'Share of cost moved (%)': 'Przeniesiona część kosztu (%)',
   'Shares received': 'Otrzymane akcje',
